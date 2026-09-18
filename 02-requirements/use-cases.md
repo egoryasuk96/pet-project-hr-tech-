@@ -17,8 +17,8 @@
 | **Primary actor** | Любой пользователь |
 | **Preconditions** | Учётная запись существует |
 | **Trigger** | Пользователь открывает форму входа и отправляет логин/пароль |
-| **Main flow** | 1. Ввод логина и пароля 2. Система проверяет данные 3. Выдаётся JWT 4. Пользователь попадает в соответствующий домашний раздел (ЛК / очередь / админка — по ролям) |
-| **Alternative flows** | A1. Несколько ролей — UI показывает доступные разделы |
+| **Main flow** | 1. Ввод логина и пароля 2. Система проверяет данные 3. Выдаётся JWT (TTL 8 часов) со списком всех ролей 4. Пользователь получает доступ ко всем разделам по объединению permissions (BR-16); отдельный выбор активной роли не выполняется |
+| **Alternative flows** | A1. Несколько ролей — в навигации доступны все разрешённые разделы одновременно |
 | **Exceptions** | E1. Неверные данные → сообщение ERR_INVALID_CREDENTIALS, повтор ввода |
 | **Postconditions** | Пользователь аутентифицирован |
 | **Related FR** | FR-AUTH-01, FR-AUTH-02, FR-AUTH-03 |
@@ -85,12 +85,12 @@
 | **Primary actor** | employee (инициатор) |
 | **Preconditions** | Заявка в `draft` или `returned`; пользователь — инициатор |
 | **Trigger** | Команда «Отправить» |
-| **Main flow** | 1. Валидация полей 2. Проверка маршрута (BR-18) 3. Если `draft` — создание snapshot (BR-08) 4. Если `returned` — snapshot не меняется (BR-22) 5. Статус `in_approval` 6. Создание задач текущего этапа 7. Уведомления согласующим 8. История |
+| **Main flow** | 1. Валидация полей по **актуальной** схеме типа (BR-26) 2. Проверка маршрута (BR-18) 3. Если `draft` — создание snapshot (BR-08) 4. Если `returned` — snapshot не меняется (BR-22) 5. Статус `in_approval` 6. Создание задач текущего этапа 7. Уведомления согласующим 8. История |
 | **Alternative flows** | A1. Повторный submit после return — этап тот же, что при return (BR-06) |
-| **Exceptions** | E1. ERR_VALIDATION  E2. ERR_ROUTE_CONFIG  E3. ERR_INVALID_STATE  E4. ERR_INACTIVE_TYPE (для первого submit, если тип деактивирован) |
+| **Exceptions** | E1. ERR_VALIDATION (в т.ч. после изменения схемы)  E2. ERR_ROUTE_CONFIG  E3. ERR_INVALID_STATE  E4. ERR_INACTIVE_TYPE |
 | **Postconditions** | Заявка на согласовании; задачи созданы |
 | **Related FR** | FR-REQ-03, FR-REQ-09, FR-APP-01, FR-NOTIF-01 |
-| **Related BR** | BR-06, BR-08, BR-18, BR-20, BR-22 |
+| **Related BR** | BR-06, BR-08, BR-18, BR-20, BR-22, BR-26 |
 
 ---
 
@@ -119,12 +119,12 @@
 | **Primary actor** | approver |
 | **Preconditions** | Есть открытая задача, пользователь — assignee; не инициатор заявки |
 | **Trigger** | Действие Approve в карточке задачи |
-| **Main flow** | 1. Просмотр заявки 2. Approve (+ опц. комментарий) 3. Задача завершена 4. First-approve: прочие задачи этапа закрыты 5. Если есть следующий этап — UC-переход (FR-APP-06) 6. Если последний — статус `approved` 7. История + уведомления |
+| **Main flow** | 1. Просмотр заявки 2. Approve (комментарий необязателен, BR-25) 3. Задача завершена 4. Остальные активные задачи этапа → `cancelled` (BR-03) 5. Если есть следующий этап — создание его задач (FR-APP-06) 6. Если последний — статус `approved` 7. История + уведомления |
 | **Alternative flows** | A1. Несколько assignees — достаточно одного approve (BR-03) |
-| **Exceptions** | E1. ERR_FORBIDDEN_APPROVAL  E2. ERR_TASK_DONE  E3. Самосогласование → ERR_FORBIDDEN_APPROVAL |
+| **Exceptions** | E1. ERR_FORBIDDEN_APPROVAL  E2. ERR_TASK_DONE  E3. Самосогласование → ERR_FORBIDDEN_APPROVAL (BR-21) |
 | **Postconditions** | Этап пройден или заявка `approved` |
 | **Related FR** | FR-APP-02, FR-APP-03, FR-APP-06, FR-APP-07 |
-| **Related BR** | BR-02, BR-03, BR-15, BR-17, BR-21 |
+| **Related BR** | BR-02, BR-03, BR-15, BR-17, BR-21, BR-25 |
 
 ---
 
@@ -136,12 +136,12 @@
 | **Primary actor** | approver |
 | **Preconditions** | Открытая задача; assignee; не инициатор |
 | **Trigger** | Действие Reject |
-| **Main flow** | 1. Reject + комментарий 2. Статус `rejected` 3. Закрытие открытых задач этапа 4. История 5. Уведомление инициатору |
+| **Main flow** | 1. Reject + **обязательный** комментарий (BR-25) 2. Статус `rejected` 3. Закрытие открытых задач этапа 4. История 5. Уведомление инициатору |
 | **Alternative flows** | — |
-| **Exceptions** | E1. ERR_FORBIDDEN_APPROVAL  E2. ERR_TASK_DONE  E3. Пустой комментарий → ERR_VALIDATION (если принят OQ-FR-01) |
+| **Exceptions** | E1. ERR_FORBIDDEN_APPROVAL  E2. ERR_TASK_DONE  E3. Пустой комментарий → ERR_VALIDATION |
 | **Postconditions** | Заявка `rejected`; маршрут завершён |
 | **Related FR** | FR-APP-04, FR-NOTIF-01, FR-AUDIT-02 |
-| **Related BR** | BR-04, BR-15, BR-21 |
+| **Related BR** | BR-04, BR-15, BR-21, BR-25 |
 
 ---
 
@@ -153,12 +153,12 @@
 | **Primary actor** | approver |
 | **Preconditions** | Открытая задача; assignee; не инициатор |
 | **Trigger** | Действие Return |
-| **Main flow** | 1. Return + комментарий 2. Статус `returned` 3. Фиксация текущего этапа для будущего resubmit 4. Закрытие задач этапа 5. История 6. Уведомление инициатору |
+| **Main flow** | 1. Return + **обязательный** комментарий (BR-25) 2. Статус `returned` 3. Фиксация текущего этапа для будущего resubmit 4. Закрытие задач этапа 5. История 6. Уведомление инициатору |
 | **Alternative flows** | A1. Инициатор далее редактирует (FR-REQ-02) и делает UC-05 |
-| **Exceptions** | E1. ERR_FORBIDDEN_APPROVAL  E2. ERR_TASK_DONE |
+| **Exceptions** | E1. ERR_FORBIDDEN_APPROVAL  E2. ERR_TASK_DONE  E3. Пустой комментарий → ERR_VALIDATION |
 | **Postconditions** | BR-05; заявка доступна инициатору для правки |
 | **Related FR** | FR-APP-05, FR-REQ-08, FR-REQ-02, FR-REQ-09 |
-| **Related BR** | BR-05, BR-06 |
+| **Related BR** | BR-05, BR-06, BR-25 |
 
 ---
 
@@ -187,12 +187,12 @@
 | **Primary actor** | admin |
 | **Preconditions** | Роль admin |
 | **Trigger** | Работа в разделе типов заявок |
-| **Main flow** | 1. Создание/редактирование типа (имя, описание, is_active) 2. CRUD полей формы 3. При необходимости привязка справочников 4. Сохранение |
+| **Main flow** | 1. Создание/редактирование типа (имя, описание, is_active) 2. CRUD полей формы 3. При необходимости привязка справочников 4. При активации — проверка валидности маршрута (BR-18) 5. Сохранение |
 | **Alternative flows** | A1. Деактивация типа — тип исчезает из каталога (BR-10) |
-| **Exceptions** | E1. ERR_VALIDATION  E2. ERR_FORBIDDEN |
-| **Postconditions** | Конфигурация сохранена; на запущенные заявки не влияет (BR-09) |
+| **Exceptions** | E1. ERR_VALIDATION  E2. ERR_FORBIDDEN  E3. Активация при невалидном маршруте → ERR_ROUTE_CONFIG |
+| **Postconditions** | Конфигурация сохранена; на snapshot запущенных заявок не влияет (BR-09); существующие draft используют актуальную схему (BR-26) |
 | **Related FR** | FR-ADMIN-01, FR-ADMIN-02, FR-ADMIN-06 |
-| **Related BR** | BR-09, BR-10 |
+| **Related BR** | BR-09, BR-10, BR-18, BR-26, BR-27 |
 
 ---
 
@@ -204,10 +204,10 @@
 | **Primary actor** | admin |
 | **Preconditions** | Тип заявки существует; роль admin |
 | **Trigger** | Редактирование маршрута типа |
-| **Main flow** | 1. Задание этапов и порядка 2. Назначение роли и/или пользователей на каждый этап 3. Сохранение |
+| **Main flow** | 1. Задание этапов и порядка 2. Назначение роли и/или пользователей на каждый этап 3. Сохранение 4. При активации связанного типа — валидация маршрута (BR-18) |
 | **Alternative flows** | A1. Изменение маршрута после того, как заявки уже запущены — влияет только на новые submit |
-| **Exceptions** | E1. Некорректные назначения → ERR_VALIDATION |
-| **Postconditions** | Маршрут сохранён; BR-02, BR-09, BR-12 |
+| **Exceptions** | E1. Некорректные назначения → ERR_VALIDATION  E2. Попытка активировать тип с невалидным маршрутом → ERR_ROUTE_CONFIG |
+| **Postconditions** | Маршрут сохранён; BR-02, BR-09, BR-12, BR-18 |
 | **Related FR** | FR-ADMIN-03, FR-ADMIN-04, FR-ADMIN-05 |
 | **Related BR** | BR-02, BR-09, BR-12, BR-18 |
 
@@ -292,8 +292,10 @@
 
 | ID | Вопрос | Предложение |
 | :--- | :--- | :--- |
-| OQ-UC-01 | Домашняя страница после login при нескольких ролях | Экран-выбор раздела или ЛК по умолчанию |
-| OQ-UC-02 | Обязательность комментария reject/return | Обязателен |
+| OQ-HOME-01 | Стартовый экран после login при нескольких ролях (без выбора роли) | ЛК по умолчанию + навигация ко всем доступным разделам |
+| OQ-BR-02 | Свободные комментарии инициатора в `in_approval` | Да |
+
+Закрыты: OQ-UC-02 (комментарий reject/return) — BR-25.
 
 ---
 
