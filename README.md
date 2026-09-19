@@ -15,7 +15,7 @@ Employee Service — веб-система личного кабинета со�
 * [BPMN-схемы процессов](./03-diagrams/bpmn/)
 * [UML-диаграммы](./03-diagrams/uml/)
 * [Архитектура](./03-diagrams/architecture/)
-* [Схема базы данных (ERD)](./03-diagrams/erd/)
+* [ERD + Data Dictionary (Stage 3.4)](./03-diagrams/erd/)
 * [OpenAPI / Swagger спецификация](./04-api/openapi.yaml)
 * [UI-прототип (Figma)](./05-prototype/figma-links.md)
 
@@ -50,12 +50,17 @@ Employee Service — веб-система личного кабинета со�
 │   └── glossary.md                # Глоссарий ключевых терминов
 ├── 02-requirements/
 │   ├── use-cases.md               # Сценарии использования (Use Cases)
-│   └── rbac-matrix.md             # Матрица прав доступа
+│   ├── rbac-matrix.md             # Матрица прав доступа
+│   ├── functional-requirements.md
+│   ├── non-functional-requirements.md
+│   ├── business-rules.md
+│   ├── acceptance-criteria.md
+│   └── error-matrix.md
 ├── 03-diagrams/
 │   ├── bpmn/                      # Диаграммы процессов (BPMN 2.0)
 │   ├── uml/                       # UML: use case, sequence, state, class
 │   ├── architecture/              # Логико-техническая архитектура (Stage 3.3)
-│   └── erd/                       # ER-диаграмма базы данных
+│   └── erd/                       # ERD + Data Dictionary (Stage 3.4)
 ├── 04-api/
 │   └── openapi.yaml               # Контракт API (OpenAPI 3.0 / Swagger)
 └── 05-prototype/
