@@ -14,6 +14,7 @@ Employee Service — веб-система личного кабинета со�
 * [Глоссарий](./01-vision-and-scope/glossary.md)
 * [BPMN-схемы процессов](./03-diagrams/bpmn/)
 * [UML-диаграммы](./03-diagrams/uml/)
+* [Архитектура](./03-diagrams/architecture/)
 * [Схема базы данных (ERD)](./03-diagrams/erd/)
 * [OpenAPI / Swagger спецификация](./04-api/openapi.yaml)
 * [UI-прототип (Figma)](./05-prototype/figma-links.md)
@@ -53,6 +54,7 @@ Employee Service — веб-система личного кабинета со�
 ├── 03-diagrams/
 │   ├── bpmn/                      # Диаграммы процессов (BPMN 2.0)
 │   ├── uml/                       # UML: use case, sequence, state, class
+│   ├── architecture/              # Логико-техническая архитектура (Stage 3.3)
 │   └── erd/                       # ER-диаграмма базы данных
 ├── 04-api/
 │   └── openapi.yaml               # Контракт API (OpenAPI 3.0 / Swagger)
