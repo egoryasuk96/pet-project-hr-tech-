@@ -70,7 +70,7 @@ RBAC: создание / edit / submit / cancel — только инициат�
 | ST-04 | Система | Создать RouteInstance | **Только** при первом submit (BR-08); см. [Snapshot Model](../erd/snapshot-model.md) |
 | ST-05 | Система | Создать FieldValueVersion | При **каждом** успешном submit (BR-26) |
 | ST-06 | Система | Установить статус in_approval | BR-20 |
-| ST-07 | Система | Создать задачи текущего этапа | Первый этап (первый submit) или тот же этап после return (BR-06, BR-22) |
+| ST-07 | Система | Создать задачи текущего этапа | Всегда задачи этапа 1 при (re)submit: первый submit или resubmit после return (BR-06, BR-22); RouteInstance без rebuild |
 | ST-08 | Система | Записать событие в историю | BR-24 |
 | ST-09 | Система | Создать in-app уведомления | В одной транзакции с бизнес-событием (BR-23, BR-29) |
 | ST-10 | Система | Установить статус cancelled | После успешного cancel (BR-07) |
@@ -159,9 +159,9 @@ RBAC: создание / edit / submit / cancel — только инициат�
 5. **GW-04**:
    - первый submit → **ST-04 RouteInstance** → **ST-05 FieldValueVersion**;
    - resubmit → только **ST-05** (RouteInstance без изменений; [Snapshot Model](../erd/snapshot-model.md)).
-6. **ST-06…ST-09** — `in_approval`, задачи этапа, история (, уведомления если в scope).
+6. **ST-06…ST-09** — `in_approval`, задачи **этапа 1**, история (, уведомления если в scope).
 7. **CA-01** — BPMN-02 до исхода: следующий этап / approved / rejected / returned.
-8. При **returned** — **UT-05/UT-02**, затем снова submit или cancel.
+8. При **returned** — **UT-05/UT-02**, затем снова submit (с первого этапа, BR-06) или cancel.
 9. **Cancel** только из `draft`/`returned` → `cancelled` (**EE-03**).
 
 ---

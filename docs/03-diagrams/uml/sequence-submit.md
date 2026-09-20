@@ -57,7 +57,7 @@
 1. Validation: как при submit.
 2. Snapshot: **не** rebuild RouteInstance (BR-22).
 3. Snapshot: **новая** FieldValueVersion (BR-26, BR-22).
-4. Статус → `in_approval`; задачи **того же** этапа (BR-06; OQ — Snapshot Model §6).
+4. Статус → `in_approval`; `currentStageNumber` → 1; задачи **первого** этапа (BR-06).
 5. Audit + Notification (BR-29).
 
 ### 3.4. Cancel
@@ -115,7 +115,7 @@ sequenceDiagram
   participant Sys as Система
   Note over Sys: Логические области анализа<br/>(не сервисы/API)
 
-  Note over Init,Sys: Заявка в returned; номер этапа N сохранён
+  Note over Init,Sys: Заявка в returned; номер этапа возврата N сохранён (аудит)
 
   Init->>Sys: Изменить поля (актуальная схема, BR-26)
   Sys-->>Init: значения сохранены
@@ -127,8 +127,8 @@ sequenceDiagram
   else OK
     Sys->>Sys: Snapshot: RouteInstance НЕ менять (BR-22)
     Sys->>Sys: Snapshot: новая FieldValueVersion (BR-26)
-    Sys->>Sys: status = in_approval
-    Sys->>Sys: TaskFactory: задачи этапа N (BR-06; OQ Snapshot Model §6)
+    Sys->>Sys: status = in_approval; currentStageNumber = 1
+    Sys->>Sys: TaskFactory: задачи этапа 1 (BR-06)
     Sys->>Sys: Audit
     Sys-->>Init: заявка снова in_approval
   end

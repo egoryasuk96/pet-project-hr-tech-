@@ -134,7 +134,7 @@
 | initiator_id | UUID | yes | no | Инициатор | FK → User | BR-01, BR-19 |
 | request_type_id | UUID | yes | no | Тип | FK → RequestType | FR-REQ-01 |
 | status | enum | yes | no | Жизненный цикл | см. glossary | UML-SM-01 |
-| current_stage_number | int | no | yes | Текущий / сохранённый этап | Обязателен в in_approval / после return | BR-05, BR-06 |
+| current_stage_number | int | no | yes | Текущий этап; после return — этап возврата (аудит); при resubmit → 1 | Обязателен в in_approval; после return может хранить N до resubmit | BR-05, BR-06 |
 | created_at | datetime | yes | no | Создание | — | — |
 | updated_at | datetime | yes | no | Обновление | — | — |
 

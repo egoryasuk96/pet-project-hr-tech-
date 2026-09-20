@@ -28,7 +28,7 @@
 | :--- | :--- | :--- |
 | `draft` | Черновик; не на согласовании | edit, submit, cancel |
 | `in_approval` | На согласовании по route snapshot | свободный комментарий (BR-28); cancel **запрещён** |
-| `returned` | Возвращена на доработку; номер этапа сохранён | edit, resubmit, cancel |
+| `returned` | Возвращена на доработку; номер этапа возврата сохранён (аудит) | edit, resubmit, cancel |
 | `approved` | Финальное согласование | терминальное |
 | `rejected` | Отклонена | терминальное |
 | `cancelled` | Отменена инициатором | терминальное |
@@ -45,7 +45,7 @@
 | `in_approval` | `approved` | finalApprove | approve на последнем этапе RouteInstance (BR-17) | закрытие задач; уведомление инициатору (если в scope) |
 | `in_approval` | `rejected` | reject | комментарий непустой (BR-25); не инициатор (BR-21); своя открытая задача (BR-15) | закрытие открытых задач этапа (BR-04) |
 | `in_approval` | `returned` | return | комментарий непустой (BR-25); BR-21; BR-15 | сохранить номер этапа; закрыть задачи этапа (BR-05) |
-| `returned` | `in_approval` | resubmit | поля OK по актуальной схеме; маршрут валиден; тип активен | **RouteInstance не менять** (BR-22); **новая** FieldValueVersion (BR-26); задачи **того же** этапа (BR-06; OQ — Snapshot Model §6) |
+| `returned` | `in_approval` | resubmit | поля OK по актуальной схеме; маршрут валиден; тип активен | **RouteInstance не менять** (BR-22); **новая** FieldValueVersion (BR-26); `currentStageNumber` → 1; задачи **первого** этапа (BR-06) |
 | `returned` | `cancelled` | cancel | — | история (BR-07) |
 
 ### 4.1. Отклонённые / невозможные переходы (notes)
@@ -74,7 +74,7 @@ stateDiagram-v2
   in_approval --> rejected: reject\n[commentRequired and notInitiator]
   in_approval --> returned: return\n[commentRequired and notInitiator]\n/ keepStageNumber
 
-  returned --> in_approval: resubmit\n[fieldsOK and routeValid]\n/ keepRouteInstance + newFieldValueVersion + sameStageTasks
+  returned --> in_approval: resubmit\n[fieldsOK and routeValid]\n/ keepRouteInstance + newFieldValueVersion + firstStageTasks
   returned --> cancelled: cancel
 
   approved --> [*]
@@ -88,10 +88,10 @@ stateDiagram-v2
   end note
 
   note right of returned
-    Вариант B (Snapshot Model):
+    Вариант B + OQ-B (Snapshot Model):
     RouteInstance — без изменений (BR-22)
     FieldValueVersion — новая (BR-26)
-    OQ-A/OQ-B — same stage vs restart
+    currentStageNumber → 1; задачи этапа 1
   end note
 ```
 

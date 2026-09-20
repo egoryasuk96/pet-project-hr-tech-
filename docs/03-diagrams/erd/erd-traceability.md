@@ -41,7 +41,7 @@
 | BR-02 | sequence_no на live и snapshot stages; current_stage_number |
 | BR-03 | ApprovalTask.status open→completed/cancelled на одном stage_number |
 | BR-04 / BR-05 / BR-17 | Request.status + закрытие задач этапа |
-| BR-06 / BR-22 | current_stage_number сохранён (OQ-A); RouteInstance keep; новая FieldValueVersion |
+| BR-06 / BR-22 | При return — stage N для аудита; при resubmit `current_stage_number` → 1 (OQ-B); RouteInstance keep; новая FieldValueVersion |
 | BR-07 | status enum + constraint cancel only draft/returned |
 | BR-08 / BR-09 | RouteInstance 1—0..1 write-once; config tables изолированы |
 | BR-10 | RequestType.is_active |

@@ -47,7 +47,7 @@
 | **RouteInstance** | Первый successful submit | Без изменений |
 | **FieldValueVersion** | Каждый successful submit (номер отправки) | Новая версия; прошлые в истории |
 
-Детали и OQ-A/OQ-B: [snapshot-model.md](./snapshot-model.md).
+Детали (в т.ч. resubmit с первого этапа, OQ-B): [snapshot-model.md](./snapshot-model.md).
 
 ---
 

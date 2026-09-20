@@ -54,8 +54,8 @@ MVP Baseline (этап 3). Сценарии вне Baseline — [docs/backlog.md
 | **Primary actor** | employee (инициатор) |
 | **Preconditions** | Заявка в `draft` или `returned`; пользователь — инициатор |
 | **Trigger** | Команда «Отправить» |
-| **Main flow** | 1. Валидация полей по **актуальной** схеме типа (BR-26) 2. Проверка маршрута (BR-18) 3. Если `draft` — создание экземпляра маршрута (BR-08) 4. Если `returned` — экземпляр маршрута не меняется (BR-22) 5. Новая версия схемы и значений полей (номер отправки; BR-26) 6. Статус `in_approval` 7. Создание задач текущего этапа 8. История (in-app уведомления — [docs/backlog.md](../backlog.md)). Механика: [Snapshot Model](../03-diagrams/erd/snapshot-model.md) |
-| **Alternative flows** | A1. Повторный submit после return — этап тот же (BR-06; OQ в Snapshot Model §6); создаётся новая версия значений, маршрут не rebuild |
+| **Main flow** | 1. Валидация полей по **актуальной** схеме типа (BR-26) 2. Проверка маршрута (BR-18) 3. Если `draft` — создание экземпляра маршрута (BR-08) 4. Если `returned` — экземпляр маршрута не меняется (BR-22); `currentStageNumber` → 1 (BR-06) 5. Новая версия схемы и значений полей (номер отправки; BR-26) 6. Статус `in_approval` 7. Создание задач этапа 1 8. История (in-app уведомления — [docs/backlog.md](../backlog.md)). Механика: [Snapshot Model](../03-diagrams/erd/snapshot-model.md) |
+| **Alternative flows** | A1. Повторный submit после return — согласование с **первого** этапа RouteInstance (BR-06); создаётся новая версия значений, маршрут не rebuild |
 | **Exceptions** | E1. ERR_VALIDATION  E2. ERR_ROUTE_CONFIG  E3. ERR_INVALID_STATE  E4. ERR_INACTIVE_TYPE |
 | **Postconditions** | Заявка на согласовании; задачи созданы; данные зафиксированы |
 | **Related FR** | FR-REQ-03, FR-REQ-09, FR-APP-01, см. [docs/backlog.md](../backlog.md) |
@@ -122,7 +122,7 @@ MVP Baseline (этап 3). Сценарии вне Baseline — [docs/backlog.md
 | **Primary actor** | approver |
 | **Preconditions** | Открытая задача; assignee; не инициатор |
 | **Trigger** | Действие Return |
-| **Main flow** | 1. Return + **обязательный** комментарий (BR-25) 2. Статус `returned` 3. Фиксация текущего этапа для будущего resubmit 4. Закрытие задач этапа 5. История |
+| **Main flow** | 1. Return + **обязательный** комментарий (BR-25) 2. Статус `returned` 3. Фиксация номера этапа возврата (аудит; при resubmit — с первого этапа, BR-06) 4. Закрытие задач этапа 5. История |
 | **Alternative flows** | A1. Инициатор далее редактирует (FR-REQ-02) и делает UC-05 |
 | **Exceptions** | E1. ERR_FORBIDDEN_APPROVAL  E2. ERR_TASK_DONE  E3. Пустой комментарий → ERR_VALIDATION |
 | **Postconditions** | BR-05; заявка доступна инициатору для правки |
