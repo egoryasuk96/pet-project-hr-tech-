@@ -1,8 +1,10 @@
-# ARCH-CMP — Component Diagram (логические модули)
+﻿# ARCH-CMP — Component Diagram (логические модули)
 
-**Проект:** Employee Service  
-**Тип:** Component (логический уровень монолита)  
-**Файл индекса:** [architecture-description.md](./architecture-description.md)
+**Продукт:** Employee Service  
+**ID:** ARCH-CMP  
+**Версия:** 1.0  
+**Статус:** Baseline v1.0  
+**Связанные документы:** [architecture-description.md](./architecture-description.md)
 
 ---
 
@@ -126,7 +128,7 @@ flowchart TB
 | BR-08 route snapshot при первом submit | Snapshot (+ Submit Orchestrator) | Create iff первый submit из `draft` |
 | BR-22 route не пересоздаётся на resubmit | Snapshot (+ Submit Orchestrator) | Skip create; читать существующий |
 | BR-26 schema/value на каждом успешном submit | Snapshot (+ Submit Orchestrator) | Upsert после валидации live schema |
-| BR-09 конфиг не ретроактивен | Admin Config пишет live; runtime читает RouteSnapshot | Approval Engine / Submit не читают live assignments для in-flight |
+| BR-09 конфиг не ретроактивен | Admin Config пишет live; runtime читает RouteInstance | Approval Engine / Submit не читают live assignments для in-flight |
 | BR-03 first-approve wins | Approval Engine | В одной TX с закрытием sibling tasks |
 | BR-21 self-approval | Authorization + Approval Engine | До мутаций → `ERR_FORBIDDEN_APPROVAL` |
 | BR-25 comment reject/return | Approval Engine | До мутаций → `ERR_VALIDATION` |
@@ -138,7 +140,7 @@ flowchart TB
 
 ## 6. Database (логический уровень)
 
-Хранилище сущностей conceptual model UML-CL-01: User, Role, RequestType, RequestFieldDefinition, Dictionary*, ApprovalRoute/Stage/Assignment, Request, RouteSnapshot, SchemaValueSnapshot, ApprovalTask, Comment, Notification, HistoryEvent.
+Хранилище сущностей conceptual model UML-CL-01: User, Role, RequestType, RequestFieldDefinition, Dictionary*, ApprovalRoute/Stage/Assignment, Request, RouteInstance, FieldValueVersion, ApprovalTask, Comment, Notification, HistoryEvent.
 
 **Не проектируется** на Stage 3.3: таблицы, PK/FK, индексы, JSON vs нормализация snapshot.
 
@@ -150,7 +152,7 @@ flowchart TB
 | :--- | :--- |
 | **ADR-CMP-01** | Список модулей §3 — логическое разбиение монолита |
 | **ADR-CMP-02** | UI-зоны §2 — логическое разбиение SPA |
-| **ADR-CMP-03** | Submit Orchestrator выделен отдельно от Request Module для явной dual-snapshot оркестрации |
+| **ADR-CMP-03** | Submit Orchestrator выделен для оркестрации RouteInstance / FieldValueVersion |
 | **ADR-CMP-04** | Authorization — отдельный cross-cutting модуль, вызываемый до domain-мутаций |
 
 Эти ADR **не** добавляют FR/BR/NFR.

@@ -1,11 +1,10 @@
-# Диаграммы UML (аналитическая модель)
+﻿# Диаграммы UML (аналитическая модель)
 
-**Проект:** Employee Service  
-**Этап:** 3.2 — UML  
+**Продукт:** Employee Service  
+**ID:** UML-00  
 **Версия:** 1.0  
-**Статус:** Draft  
-**Источник требований:** Этап 1–2 (`01-vision-and-scope/`, `02-requirements/`)  
-**Связанный процессный слой:** Этап 3.1 ([BPMN](../bpmn/bpmn-description.md))
+**Статус:** Baseline v1.0  
+**Связанные документы:** [BPMN](../bpmn/bpmn-description.md), [Snapshot Model](../erd/snapshot-model.md), [Architecture](../architecture/architecture-description.md)
 
 ---
 
@@ -35,7 +34,7 @@ UML дополняет BPMN:
 | **Activity Diagram** | Не создаются: процесс покрыт BPMN-01…03 |
 | **ERD / API / архитектура** | Вне Этапа 3.2 |
 
-### 2.1. Dual snapshot (без новых правил)
+### 2.1. RouteInstance / FieldValueVersion (без новых правил)
 
 | Вид snapshot | Когда создаётся | После return / resubmit |
 | :--- | :--- | :--- |
@@ -54,14 +53,14 @@ UML дополняет BPMN:
 
 ## 3. Список артефактов
 
-| ID | Файл | Тип UML | Кратко |
-| :--- | :--- | :--- | :--- |
-| UML-UC-01 | [use-case-overview.md](./use-case-overview.md) | Use Case | Актёры и UC-01…UC-15 |
-| UML-SM-01 | [state-request.md](./state-request.md) | State Machine | Статусы заявки и переходы |
-| UML-SEQ-01 | [sequence-submit.md](./sequence-submit.md) | Sequence | Create / submit / resubmit / cancel + dual snapshot |
-| UML-SEQ-02 | [sequence-approval.md](./sequence-approval.md) | Sequence | Approve / reject / return; first-approve; self-approval |
-| UML-SEQ-03 | [sequence-admin-configure.md](./sequence-admin-configure.md) | Sequence | Конфиг типа/маршрута; активация; изоляция snapshot |
-| UML-CL-01 | [class-domain-model.md](./class-domain-model.md) | Class (conceptual) | Предметная модель; **не ERD** |
+| ID | Файл | Тип UML | Статус | Кратко |
+| :--- | :--- | :--- | :--- | :--- |
+| UML-UC-01 | [use-case-overview.md](./use-case-overview.md) | Use Case | Baseline | Актёры и UC |
+| UML-SM-01 | [state-request.md](./state-request.md) | State Machine | Baseline | Статусы заявки и переходы |
+| UML-SEQ-01 | [sequence-submit.md](./sequence-submit.md) | Sequence | Baseline | Create / submit / resubmit / cancel |
+| UML-SEQ-02 | [sequence-approval.md](./sequence-approval.md) | Sequence | Baseline | Approve / reject / return |
+| UML-SEQ-03 | [sequence-admin-configure.md](./sequence-admin-configure.md) | Sequence | **Future** | Admin-конфиг; [backlog](../../backlog.md) |
+| UML-CL-01 | [class-domain-model.md](./class-domain-model.md) | Class (conceptual) | Baseline | Предметная модель; **не ERD** |
 
 ---
 

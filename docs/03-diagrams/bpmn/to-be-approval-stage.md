@@ -1,9 +1,10 @@
-# BPMN-02 — Обработка этапа согласования (TO-BE)
+﻿# BPMN-02 — Обработка этапа согласования (TO-BE)
 
-**Проект:** Employee Service  
-**Тип диаграммы:** Subprocess / Process (BPMN 2.0)  
-**Вызывается из:** [BPMN-01](./to-be-request-lifecycle.md) (Call Activity CA-01)  
-**Файл индекса:** [bpmn-description.md](./bpmn-description.md)
+**Продукт:** Employee Service  
+**ID:** BPMN-02  
+**Версия:** 1.0  
+**Статус:** Baseline v1.0  
+**Связанные документы:** [bpmn-description.md](./bpmn-description.md), [BPMN-01](./to-be-request-lifecycle.md)
 
 ---
 

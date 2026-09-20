@@ -1,6 +1,6 @@
-# Пользовательские сценарии (Use Cases)
+﻿# Пользовательские сценарии (Use Cases)
 
-**Проект:** Employee Service  
+**Продукт:** Employee Service  
 **Документ:** Use Cases  
 **ID:** DOC-UC  
 **Версия:** 1.0  
@@ -54,8 +54,8 @@ MVP Baseline (этап 3). Сценарии вне Baseline — [docs/backlog.md
 | **Primary actor** | employee (инициатор) |
 | **Preconditions** | Заявка в `draft` или `returned`; пользователь — инициатор |
 | **Trigger** | Команда «Отправить» |
-| **Main flow** | 1. Валидация полей по **актуальной** схеме типа (BR-26) 2. Проверка маршрута (BR-18) 3. Если `draft` — создание snapshot маршрута (BR-08) 4. Если `returned` — snapshot маршрута не меняется (BR-22) 5. Фиксация схемы и значений полей (BR-26) 6. Статус `in_approval` 7. Создание задач текущего этапа 8. История (in-app уведомления — [docs/backlog.md](../backlog.md)) |
-| **Alternative flows** | A1. Повторный submit после return — этап тот же (BR-06); схема/значения перезаписываются новым snapshot |
+| **Main flow** | 1. Валидация полей по **актуальной** схеме типа (BR-26) 2. Проверка маршрута (BR-18) 3. Если `draft` — создание экземпляра маршрута (BR-08) 4. Если `returned` — экземпляр маршрута не меняется (BR-22) 5. Новая версия схемы и значений полей (номер отправки; BR-26) 6. Статус `in_approval` 7. Создание задач текущего этапа 8. История (in-app уведомления — [docs/backlog.md](../backlog.md)). Механика: [Snapshot Model](../03-diagrams/erd/snapshot-model.md) |
+| **Alternative flows** | A1. Повторный submit после return — этап тот же (BR-06; OQ в Snapshot Model §6); создаётся новая версия значений, маршрут не rebuild |
 | **Exceptions** | E1. ERR_VALIDATION  E2. ERR_ROUTE_CONFIG  E3. ERR_INVALID_STATE  E4. ERR_INACTIVE_TYPE |
 | **Postconditions** | Заявка на согласовании; задачи созданы; данные зафиксированы |
 | **Related FR** | FR-REQ-03, FR-REQ-09, FR-APP-01, см. [docs/backlog.md](../backlog.md) |

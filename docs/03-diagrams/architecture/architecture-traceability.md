@@ -1,8 +1,10 @@
-# ARCH-MAP — Трассировка архитектуры к требованиям
+﻿# ARCH-MAP — Трассировка архитектуры к требованиям
 
-**Проект:** Employee Service  
-**Тип:** Traceability matrix  
-**Файл индекса:** [architecture-description.md](./architecture-description.md)
+**Продукт:** Employee Service  
+**ID:** ARCH-MAP  
+**Версия:** 1.0  
+**Статус:** Baseline v1.0  
+**Связанные документы:** [architecture-description.md](./architecture-description.md), [Snapshot Model](../erd/snapshot-model.md)
 
 ---
 
@@ -37,10 +39,10 @@
 
 | Правило | Требование | Где в архитектуре | TX / ошибка |
 | :--- | :--- | :--- | :--- |
-| Route snapshot только при первом submit | BR-08 | Submit Orchestrator → Snapshot Module create-once | ADR-TX-01 |
-| Route snapshot не меняется при resubmit | BR-22 | Snapshot: skip create; Approval читает существующий | ADR-TX-01 |
-| Schema/value snapshot при каждом успешном submit | BR-26, BR-22 | Snapshot upsert после валидации live schema | ADR-TX-01 |
-| Конфиг admin не ретроактивен | BR-09 | Admin Config → live only; runtime → RouteSnapshot | ADR-TX-04 |
+| RouteInstance только при первом submit | BR-08 | Snapshot Module create-once; [Snapshot Model](../erd/snapshot-model.md) | ADR-TX-01 / ADR-SNAP-01 |
+| RouteInstance не меняется при resubmit | BR-22 | Snapshot: skip rebuild | ADR-TX-01 |
+| FieldValueVersion при каждом успешном submit | BR-26, BR-22 | Новая версия после валидации live schema | ADR-TX-01 / ADR-SNAP-01 |
+| Конфиг admin не ретроактивен | BR-09 | live only; runtime → RouteInstance ([backlog](../../backlog.md)) | ADR-TX-04 |
 | First-approve wins | BR-03 | Approval Engine: complete + cancel siblings | ADR-TX-02 |
 | Self-approval prohibition | BR-21 | Authorization + Approval Engine pre-check | `ERR_FORBIDDEN_APPROVAL` |
 | Comment required reject/return | BR-25 | Approval Engine validation | `ERR_VALIDATION` |
@@ -50,16 +52,15 @@
 
 ---
 
-## 4. Dual snapshot — сводка
+## 4. RouteInstance / FieldValueVersion — сводка
 
-| Момент | Route snapshot | Schema/value snapshot | Модули |
+Краткая отсылка (канон — [Snapshot Model](../erd/snapshot-model.md), ADR [ADR-SNAP-01](./adr-snapshot-submit-versions.md)):
+
+| Момент | RouteInstance | FieldValueVersion | Модули |
 | :--- | :--- | :--- | :--- |
-| Первый submit `draft → in_approval` | Создаётся | Создаётся | Submit + Snapshot |
-| Resubmit `returned → in_approval` | Без изменений | Обновляется | Submit + Snapshot |
-| Пока `in_approval` | Только чтение для next stage | Зафиксированные данные для согласующих | Approval Engine + Snapshot |
-| Admin меняет live config | Не затрагивает | Не переписывает in-flight до returned-edit/resubmit | Admin Config |
-
-Согласовано с BPMN §3 snapshot и UML-CL-01 / UML-SEQ-01.
+| Первый submit | Создаётся | Версия #1 | Submit + Snapshot |
+| Resubmit | Без изменений | Новая версия | Submit + Snapshot |
+| Пока `in_approval` | Чтение для next stage | Текущая версия для согласующих | Approval Engine + Snapshot |
 
 ---
 
@@ -126,7 +127,7 @@ flowchart LR
 | Ошибки | ARCH-SEC §4 |
 | Аудит и уведомления | ARCH-SEC §5–6, ARCH-FLOW |
 | Масштабируемость и производительность | ARCH-SEC §7 |
-| Route / schema snapshots | ARCH-MAP §4, ARCH-FLOW A |
+| RouteInstance / FieldValueVersion | Snapshot Model + ARCH-MAP §4, ARCH-FLOW A |
 | First-approve / self-approval / comment | ARCH-FLOW B, ARCH-MAP §3 |
 | RBAC / history / in-app | ARCH-CMP, ARCH-SEC |
 

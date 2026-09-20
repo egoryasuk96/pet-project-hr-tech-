@@ -1,10 +1,10 @@
-# ERD-00 — Описание модели данных (Stage 3.4)
+﻿# ERD-00 — Описание модели данных (Stage 3.4)
 
-**Проект:** Employee Service  
-**Этап:** 3.4 — ERD + Data Dictionary  
+**Продукт:** Employee Service  
+**ID:** ERD-00  
 **Версия:** 1.0  
-**Статус:** Draft  
-**Индекс:** [README.md](./README.md)
+**Статус:** Baseline v1.0  
+**Связанные документы:** [README.md](./README.md), [Snapshot Model](./snapshot-model.md)
 
 ---
 
@@ -39,7 +39,7 @@
 | **Бизнес** | Предметные объекты пользователя | User (профиль), Request, Comment, ApprovalTask |
 | **Конфигурация** | Live-настройки admin (каталог, маршрут, справочники) | RequestType, RequestFieldDefinition, ApprovalRoute, ApprovalStage, StageAssignment, Dictionary, DictionaryItem |
 | **Runtime** | Состояние исполнения заявки | Request (status, currentStageNumber), RequestFieldValue, ApprovalTask |
-| **Snapshot / historical** | Замороженные копии и прикладной аудит | RouteSnapshot, RouteSnapshotStage, RouteSnapshotAssignment, SchemaValueSnapshot, HistoryEvent |
+| **Snapshot / historical** | Замороженные копии и прикладной аудит | RouteInstance, RouteInstanceStage, RouteInstanceAssignment, FieldValueVersion, HistoryEvent |
 | **Технические** | RBAC, credentials, флаги доставки | Role, UserRole, User.passwordHash, Notification |
 
 Одна сущность может участвовать в нескольких классах (например, Request — бизнес + runtime). Классификация нужна, чтобы не смешивать **live config**, **working values** и **frozen snapshots**.
@@ -55,8 +55,8 @@
 | Auth / Authorization | User, Role, UserRole |
 | Catalog / Admin Config | RequestType, FieldDefinition, Route/Stage/Assignment, Dictionary* |
 | Request | Request, RequestFieldValue, Comment |
-| Snapshot | RouteSnapshot*, SchemaValueSnapshot |
-| Approval Engine | ApprovalTask (читает RouteSnapshot) |
+| Snapshot | RouteInstance*, FieldValueVersion |
+| Approval Engine | ApprovalTask (читает RouteInstance) |
 | Audit | HistoryEvent |
 | Notification | Notification |
 
@@ -68,7 +68,7 @@
 
 | Тема | Причина |
 | :--- | :--- |
-| SubmitVersion / RequestVersion | Требования не требуют полного payload всех прошлых submit; HistoryEvent фиксирует факт события |
+| Версии значений | **FieldValueVersion** по номеру submit; канон — [snapshot-model.md](./snapshot-model.md) |
 | Оргструктура / дерево руководителей | Out of scope; BR-12 — явные назначения |
 | Attachments, email/push | Out of scope Vision |
 | JWT / refresh sessions на сервере | Stateless JWT (NFR-SCL-01, NFR-SEC-04) |

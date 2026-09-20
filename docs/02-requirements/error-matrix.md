@@ -1,6 +1,6 @@
-# Матрица ошибок
+﻿# Матрица ошибок
 
-**Проект:** Employee Service  
+**Продукт:** Employee Service  
 **Документ:** Error Matrix  
 **ID:** DOC-ERR  
 **Версия:** 1.0  

@@ -1,9 +1,10 @@
-# UML-SEQ-02 — Sequence: решение на этапе согласования
+﻿# UML-SEQ-02 — Sequence: решение на этапе согласования
 
-**Проект:** Employee Service  
-**Тип диаграммы:** Sequence  
-**Файл индекса:** [uml-description.md](./uml-description.md)  
-**Связь с BPMN:** [BPMN-02](../bpmn/to-be-approval-stage.md)
+**Продукт:** Employee Service  
+**ID:** UML-SEQ-02  
+**Версия:** 1.0  
+**Статус:** Baseline v1.0  
+**Связанные документы:** [uml-description.md](./uml-description.md), [BPMN-02](../bpmn/to-be-approval-stage.md)
 
 ---
 

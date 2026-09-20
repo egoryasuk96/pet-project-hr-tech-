@@ -1,8 +1,10 @@
-# ARCH-CTX — Context Diagram (граница системы)
+﻿# ARCH-CTX — Context Diagram (граница системы)
 
-**Проект:** Employee Service  
-**Тип:** Context (C4 Level 1, аналитический)  
-**Файл индекса:** [architecture-description.md](./architecture-description.md)
+**Продукт:** Employee Service  
+**ID:** ARCH-CTX  
+**Версия:** 1.0  
+**Статус:** Baseline v1.0  
+**Связанные документы:** [architecture-description.md](./architecture-description.md)
 
 ---
 
@@ -69,7 +71,7 @@ flowchart TB
 1. Аутентификация login/password + JWT (FR-AUTH-*, NFR-SEC-*).
 2. Личный кабинет и профиль (FR-CAB-*).
 3. Каталог активных типов и формы (FR-CAT-*).
-4. Жизненный цикл заявки и dual snapshot (FR-REQ-*, BR-08/22/26).
+4. Жизненный цикл заявки и RouteInstance / FieldValueVersion (FR-REQ-*, BR-08/22/26).
 5. Последовательное согласование (FR-APP-*, BR-02…05, BR-21, BR-25).
 6. Admin-конфигурация без ретроактивности snapshot (FR-ADMIN-*, BR-09).
 7. In-app уведомления и история (FR-NOTIF-*, FR-AUDIT-*, BR-23/24/29).

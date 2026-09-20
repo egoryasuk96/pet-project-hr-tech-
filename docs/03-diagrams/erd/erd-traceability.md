@@ -1,10 +1,10 @@
-# ERD-MAP — Traceability (Stage 3.4)
+﻿# ERD-MAP — Traceability (Stage 3.4)
 
-**Проект:** Employee Service  
-**Этап:** 3.4  
+**Продукт:** Employee Service  
+**ID:** ERD-MAP  
 **Версия:** 1.0  
-**Статус:** Draft  
-**Индекс:** [README.md](./README.md)
+**Статус:** Baseline v1.0  
+**Связанные документы:** [README.md](./README.md), [Snapshot Model](./snapshot-model.md)
 
 ---
 
@@ -24,8 +24,8 @@
 | ApprovalRoute, ApprovalStage, StageAssignment | FR-ADMIN-03…05 | BR-02, BR-12, BR-18 | UC-12 |
 | Request | FR-REQ-01…09, FR-CAB-02, FR-ADMIN-07 | BR-01, BR-07, BR-19, BR-20, BR-27 | UC-04…06, UC-10, UC-15 |
 | RequestFieldValue | FR-REQ-02, FR-REQ-09 | BR-26 | UC-04, UC-05 |
-| RouteSnapshot* | FR-REQ-03, FR-REQ-09 | BR-08, BR-09, BR-22 | UC-05 |
-| SchemaValueSnapshot | FR-REQ-03, FR-REQ-09 | BR-22, BR-26 | UC-05 |
+| RouteInstance* | FR-REQ-03, FR-REQ-09 | BR-08, BR-09, BR-22 | UC-05 |
+| FieldValueVersion | FR-REQ-03, FR-REQ-09 | BR-22, BR-26 | UC-05 |
 | ApprovalTask | FR-APP-01…07 | BR-03…06, BR-15, BR-17, BR-21 | UC-07…09 |
 | Comment | FR-REQ-06, FR-APP-03…05 | BR-25, BR-28 | UC-05, UC-07…09 |
 | HistoryEvent | FR-AUDIT-01…02, FR-ADMIN-08 | BR-24; retention NFR-LOG-02, NFR-LOG-03 п.2 | UC-14 |
@@ -41,9 +41,9 @@
 | BR-02 | sequence_no на live и snapshot stages; current_stage_number |
 | BR-03 | ApprovalTask.status open→completed/cancelled на одном stage_number |
 | BR-04 / BR-05 / BR-17 | Request.status + закрытие задач этапа |
-| BR-06 / BR-22 | current_stage_number сохранён; RouteSnapshot keep; SchemaValueSnapshot replace |
+| BR-06 / BR-22 | current_stage_number сохранён (OQ-A); RouteInstance keep; новая FieldValueVersion |
 | BR-07 | status enum + constraint cancel only draft/returned |
-| BR-08 / BR-09 | RouteSnapshot 1—0..1 write-once; config tables изолированы |
+| BR-08 / BR-09 | RouteInstance 1—0..1 write-once; config tables изолированы |
 | BR-10 | RequestType.is_active |
 | BR-11 / BR-23 / BR-29 | Notification entity; TX — runtime/architecture |
 | BR-12 | StageAssignment role/user; нет org entities |
@@ -55,7 +55,7 @@
 | BR-21 | initiator ≠ assignee на действиях |
 | BR-24 | HistoryEvent; **без** обязательного полного snapshot payload |
 | BR-25 | Comment.kind=decision + text required for reject/return |
-| BR-26 | RequestFieldValue (live) vs SchemaValueSnapshot (frozen) |
+| BR-26 | RequestFieldValue (live) vs FieldValueVersion (frozen) |
 | BR-27 | create Request только с employee; нет «admin-as-initiator» сущности |
 | BR-28 | Comment.kind=free при in_approval |
 
@@ -74,9 +74,9 @@
 
 | BPMN | Сущности |
 | :--- | :--- |
-| BPMN-01 Request lifecycle | Request, RequestFieldValue, RouteSnapshot*, SchemaValueSnapshot, ApprovalTask, HistoryEvent, Notification, Comment |
-| BPMN-02 Approval stage | ApprovalTask, RouteSnapshot*, Request, Comment, HistoryEvent, Notification |
-| BPMN-03 Admin configure | RequestType, FieldDefinition, ApprovalRoute/Stage/Assignment, Dictionary*; **не** мутирует in-flight RouteSnapshot |
+| BPMN-01 Request lifecycle | Request, RequestFieldValue, RouteInstance*, FieldValueVersion, ApprovalTask, HistoryEvent, Notification, Comment |
+| BPMN-02 Approval stage | ApprovalTask, RouteInstance*, Request, Comment, HistoryEvent, Notification |
+| BPMN-03 Admin configure | RequestType, FieldDefinition, ApprovalRoute/Stage/Assignment, Dictionary*; **не** мутирует in-flight RouteInstance |
 
 ---
 
@@ -84,9 +84,9 @@
 
 | UML | Сущности |
 | :--- | :--- |
-| UML-CL-01 | Все основные классы + уточнения RequestFieldValue, RouteSnapshot children |
+| UML-CL-01 | Все основные классы + уточнения RequestFieldValue, RouteInstance children |
 | UML-SM-01 | Request.status, current_stage_number, наличие snapshots |
-| UML-SEQ-01 | dual snapshot create/keep/replace; HistoryEvent; Notification |
+| UML-SEQ-01 | RouteInstance create-once; FieldValueVersion append; HistoryEvent |
 | UML-SEQ-02 | ApprovalTask first-approve; Comment decision; BR-21/25 |
 | UML-SEQ-03 | live config only; isolation BR-09 |
 | UML-UC-01 | покрытие актёров через Role/UserRole |
@@ -102,9 +102,9 @@
 | Catalog | RequestType, RequestFieldDefinition (active) |
 | Request | Request, RequestFieldValue, Comment |
 | Submit Orchestrator | оркестрация → Snapshot + ApprovalTask + Audit + Notification |
-| Snapshot | RouteSnapshot*, SchemaValueSnapshot |
-| Approval Engine | ApprovalTask; reads RouteSnapshot |
-| Admin Config | live config entities; не пишет RouteSnapshot заявок |
+| Snapshot | RouteInstance*, FieldValueVersion |
+| Approval Engine | ApprovalTask; reads RouteInstance |
+| Admin Config | live config entities; не пишет RouteInstance заявок |
 | Audit | HistoryEvent |
 | Notification | Notification |
 | Persistence | все выше в одной PostgreSQL |
@@ -128,11 +128,11 @@
 
 | Инвариант | Entity / relation |
 | :--- | :--- |
-| Route create-once | RouteSnapshot.request_id unique; created only on first submit |
+| Route create-once | RouteInstance.request_id unique; created only on first submit |
 | Route immutable | no update path for children after create |
-| Schema/value each submit | SchemaValueSnapshot current per Request |
-| Resubmit replace values snapshot | replace current SchemaValueSnapshot |
-| No SubmitVersion | отсутствует сущность |
+| Schema/value each submit | FieldValueVersion 0..N per Request (submit_number) |
+| Resubmit values | append FieldValueVersion (не replace) |
+| FieldValueVersion | Версии значений по submit_number; канон — [snapshot-model.md](./snapshot-model.md) |
 | History without full payload | HistoryEvent.action/from/to/comment only |
 
 Детали: [snapshot-model.md](./snapshot-model.md).

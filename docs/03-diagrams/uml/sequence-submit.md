@@ -1,15 +1,16 @@
-# UML-SEQ-01 — Sequence: create / submit / resubmit / cancel
+﻿# UML-SEQ-01 — Sequence: create / submit / resubmit / cancel
 
-**Проект:** Employee Service  
-**Тип диаграммы:** Sequence  
-**Файл индекса:** [uml-description.md](./uml-description.md)  
-**Связь с BPMN:** [BPMN-01](../bpmn/to-be-request-lifecycle.md)
+**Продукт:** Employee Service  
+**ID:** UML-SEQ-01  
+**Версия:** 1.0  
+**Статус:** Baseline v1.0  
+**Связанные документы:** [uml-description.md](./uml-description.md), [Snapshot Model](../erd/snapshot-model.md)
 
 ---
 
 ## 1. Назначение
 
-Взаимодействия инициатора и системы при создании заявки, первом submit, повторном submit после return и отмене. Явно показан **dual snapshot** (BR-08 / BR-22 / BR-26).
+Взаимодействия инициатора и системы при создании заявки, первом submit, повторном submit после return и отмене. Механика RouteInstance / FieldValueVersion — [Snapshot Model](../erd/snapshot-model.md) (BR-08 / BR-22 / BR-26).
 
 ---
 
@@ -45,18 +46,18 @@
 ### 3.2. Первый submit из `draft`
 
 1. Validation: поля по актуальной схеме; маршрут валиден (BR-18); тип активен.
-2. Snapshot: создать **route snapshot** (BR-08).
-3. Snapshot: создать **schema/value snapshot** (BR-26).
+2. Snapshot: создать **RouteInstance** (BR-08).
+3. Snapshot: создать **FieldValueVersion** #1 (BR-26).
 4. Статус → `in_approval` (BR-20).
-5. TaskFactory: задачи первого этапа по route snapshot.
-6. Audit + Notification в одной транзакции с бизнес-событием (BR-29, BR-23).
+5. TaskFactory: задачи первого этапа по RouteInstance.
+6. Audit (+ Notification при наличии в scope) в одной транзакции с бизнес-событием.
 
 ### 3.3. Resubmit из `returned`
 
 1. Validation: как при submit.
-2. Snapshot: **не** пересоздавать route snapshot (BR-22).
-3. Snapshot: **обновить** schema/value snapshot (BR-26, BR-22).
-4. Статус → `in_approval`; задачи **того же** этапа (BR-06).
+2. Snapshot: **не** rebuild RouteInstance (BR-22).
+3. Snapshot: **новая** FieldValueVersion (BR-26, BR-22).
+4. Статус → `in_approval`; задачи **того же** этапа (BR-06; OQ — Snapshot Model §6).
 5. Audit + Notification (BR-29).
 
 ### 3.4. Cancel
@@ -94,10 +95,10 @@ sequenceDiagram
   alt Ошибка валидации / маршрута / типа
     Sys-->>Init: ERR_VALIDATION / ERR_ROUTE_CONFIG / ERR_INACTIVE_TYPE
   else OK (первый submit из draft)
-    Sys->>Sys: Snapshot: создать route snapshot (BR-08)
-    Sys->>Sys: Snapshot: создать schema/value snapshot (BR-26)
+    Sys->>Sys: Snapshot: создать RouteInstance (BR-08)
+    Sys->>Sys: Snapshot: создать FieldValueVersion (BR-26)
     Sys->>Sys: status = in_approval
-    Sys->>Sys: TaskFactory: задачи этапа 1 по route snapshot
+    Sys->>Sys: TaskFactory: задачи этапа 1 по RouteInstance
     Sys->>Sys: Audit: событие submit
     Sys->>Sys: Notification: in-app согласующим (та же транзакция, BR-29)
     Sys-->>Init: заявка на согласовании
@@ -124,11 +125,11 @@ sequenceDiagram
   alt Ошибка
     Sys-->>Init: ошибка; статус returned
   else OK
-    Sys->>Sys: Snapshot: route snapshot НЕ менять (BR-22)
-    Sys->>Sys: Snapshot: обновить schema/value snapshot (BR-26)
+    Sys->>Sys: Snapshot: RouteInstance НЕ менять (BR-22)
+    Sys->>Sys: Snapshot: новая FieldValueVersion (BR-26)
     Sys->>Sys: status = in_approval
-    Sys->>Sys: TaskFactory: задачи этапа N (не с начала)
-    Sys->>Sys: Audit + Notification (BR-29)
+    Sys->>Sys: TaskFactory: задачи этапа N (BR-06; OQ Snapshot Model §6)
+    Sys->>Sys: Audit
     Sys-->>Init: заявка снова in_approval
   end
 

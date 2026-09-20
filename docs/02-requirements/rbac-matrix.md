@@ -1,6 +1,6 @@
-# Матрица прав доступа (RBAC)
+﻿# Матрица прав доступа (RBAC)
 
-**Проект:** Employee Service  
+**Продукт:** Employee Service  
 **Документ:** RBAC Matrix  
 **ID:** DOC-RBAC  
 **Версия:** 1.0  

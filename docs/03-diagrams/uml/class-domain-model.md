@@ -1,8 +1,10 @@
-# UML-CL-01 — Conceptual Class Diagram (предметная модель)
+﻿# UML-CL-01 — Conceptual Class Diagram (предметная модель)
 
-**Проект:** Employee Service  
-**Тип диаграммы:** Class (conceptual / analysis)  
-**Файл индекса:** [uml-description.md](./uml-description.md)
+**Продукт:** Employee Service  
+**ID:** UML-CL-01  
+**Версия:** 1.0  
+**Статус:** Baseline v1.0  
+**Связанные документы:** [uml-description.md](./uml-description.md), [Snapshot Model](../erd/snapshot-model.md)
 
 ---
 
@@ -43,13 +45,13 @@
 | **ApprovalStage** | name, sequence | Этап маршрута (конфиг) |
 | **StageAssignment** | assignmentKind (role / user) | Явное назначение на этап (BR-12) |
 
-### 2.3. Экземпляр заявки и snapshots
+### 2.3. Экземпляр заявки и snapshot-сущности
 
 | Класс | Атрибуты (анализ) | Смысл |
 | :--- | :--- | :--- |
 | **Request** | status, currentStageNumber | Экземпляр заявки; инициатор = User |
-| **RouteSnapshot** | stagesOrder, assignmentsCopy | Копия маршрута при **первом** submit (BR-08); при resubmit не меняется (BR-22) |
-| **SchemaValueSnapshot** | fieldSchemaCopy, fieldValuesCopy | Схема и значения после **каждого** успешного submit (BR-26) |
+| **RouteInstance** | stagesOrder, assignmentsCopy | Экземпляр маршрута при **первом** submit (BR-08); при resubmit не rebuild (BR-22). Ранее: RouteSnapshot |
+| **FieldValueVersion** | submitNumber, fieldSchemaCopy, fieldValuesCopy | Версия схемы+значений на каждый successful submit (BR-26); решение bound to version. Ранее: SchemaValueSnapshot |
 
 ### 2.4. Согласование, комментарии, уведомления, аудит
 
@@ -66,14 +68,15 @@
 
 | Тема | Ограничение (существующие BR) |
 | :--- | :--- |
-| Route snapshot | `Request` имеет не более одного route snapshot после первого submit; создаётся только из `draft` |
-| Schema/value snapshot | Обновляется при каждом успешном submit, включая resubmit |
-| Задачи | `ApprovalTask` создаётся по назначениям **RouteSnapshot**, не по live `StageAssignment` конфига |
+| RouteInstance | `Request` имеет не более одного после первого submit; создаётся только из `draft` |
+| FieldValueVersion | Append-only на каждый successful submit; решение bound to version |
+| Задачи | `ApprovalTask` из назначений **RouteInstance**, не из live `StageAssignment` |
 | First-approve | При approve прочие `open` задачи того же stageNumber → `cancelled` (BR-03) |
 | Self-approval | Исполнитель задачи не может быть инициатором той же `Request` (BR-21) |
 | Comment on decision | Для decision reject/return `Comment.text` обязателен (BR-25); для approve — нет |
-| Visibility | Сотрудник видит свои Request; approver — по своим Task; admin — все (BR-01, BR-13, BR-14) |
-| Config isolation | Изменение `ApprovalRoute` / stages / assignments не изменяет существующие `RouteSnapshot` (BR-09) |
+| Visibility | Сотрудник видит свои Request; approver — по своим Task (BR-01, BR-14) |
+| Config isolation | Изменение live-маршрута не изменяет существующие `RouteInstance` (BR-09; admin — backlog) |
+| Канон | [Snapshot Model](../erd/snapshot-model.md) |
 
 ---
 
@@ -125,11 +128,12 @@ classDiagram
     status
     currentStageNumber
   }
-  class RouteSnapshot {
+  class RouteInstance {
     stagesOrder
     assignmentsCopy
   }
-  class SchemaValueSnapshot {
+  class FieldValueVersion {
+    submitNumber
     fieldSchemaCopy
     fieldValuesCopy
   }
@@ -166,16 +170,17 @@ classDiagram
   Dictionary "1" --> "many" DictionaryItem : contains
 
   RequestType "1" --> "many" Request : typedAs
-  Request "1" --> "0..1" RouteSnapshot : firstSubmit
-  Request "1" --> "0..1" SchemaValueSnapshot : eachSubmit
+  Request "1" --> "0..1" RouteInstance : firstSubmit
+  Request "1" --> "0..*" FieldValueVersion : eachSubmit
   Request "1" --> "many" ApprovalTask : has
   ApprovalTask --> User : assignee
+  ApprovalTask --> FieldValueVersion : decidedOn
   Request "1" --> "many" Comment : has
   Request "1" --> "many" HistoryEvent : auditedBy
   User "1" --> "many" Notification : receives
 
-  note for RouteSnapshot "Создаётся только при первом submit (BR-08).\nПри resubmit не пересоздаётся (BR-22).\nКонфиг не ретроактивен (BR-09)."
-  note for SchemaValueSnapshot "Создаётся/обновляется при каждом успешном submit (BR-26)."
+  note for RouteInstance "Создаётся только при первом submit (BR-08).\nПри resubmit не rebuild (BR-22).\nКонфиг не ретроактивен (BR-09)."
+  note for FieldValueVersion "Новая версия на каждый successful submit (BR-26).\nРешение bound to version. См. Snapshot Model."
   note for ApprovalTask "First-approve: прочие open → cancelled (BR-03).\nИсполнитель ≠ инициатор Request (BR-21)."
   note for Comment "decision reject/return: text обязателен (BR-25)."
 ```

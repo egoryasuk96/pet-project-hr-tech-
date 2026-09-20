@@ -1,8 +1,10 @@
-# UML-UC-01 — Use Case Overview
+﻿# UML-UC-01 — Use Case Overview
 
-**Проект:** Employee Service  
-**Тип диаграммы:** Use Case  
-**Файл индекса:** [uml-description.md](./uml-description.md)
+**Продукт:** Employee Service  
+**ID:** UML-UC-01  
+**Версия:** 1.0  
+**Статус:** Baseline v1.0  
+**Связанные документы:** [uml-description.md](./uml-description.md), [Use Cases](../../02-requirements/use-cases.md)
 
 ---
 

@@ -1,8 +1,10 @@
-# ARCH-SEC — Безопасность и сквозные аспекты
+﻿# ARCH-SEC — Безопасность и сквозные аспекты
 
-**Проект:** Employee Service  
-**Тип:** Security & cross-cutting architecture  
-**Файл индекса:** [architecture-description.md](./architecture-description.md)
+**Продукт:** Employee Service  
+**ID:** ARCH-SEC  
+**Версия:** 1.0  
+**Статус:** Baseline v1.0  
+**Связанные документы:** [architecture-description.md](./architecture-description.md), [ADR demo role](./adr-demo-role-header.md)
 
 ---
 

@@ -1,8 +1,10 @@
-# ARCH-FLOW — Основные потоки данных и взаимодействия
+﻿# ARCH-FLOW — Основные потоки данных и взаимодействия
 
-**Проект:** Employee Service  
-**Тип:** Data / interaction flows (логический уровень модулей)  
-**Файл индекса:** [architecture-description.md](./architecture-description.md)
+**Продукт:** Employee Service  
+**ID:** ARCH-FLOW  
+**Версия:** 1.0  
+**Статус:** Baseline v1.0  
+**Связанные документы:** [architecture-description.md](./architecture-description.md), [Snapshot Model](../erd/snapshot-model.md)
 
 ---
 
@@ -23,13 +25,13 @@
 1. HTTP Layer принимает команду submit; AuthN (JWT); AuthZ (инициатор, статус `draft`|`returned`).
 2. Request / Catalog: валидация полей по **актуальной** схеме; проверка типа активен; валидация маршрута (BR-18).
 3. **Submit Orchestrator** открывает транзакцию БД (**ADR-TX-01**):
-   - если первый submit (`draft`) → Snapshot: **создать** RouteSnapshot (BR-08);
-   - если resubmit (`returned`) → Snapshot: **не** менять RouteSnapshot (BR-22);
-   - Snapshot: создать/обновить SchemaValueSnapshot (BR-26);
-   - статус → `in_approval`; создать ApprovalTask текущего этапа по RouteSnapshot;
-   - Audit: событие submit/resubmit;
-   - Notification: in-app согласующим (BR-23, BR-29).
-4. Commit. Ошибка Notification/Audit/Snapshot → rollback всего изменения (BR-29, NFR-REL-01).
+   - если первый submit (`draft`) → Snapshot: **создать** RouteInstance (BR-08);
+   - если resubmit (`returned`) → Snapshot: **не** rebuild RouteInstance (BR-22);
+   - Snapshot: **новая** FieldValueVersion (BR-26; канон — [Snapshot Model](../erd/snapshot-model.md));
+   - статус → `in_approval`; создать ApprovalTask текущего этапа по RouteInstance;
+   - Audit: событие submit/resubmit (+ связь с версией значений, BR-24);
+   - Notification: если в scope (иначе backlog).
+4. Commit. Ошибка Audit/Snapshot (и Notification при наличии) → rollback.
 
 ### 2.2. Sequence (Mermaid)
 
@@ -53,11 +55,11 @@ sequenceDiagram
   Note over Sub,DB: ADR-TX-01 одна транзакция БД
   Sub->>Sub: validate live schema + route + active type
   alt первый submit из draft
-    Sub->>Snap: create RouteSnapshot
+    Sub->>Snap: create RouteInstance
   else resubmit из returned
-    Sub->>Snap: keep RouteSnapshot
+    Sub->>Snap: keep RouteInstance
   end
-  Sub->>Snap: upsert SchemaValueSnapshot
+  Sub->>Snap: append FieldValueVersion
   Sub->>Appr: create tasks for current stage
   Sub->>Aud: write HistoryEvent
   Sub->>Ntf: create in-app notifications
@@ -79,7 +81,7 @@ sequenceDiagram
    - reject/return → непустой комментарий (BR-25) иначе `ERR_VALIDATION`;
    - approve → комментарий опционален.
 3. Транзакция (**ADR-TX-02**):
-   - **Approve:** задача completed; sibling open → `cancelled` (BR-03); читать RouteSnapshot (не live config); next tasks или `approved` (BR-17);
+   - **Approve:** задача completed; sibling open → `cancelled` (BR-03); читать RouteInstance (не live config); next tasks или `approved` (BR-17);
    - **Reject:** `rejected`; закрыть open задачи этапа (BR-04);
    - **Return:** `returned`; сохранить номер этапа; закрыть задачи этапа (BR-05);
    - Audit + Notification в той же TX (BR-29).
@@ -105,7 +107,7 @@ sequenceDiagram
   API->>Eng: approve
   Note over Eng,DB: ADR-TX-02 одна транзакция
   Eng->>Eng: complete task A; cancel sibling open tasks
-  Eng->>Snap: read RouteSnapshot next step
+  Eng->>Snap: read RouteInstance next step
   alt есть следующий этап
     Eng->>Eng: create next stage tasks
   else последний этап
@@ -125,7 +127,7 @@ sequenceDiagram
 
 1. AuthZ: роль `admin` (ACL-04); admin не создаёт заявки за сотрудников (BR-27).
 2. Admin Config пишет **live** конфигурацию (тип, поля, этапы, назначения, справочники).
-3. **Snapshot isolation (BR-09):** запись конфига **не** изменяет существующие RouteSnapshot in-flight заявок.
+3. **Snapshot isolation (BR-09):** запись конфига **не** изменяет существующие RouteInstance in-flight заявок.
 4. Activate: валидация маршрута (BR-18); иначе тип остаётся неактивным.
 5. Deactivate: скрытие из каталога (BR-10); in-flight продолжают по своим snapshot.
 6. Audit конфигурационных изменений — по мере наличия событий в BR-24 / admin history FR-ADMIN-08 (без расширения набора обязательных событий сверх Stage 2).
@@ -144,7 +146,7 @@ sequenceDiagram
   API->>AuthZ: роль admin
   API->>Cfg: save / activate
   Cfg->>Cfg: write live config only
-  Note over Cfg: BR-09 не трогает RouteSnapshot заявок
+  Note over Cfg: BR-09 не трогает RouteInstance заявок
   alt activate
     Cfg->>Cfg: validate route BR-18
   end
@@ -177,7 +179,7 @@ sequenceDiagram
 | **ADR-TX-01** | Submit / resubmit | status + snapshots + tasks + audit + notifications | BR-29, NFR-REL-01, BR-20 |
 | **ADR-TX-02** | Approve / reject / return | status/tasks (вкл. first-approve cancel) + audit + notifications | BR-03/04/05, BR-29, NFR-REL-01 |
 | **ADR-TX-03** | Cancel | status + audit (+ notification инициатору при наличии в BR-23) | BR-07, BR-24, BR-23 |
-| **ADR-TX-04** | Admin save/activate | запись live config; **без** мутации RouteSnapshot заявок | BR-09 |
+| **ADR-TX-04** | Admin save/activate | запись live config; **без** мутации RouteInstance заявок | BR-09 |
 
 Детализация «один DB transaction на use case» — **предположение MVP** о реализации атомарности, уже требуемой NFR/BR. Альтернативы (outbox и т.п.) не вводятся в MVP.
 

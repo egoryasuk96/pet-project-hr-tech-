@@ -1,10 +1,10 @@
-# Диаграммы процессов BPMN (TO-BE)
+﻿# Диаграммы процессов BPMN (TO-BE)
 
-**Проект:** Employee Service  
-**Этап:** 3.1 — BPMN TO-BE  
+**Продукт:** Employee Service  
+**ID:** BPMN-00  
 **Версия:** 1.0  
-**Статус:** Draft  
-**Источник требований:** Этап 2 (`02-requirements/`)
+**Статус:** Baseline v1.0  
+**Связанные документы:** [Vision](../../01-vision-and-scope/vision-scope.md), [Business Rules](../../02-requirements/business-rules.md), [UML](../uml/uml-description.md)
 
 ---
 
@@ -37,24 +37,24 @@
 
 ---
 
-## 3. Snapshot (разделение по BR-08, BR-22, BR-26)
+## 3. Snapshot (кратко)
 
-| Вид snapshot | Когда создаётся | После return / resubmit |
+Канон: [Snapshot Model](../erd/snapshot-model.md) (вариант B).
+
+| Механизм | Когда | При resubmit |
 | :--- | :--- | :--- |
-| **Route snapshot** | При **первом** submit из `draft` (BR-08) | **Не изменяется** (BR-22) |
-| **Schema/value snapshot** | При **каждом** успешном submit — первом и повторном (BR-26, BR-22) | **Создаётся заново** (обновляется) по итогам валидации актуальной схемы |
-
-Изменение конфигурации типа/маршрута администратором не меняет route snapshot уже отправленных заявок (BR-09).
+| **RouteInstance** | Первый successful submit (BR-08) | Без изменений (BR-22) |
+| **FieldValueVersion** | Каждый successful submit (BR-26) | Новая версия |
 
 ---
 
 ## 4. Список диаграмм
 
-| ID | Файл | Тип | Кратко |
-| :--- | :--- | :--- | :--- |
-| BPMN-01 | [to-be-request-lifecycle.md](./to-be-request-lifecycle.md) | Collaboration | Жизненный цикл заявки: draft → согласование → approved / rejected / cancelled; return/resubmit; cancel |
-| BPMN-02 | [to-be-approval-stage.md](./to-be-approval-stage.md) | Subprocess | Обработка этапа: approve / reject / return; first-approve wins; переход этапа |
-| BPMN-03 | [to-be-admin-configure.md](./to-be-admin-configure.md) | Process | Настройка типа заявки, полей, маршрута, этапов, назначений; активация |
+| ID | Файл | Тип | Статус | Кратко |
+| :--- | :--- | :--- | :--- | :--- |
+| BPMN-01 | [to-be-request-lifecycle.md](./to-be-request-lifecycle.md) | Collaboration | Baseline | Жизненный цикл заявки |
+| BPMN-02 | [to-be-approval-stage.md](./to-be-approval-stage.md) | Subprocess | Baseline | Этап: approve / reject / return |
+| BPMN-03 | [to-be-admin-configure.md](./to-be-admin-configure.md) | Process | **Future** | Admin-конфиг; см. [backlog](../../backlog.md) |
 
 ---
 

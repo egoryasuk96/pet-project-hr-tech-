@@ -1,9 +1,10 @@
-# BPMN-01 — Жизненный цикл заявки (TO-BE)
+﻿# BPMN-01 — Жизненный цикл заявки (TO-BE)
 
-**Проект:** Employee Service  
-**Тип диаграммы:** Collaboration (BPMN 2.0)  
-**Файл индекса:** [bpmn-description.md](./bpmn-description.md)  
-**Вызываемый процесс:** [BPMN-02](./to-be-approval-stage.md)
+**Продукт:** Employee Service  
+**ID:** BPMN-01  
+**Версия:** 1.0  
+**Статус:** Baseline v1.0  
+**Связанные документы:** [bpmn-description.md](./bpmn-description.md), [Snapshot Model](../erd/snapshot-model.md), [UML-SM-01](../uml/state-request.md)
 
 ---
 
@@ -26,12 +27,14 @@ RBAC: создание / edit / submit / cancel — только инициат�
 
 ---
 
-## 3. Snapshot (явное разделение)
+## 3. Snapshot (кратко)
+
+Канон: [Snapshot Model](../erd/snapshot-model.md) (вариант B).
 
 | Вид | BPMN-отражение | Правило |
 | :--- | :--- | :--- |
-| **Route snapshot** | Service Task ST-04 | Создаётся **только** при первом submit из `draft` (BR-08). После return/resubmit **не изменяется** (BR-22). |
-| **Schema/value snapshot** | Service Task ST-05 | Создаётся при **каждом** успешном submit — первом и повторном (BR-26, BR-22). |
+| **RouteInstance** | ST-04 | Создаётся только при первом submit (BR-08); при resubmit не rebuild (BR-22) |
+| **FieldValueVersion** | ST-05 | Новая версия на каждый successful submit (BR-26) |
 
 ---
 
@@ -64,8 +67,8 @@ RBAC: создание / edit / submit / cancel — только инициат�
 | ST-01 | Система | Валидировать поля по актуальной схеме | Проверка значений перед submit (BR-26) |
 | ST-02 | Система | Проверить маршрут и активность типа | Валидность маршрута (BR-18); тип активен |
 | ST-03 | Система | Определить вид submit | Первый (`draft`) или повторный (`returned`) |
-| ST-04 | Система | Создать route snapshot | **Только** при первом submit: этапы, порядок, назначения (BR-08) |
-| ST-05 | Система | Создать schema/value snapshot | При **каждом** успешном submit: фиксация схемы и значений (BR-26) |
+| ST-04 | Система | Создать RouteInstance | **Только** при первом submit (BR-08); см. [Snapshot Model](../erd/snapshot-model.md) |
+| ST-05 | Система | Создать FieldValueVersion | При **каждом** успешном submit (BR-26) |
 | ST-06 | Система | Установить статус in_approval | BR-20 |
 | ST-07 | Система | Создать задачи текущего этапа | Первый этап (первый submit) или тот же этап после return (BR-06, BR-22) |
 | ST-08 | Система | Записать событие в историю | BR-24 |
@@ -112,9 +115,9 @@ RBAC: создание / edit / submit / cancel — только инициат�
 | SF-14 | GW-03 → ST-03 | Маршрут OK, тип активен |
 | SF-15 | GW-03 → EE-04 | ERR_ROUTE_CONFIG / ERR_INACTIVE_TYPE |
 | SF-16 | ST-03 → GW-04 | — |
-| SF-17 | GW-04 → ST-04 | Первый submit: создать **route snapshot** |
-| SF-18 | ST-04 → ST-05 | Затем **schema/value snapshot** |
-| SF-19 | GW-04 → ST-05 | Resubmit: route snapshot **не трогать**; только schema/value snapshot |
+| SF-17 | GW-04 → ST-04 | Первый submit: создать **RouteInstance** |
+| SF-18 | ST-04 → ST-05 | Затем **FieldValueVersion** |
+| SF-19 | GW-04 → ST-05 | Resubmit: RouteInstance **не трогать**; новая FieldValueVersion |
 | SF-20 | ST-05 → ST-06 | — |
 | SF-21 | ST-06 → ST-07 | — |
 | SF-22 | ST-07 → ST-08 | История submit / resubmit |
@@ -154,9 +157,9 @@ RBAC: создание / edit / submit / cancel — только инициат�
 3. **GW-05** — submit (**UT-03**), cancel (**UT-04**) или продолжение edit.
 4. При **submit**: проверки (**ST-01…ST-02**, шлюзы GW-01…GW-03).
 5. **GW-04**:
-   - первый submit → **ST-04 route snapshot** → **ST-05 schema/value snapshot**;
-   - resubmit → только **ST-05** (route snapshot без изменений).
-6. **ST-06…ST-09** — `in_approval`, задачи этапа, история, уведомления.
+   - первый submit → **ST-04 RouteInstance** → **ST-05 FieldValueVersion**;
+   - resubmit → только **ST-05** (RouteInstance без изменений; [Snapshot Model](../erd/snapshot-model.md)).
+6. **ST-06…ST-09** — `in_approval`, задачи этапа, история (, уведомления если в scope).
 7. **CA-01** — BPMN-02 до исхода: следующий этап / approved / rejected / returned.
 8. При **returned** — **UT-05/UT-02**, затем снова submit или cancel.
 9. **Cancel** только из `draft`/`returned` → `cancelled` (**EE-03**).

@@ -1,11 +1,10 @@
-# ERD-DD — Data Dictionary
+﻿# ERD-DD — Data Dictionary
 
-**Проект:** Employee Service  
-**Этап:** 3.4  
+**Продукт:** Employee Service  
+**ID:** ERD-DD  
 **Версия:** 1.0  
-**Статус:** Draft  
-**Индекс:** [README.md](./README.md)  
-**Диаграмма:** [erd-domain-model.md](./erd-domain-model.md)
+**Статус:** Baseline v1.0  
+**Связанные документы:** [README.md](./README.md), [Snapshot Model](./snapshot-model.md)
 
 ---
 
@@ -121,7 +120,7 @@
 | role_id | UUID | no | yes | Роль | FK → Role; ≥1 из role/user | BR-12 |
 | user_id | UUID | no | yes | Пользователь | FK → User; ≥1 из role/user | BR-12 |
 
-**Constraints:** нет auto-routing по оргструктуре (BR-12). Live assignments **не** меняют существующие RouteSnapshot (BR-09).
+**Constraints:** нет auto-routing по оргструктуре (BR-12). Live assignments **не** меняют существующие RouteInstance (BR-09).
 
 ---
 
@@ -139,7 +138,7 @@
 | created_at | datetime | yes | no | Создание | — | — |
 | updated_at | datetime | yes | no | Обновление | — | — |
 
-**Relations:** 0..1 RouteSnapshot; 0..1 current SchemaValueSnapshot; 0..N RequestFieldValue, ApprovalTask, Comment, HistoryEvent.
+**Relations:** 0..1 RouteInstance; 0..N FieldValueVersion; 0..N RequestFieldValue, ApprovalTask, Comment, HistoryEvent.
 
 **Constraints:** cancel только draft/returned (BR-07); admin не создаёт от имени сотрудника (BR-27).
 
@@ -152,13 +151,13 @@
 | field_code | string | yes | no | Код поля | Соответствует схеме (live при edit) | BR-26 |
 | value | string | no | yes | Значение (логический носитель) | Валидация по data_type / catalog | FR-REQ-02, BR-26 |
 
-**Constraints:** мутации в `draft`/`returned` по **live** схеме; не являются SchemaValueSnapshot.
+**Constraints:** мутации в `draft`/`returned` по **live** схеме; не являются FieldValueVersion.
 
 ---
 
 ## 5. Snapshots
 
-### 5.1. RouteSnapshot
+### 5.1. RouteInstance
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -168,38 +167,39 @@
 
 **Constraints:** создаётся только при первом successful submit; immutable; не пересоздаётся при resubmit (BR-22).
 
-### 5.2. RouteSnapshotStage
+### 5.2. RouteInstanceStage
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | id | UUID | yes | no | Этап snapshot | PK | BR-08 |
-| route_snapshot_id | UUID | yes | no | Snapshot | FK → RouteSnapshot | BR-08 |
+| route_snapshot_id | UUID | yes | no | Snapshot | FK → RouteInstance | BR-08 |
 | name | string | yes | no | Имя на момент submit | — | BR-08 |
 | sequence_no | int | yes | no | Порядок | unique per snapshot | BR-02, BR-08 |
 
-### 5.3. RouteSnapshotAssignment
+### 5.3. RouteInstanceAssignment
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | id | UUID | yes | no | Назначение snapshot | PK | BR-08 |
-| snapshot_stage_id | UUID | yes | no | Этап snapshot | FK → RouteSnapshotStage | BR-08 |
+| snapshot_stage_id | UUID | yes | no | Этап snapshot | FK → RouteInstanceStage | BR-08 |
 | assignment_kind | enum | yes | no | role / user / both | — | BR-12 |
 | role_id | UUID | no | yes | Роль на момент snapshot | FK → Role | BR-08 |
 | user_id | UUID | no | yes | User на момент snapshot | FK → User | BR-08 |
 
 **Constraints:** ApprovalTask строятся из этих назначений (не из live StageAssignment для in-flight).
 
-### 5.4. SchemaValueSnapshot
+### 5.4. FieldValueVersion
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | Snapshot схемы+значений | PK | BR-26 |
-| request_id | UUID | yes | no | Заявка | FK → Request; **unique current** (1—0..1) | BR-26, BR-22 |
+| id | UUID | yes | no | Версия схемы+значений | PK | BR-26 |
+| request_id | UUID | yes | no | Заявка | FK → Request | BR-26, BR-22 |
+| submit_number | int | yes | no | Номер successful submit (1, 2, …) | unique per request | BR-26 |
 | schema_document | JSON | yes | no | Копия схемы полей на момент submit | Логический документ | BR-26 |
 | values_document | JSON | yes | no | Копия значений на момент submit | Логический документ | BR-26 |
 | created_at | datetime | yes | no | Момент данного successful submit | — | BR-26 |
 
-**Constraints:** создаётся на каждом successful submit; при resubmit current **заменяется**; нет SubmitVersion; между submit — без in-place patch. HistoryEvent **не** обязан дублировать полный payload.
+**Constraints:** append-only на каждый successful submit; прошлые версии не переписываются; решение согласующего привязано к версии. Канон: [snapshot-model.md](./snapshot-model.md).
 
 ---
 
@@ -211,11 +211,11 @@
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | id | UUID | yes | no | Задача | PK | FR-APP-01 |
 | request_id | UUID | yes | no | Заявка | FK → Request | FR-APP-02 |
-| stage_number | int | yes | no | Номер этапа snapshot | Соответствует RouteSnapshotStage.sequence_no | BR-02 |
+| stage_number | int | yes | no | Номер этапа snapshot | Соответствует RouteInstanceStage.sequence_no | BR-02 |
 | assignee_id | UUID | yes | no | Исполнитель | FK → User | BR-15 |
 | status | enum | yes | no | `open` \| `completed` \| `cancelled` | First-approve → siblings cancelled | BR-03 |
 | decision | enum | no | yes | `approve` \| `reject` \| `return` | Только после решения | FR-APP-03…05 |
-| decided_at | datetime | no | yes | Время решения | — | — |
+| value_version_id | UUID | no | yes | Версия значений, на которой принято решение | FK → FieldValueVersion | BR-26 |
 
 **Constraints:** действие только по своей open задаче (BR-15); assignee ≠ initiator (BR-21); повтор по closed → ошибка (NFR-REL-02).
 
@@ -274,7 +274,7 @@
 | :--- | :--- |
 | Technical API logs | NFR-LOG-01 / NFR-LOG-03 п.1; infra |
 | JWT / client session storage | Stateless API |
-| SubmitVersion / RequestVersion | Не требуется MVP |
+| Отдельная сущность SubmitVersion / RequestVersion | Не вводится как ID требования; версионирование — **FieldValueVersion** ([snapshot-model.md](./snapshot-model.md)) |
 | Org units / manager links | BR-12 out of scope |
 
 ---

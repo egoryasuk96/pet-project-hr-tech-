@@ -1,8 +1,10 @@
-# ARCH-CNT — Container Diagram (Web / API / DB)
+﻿# ARCH-CNT — Container Diagram (Web / API / DB)
 
-**Проект:** Employee Service  
-**Тип:** Container (C4 Level 2, аналитический)  
-**Файл индекса:** [architecture-description.md](./architecture-description.md)
+**Продукт:** Employee Service  
+**ID:** ARCH-CNT  
+**Версия:** 1.0  
+**Статус:** Baseline v1.0  
+**Связанные документы:** [architecture-description.md](./architecture-description.md), [ADR demo role](./adr-demo-role-header.md)
 
 ---
 
