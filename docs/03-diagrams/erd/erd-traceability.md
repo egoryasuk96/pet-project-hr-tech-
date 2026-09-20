@@ -18,17 +18,17 @@
 
 | Entity | FR | BR | UC (основные) |
 | :--- | :--- | :--- | :--- |
-| User, Role, UserRole | FR-AUTH-01…03, FR-CAB-01 | BR-16, BR-27 | UC-01, UC-02 |
-| RequestType, RequestFieldDefinition | FR-CAT-01…03, FR-ADMIN-01…02 | BR-10, BR-18, BR-26 | UC-03, UC-04, UC-11 |
-| Dictionary, DictionaryItem | FR-ADMIN-06, FR-CAT-03 | — | UC-11 |
-| ApprovalRoute, ApprovalStage, StageAssignment | FR-ADMIN-03…05 | BR-02, BR-12, BR-18 | UC-12 |
-| Request | FR-REQ-01…09, FR-CAB-02, FR-ADMIN-07 | BR-01, BR-07, BR-19, BR-20, BR-27 | UC-04…06, UC-10, UC-15 |
+| User, Role, UserRole | FR-AUTH-01…03, FR-CAB-01 — **Future / backlog** | BR-16; BR-27 — backlog | UC-01, UC-02 — backlog |
+| RequestType, RequestFieldDefinition | FR-CAT-01…03; FR-ADMIN-01…02 — **Future / backlog** | BR-10, BR-18, BR-26 | UC-03, UC-04; UC-11 — backlog |
+| Dictionary, DictionaryItem | FR-CAT-03; FR-ADMIN-06 — **Future / backlog** | — | UC-11 — backlog |
+| ApprovalRoute, ApprovalStage, StageAssignment | FR-ADMIN-03…05 — **Future / backlog** | BR-02, BR-12, BR-18 | UC-12 — backlog |
+| Request | FR-REQ-01…09; FR-CAB-02, FR-ADMIN-07 — **Future / backlog** | BR-01, BR-07, BR-19, BR-20; BR-27 — backlog | UC-04…06, UC-10; UC-15 — backlog |
 | RequestFieldValue | FR-REQ-02, FR-REQ-09 | BR-26 | UC-04, UC-05 |
 | RouteInstance* | FR-REQ-03, FR-REQ-09 | BR-08, BR-09, BR-22 | UC-05 |
 | FieldValueVersion | FR-REQ-03, FR-REQ-09 | BR-22, BR-26 | UC-05 |
 | ApprovalTask | FR-APP-01…07 | BR-03…06, BR-15, BR-17, BR-21 | UC-07…09 |
 | Comment | FR-REQ-06, FR-APP-03…05 | BR-25, BR-28 | UC-05, UC-07…09 |
-| HistoryEvent | FR-AUDIT-01…02, FR-ADMIN-08 | BR-24; retention NFR-LOG-02, NFR-LOG-03 п.2 | UC-14 |
+| HistoryEvent | FR-AUDIT-01…02; FR-ADMIN-08 — **Future / backlog** | BR-24; retention NFR-LOG-02, NFR-LOG-03 п.2 | UC-14 (employee/approver Baseline; admin — backlog) |
 | Notification (**Future / backlog**) | FR-NOTIF-01…03, FR-CAB-03 | BR-11, BR-23, BR-29 | UC-13 |
 
 ---
@@ -47,7 +47,7 @@
 | BR-10 | RequestType.is_active |
 | BR-11 / BR-23 / BR-29 | Notification entity (**Future / backlog**); TX — runtime/architecture when in scope |
 | BR-12 | StageAssignment role/user; нет org entities |
-| BR-13 / BR-14 | данные + AuthZ; Approver через наличие ApprovalTask |
+| BR-13 (**backlog**) / BR-14 | данные + AuthZ; Approver через наличие ApprovalTask |
 | BR-15 | ApprovalTask.assignee_id |
 | BR-16 | UserRole M:N |
 | BR-18 | валидация route на activate/submit (логические constraints C-11) |

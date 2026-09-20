@@ -42,7 +42,7 @@
 | RouteInstance только при первом submit | BR-08 | Snapshot Module create-once; [Snapshot Model](../erd/snapshot-model.md) | ADR-TX-01 / ADR-SNAP-01 |
 | RouteInstance не меняется при resubmit | BR-22 | Snapshot: skip rebuild | ADR-TX-01 |
 | FieldValueVersion при каждом успешном submit | BR-26, BR-22 | Новая версия после валидации live schema | ADR-TX-01 / ADR-SNAP-01 |
-| Конфиг admin не ретроактивен | BR-09 | live only; runtime → RouteInstance ([backlog](../../backlog.md)) | ADR-TX-04 (Future) |
+| Изменения live-конфигурации не ретроактивны | BR-09 | runtime → RouteInstance; Admin UI как writer — [backlog](../../backlog.md) | ADR-TX-04 (Future) |
 | First-approve wins | BR-03 | Approval Engine: complete + cancel siblings | ADR-TX-02 |
 | Self-approval prohibition | BR-21 | Authorization + Approval Engine pre-check | `ERR_FORBIDDEN_APPROVAL` |
 | Comment required reject/return | BR-25 | Approval Engine validation | `ERR_VALIDATION` |
@@ -82,22 +82,30 @@
 
 ## 6. ADR-реестр (не требования)
 
+### 6.1. Active ADR (Baseline / Future)
+
 | ID | Суть | Файл | Статус |
 | :--- | :--- | :--- | :--- |
 | ADR-CNT-01, 02, 04 | Монолит, одна БД, FE без authoritative BR | container-diagram.md | Baseline |
-| ADR-CNT-03 | JWT на клиенте SPA | container-diagram.md | **Superseded** → ADR-AUTH-DEMO-01 / ADR-UI-01 |
-| ADR-CMP-01…04 | Список модулей/UI-зон, Submit Orchestrator, AuthZ | component-diagram.md | Baseline; SPA-формулировка CMP-02 **Superseded** → ADR-UI-01 |
+| ADR-CMP-01…04 | Список модулей/UI-зон, Submit Orchestrator, AuthZ | component-diagram.md | Baseline, кроме Superseded SPA-части ADR-CMP-02 ниже |
 | ADR-TX-01…03 | Транзакции submit / approval / cancel | data-flows.md | Baseline |
 | ADR-TX-04 | Admin save/activate | data-flows.md | Future / backlog |
 | ADR-SEC-01 | bcrypt для полной auth | security-and-crosscutting.md | Backlog auth |
-| ADR-SEC-02 | JWT на клиенте SPA | security-and-crosscutting.md | **Superseded** → ADR-AUTH-DEMO-01 |
-| ADR-SEC-03 | JWT middleware | security-and-crosscutting.md | **Superseded** для Baseline → ADR-AUTH-DEMO-01; JWT вернётся с backlog |
 | ADR-ERR-01…02 | Центральный error mapping | security-and-crosscutting.md | Baseline |
 | ADR-LOG-01 | Структурированный tech log | security-and-crosscutting.md | Baseline |
 | ADR-NOTIF-01 | Pull UI для in-app | security-and-crosscutting.md | Backlog |
 | ADR-SNAP-01 | RouteInstance + FieldValueVersion | adr-snapshot-submit-versions.md | Baseline |
 | ADR-AUTH-DEMO-01 | Демо-роль заголовком | adr-demo-role-header.md | Baseline |
 | ADR-UI-01 | Static HTML+JS от FastAPI | adr-static-web-client.md | Baseline |
+
+### 6.2. Superseded ADR (история решений)
+
+| ID | Суть | Файл | Статус / замена |
+| :--- | :--- | :--- | :--- |
+| ADR-CNT-03 | JWT на клиенте SPA | container-diagram.md | **Superseded** → ADR-AUTH-DEMO-01 / ADR-UI-01 |
+| ADR-CMP-02 (SPA-часть) | Отдельный SPA Web UI | component-diagram.md | **Superseded** → ADR-UI-01 |
+| ADR-SEC-02 | JWT на клиенте SPA | security-and-crosscutting.md | **Superseded** → ADR-AUTH-DEMO-01 |
+| ADR-SEC-03 | JWT middleware | security-and-crosscutting.md | **Superseded** для Baseline → ADR-AUTH-DEMO-01; JWT вернётся с backlog |
 
 ---
 

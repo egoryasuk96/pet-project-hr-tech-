@@ -127,7 +127,7 @@ MVP Baseline. Сценарии вне Baseline — [docs/backlog.md](../backlog.
 | **Exceptions** | E1. ERR_FORBIDDEN_APPROVAL  E2. ERR_TASK_DONE  E3. Пустой комментарий → ERR_VALIDATION |
 | **Postconditions** | BR-05; заявка доступна инициатору для правки |
 | **Related FR** | FR-APP-05, FR-REQ-08, FR-REQ-02, FR-REQ-09 |
-| **Related BR** | BR-05, BR-06, BR-25 |
+| **Related BR** | BR-05, BR-06, BR-15, BR-25 |
 
 ---
 

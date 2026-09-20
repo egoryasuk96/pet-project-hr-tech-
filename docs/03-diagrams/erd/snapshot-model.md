@@ -91,7 +91,7 @@ returned → edit
 | RouteInstance write-once | После create содержимое этапов/назначений не UPDATE |
 | FieldValueVersion append-only | Новая версия только на successful submit; прошлые не переписываются |
 | Нет in-place patch версии | Между submit значения версии не правятся «на лету» |
-| Конфиг admin | Не меняет RouteInstance уже отправленных заявок (BR-09); в MVP admin UI нет — принцип сохранён для будущего ([backlog](../../backlog.md)) |
+| Live-конфигурация | Не меняет RouteInstance и FieldValueVersion уже отправленных заявок (BR-09); Admin UI как способ изменения конфигурации — [backlog](../../backlog.md) |
 
 ---
 
@@ -108,7 +108,7 @@ returned → edit
 | Источник | Ожидание при варианте B + OQ-B |
 | :--- | :--- |
 | BR-06 | Resubmit с первого этапа; полный цикл решений на новой версии |
-| BR-08 / BR-09 | RouteInstance once; изоляция; MVP без runtime-смены маршрута → [backlog](../../backlog.md) |
+| BR-08 / BR-09 | RouteInstance once; изоляция от изменений live-конфигурации — Baseline; Admin UI → [backlog](../../backlog.md) |
 | BR-22 | Route не rebuild; новая FieldValueVersion |
 | BR-26 | Live schema при edit; freeze в версии на submit |
 | BR-24 / UC-14 | Прошлые версии и решения видны в истории |

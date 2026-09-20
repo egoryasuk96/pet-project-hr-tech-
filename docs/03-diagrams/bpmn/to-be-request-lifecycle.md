@@ -23,7 +23,7 @@ TO-BE процесс прохождения кадровой заявки от �
 | **Lane** | Согласующий | Роль `approver` (участник через Call Activity BPMN-02) |
 | **Lane** | Система | Автоматические Service Task; доставка уведомлений — **Future / backlog** |
 
-RBAC: создание / edit / submit / cancel — только инициатор с ролью `employee` (матрица RBAC; BR-27 / ACL-09 — admin сам по себе заявки не создаёт).
+RBAC: создание / edit / submit / cancel — только инициатор с ролью `employee` (матрица RBAC; BR-27 / ACL-09 — **Future / backlog**, admin сам по себе заявки не создаёт).
 
 ---
 
@@ -195,7 +195,7 @@ stateDiagram-v2
 | **FR** | FR-REQ-01, FR-REQ-02, FR-REQ-03, FR-REQ-07, FR-REQ-08, FR-REQ-09; FR-APP-06, FR-APP-07 (итог); FR-AUDIT-02; FR-NOTIF-01 — **Future / backlog** |
 | **BR** | BR-06, BR-07, BR-08, BR-18, BR-19, BR-20, BR-22, BR-24, BR-26; BR-23, BR-29 — **Future / backlog** |
 | **AC** | AC-APP-01, AC-APP-02, AC-APP-02b, AC-APP-03, AC-APP-05, AC-APP-05b, AC-APP-08, AC-REQ-07, AC-DRAFT-01, AC-DRAFT-02; AC-NOTIF-01 — **Future / backlog** |
-| **RBAC** | создание/edit/submit/cancel — `employee` (инициатор); BR-27 / ACL-09 |
+| **RBAC** | создание/edit/submit/cancel — `employee` (инициатор); BR-27 / ACL-09 — **Future / backlog** |
 
 ---
 

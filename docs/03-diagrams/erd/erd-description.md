@@ -71,7 +71,7 @@
 | Версии значений | **FieldValueVersion** по номеру submit; канон — [snapshot-model.md](./snapshot-model.md) |
 | Оргструктура / дерево руководителей | Out of scope; BR-12 — явные назначения |
 | Attachments, email/push | Out of scope Vision |
-| JWT / refresh sessions на сервере | Stateless JWT (NFR-SCL-01, NFR-SEC-04) |
+| JWT / refresh sessions на сервере | Полная auth/JWT — **Future / backlog**; Baseline demo-auth не требует session entities |
 | Technical API logs | NFR-LOG-01; retention 14 дней (NFR-LOG-03 п.1); infra, не предметная ERD |
 | Optimistic locking / version columns | Не входит в MVP |
 | Параллельные этапы маршрута | Out of scope |

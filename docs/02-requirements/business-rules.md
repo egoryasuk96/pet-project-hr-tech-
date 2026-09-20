@@ -72,7 +72,8 @@
 
 ### BR-12 — Нет auto-routing по оргструктуре
 Система не определяет согласующего автоматически через оргструктуру или «непосредственного руководителя». Назначения задаются явно: роль и/или конкретный пользователь.  
-**Связи:** Vision §12; назначения настраиваются явно (admin UI — [docs/backlog.md](../backlog.md))
+В Baseline явные назначения задаются seed/test data. Admin UI для настройки этих назначений — [docs/backlog.md](../backlog.md).  
+**Связи:** Vision §12, FR-REQ-03; Admin UI — FR-ADMIN-05 в [docs/backlog.md](../backlog.md)
 
 ---
 
@@ -122,9 +123,9 @@
 **Связи:** FR-REQ-03, AC-APP-10
 
 ### BR-09 — Изоляция запущенных заявок от изменений конфигурации
-Изменение настроек типа заявки, маршрута, этапов или назначений (когда появится admin UI) не изменяет экземпляр маршрута уже отправленных заявок и не меняет их дальнейшее согласование.  
-В MVP runtime-смены маршрута нет; принцип изоляции — для будущего админа: [docs/backlog.md](../backlog.md). См. [Snapshot Model](../03-diagrams/erd/snapshot-model.md).  
-**Связи:** AC-APP-10; изменение конфигурации admin — [docs/backlog.md](../backlog.md)
+**Baseline:** изменение live-конфигурации типа заявки, маршрута, этапов или назначений не изменяет `RouteInstance` и `FieldValueVersion` уже отправленных заявок и не меняет их дальнейшее согласование. Принцип изоляции действует независимо от способа внесения изменений конфигурации; см. [Snapshot Model](../03-diagrams/erd/snapshot-model.md).  
+В Baseline правило проверяется через seed/test data или SQL/test script. **Backlog:** Admin UI как пользовательский способ изменения конфигурации — [docs/backlog.md](../backlog.md).  
+**Связи:** FR-REQ-03, UC-05, AC-APP-10, AC-APP-10b, AC-DRAFT-02; изменение конфигурации через Admin UI — [docs/backlog.md](../backlog.md)
 
 ### BR-22 — Повторный submit: маршрут и версии значений
 При повторной отправке из `returned`:
@@ -237,14 +238,19 @@ Backlog BR: см. [docs/backlog.md](../backlog.md).
 | BR-06 | FR-REQ-09 | UC-05 | AC-APP-08 |
 | BR-07 | FR-REQ-07 | UC-10 | AC-REQ-07 |
 | BR-08 | FR-REQ-03 | UC-05 | AC-APP-10 |
-| BR-09 | см. backlog (admin FR) | — | AC-APP-10 |
+| BR-09 | FR-REQ-03 | UC-05 | AC-APP-10, AC-APP-10b, AC-DRAFT-02 |
 | BR-10 | FR-CAT-01 | UC-03 | AC-CAT-01 |
-| BR-12 | см. backlog (admin FR) | — | — |
+| BR-12 | FR-REQ-03; FR-ADMIN-05 — backlog | UC-05; UC-12 — backlog | AC-APP-02b |
 | BR-14 | FR-APP-02, FR-REQ-04 | UC-07 | AC-ACC-06 |
+| BR-15 | FR-APP-03–05 | UC-07–09 | AC-ACC-02 |
 | BR-16 | см. backlog (AUTH FR) | — | — |
+| BR-17 | FR-APP-07 | UC-07 | AC-APP-05b |
 | BR-18 | FR-REQ-03 | UC-05 | AC-APP-02b |
+| BR-19 | FR-REQ-01, FR-REQ-02 | UC-04 | AC-APP-01, AC-DRAFT-01 |
+| BR-20 | FR-REQ-03 | UC-05 | AC-APP-02, AC-APP-03 |
 | BR-21 | FR-APP-03–05 | UC-07–09 | AC-ACC-03 |
 | BR-22 | FR-REQ-09 | UC-05 | AC-APP-08, AC-DRAFT-02 |
+| BR-24 | FR-AUDIT-01, FR-AUDIT-02 | UC-14 | — |
 | BR-25 | FR-APP-03–05 | UC-07–09 | AC-APP-04, AC-APP-06, AC-APP-07 |
 | BR-26 | FR-REQ-02, FR-REQ-03 | UC-04, UC-05 | AC-DRAFT-01, AC-DRAFT-02 |
 | BR-28 | FR-REQ-06 | UC-06 | AC-REQ-06 |

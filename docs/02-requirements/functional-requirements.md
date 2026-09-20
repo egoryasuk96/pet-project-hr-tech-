@@ -102,7 +102,7 @@ AUTH, NOTIF, ADMIN и часть CAB — [docs/backlog.md](../backlog.md).
 | **Основной сценарий** | 1) Submit 2) Валидация полей по актуальной схеме 3) Проверка маршрута 4) Экземпляр маршрута (если первый) 5) Новая версия схемы и значений 6) Статус in_approval 7) Задачи этапа 8) История (in-app уведомления — [docs/backlog.md](../backlog.md)) |
 | **Альтернативы / исключения** | ERR_VALIDATION; ERR_ROUTE_CONFIG; ERR_INVALID_STATE; ERR_INACTIVE_TYPE |
 | **Postconditions** | BR-20; задачи созданы; версия значений зафиксирована; маршрут по BR-08/BR-22 |
-| **Связи** | BR-08, BR-18, BR-20, BR-22, BR-26; UC-05; AC-APP-02, AC-APP-03, AC-APP-08, AC-APP-10, AC-DRAFT-01, AC-DRAFT-02; уведомления — [docs/backlog.md](../backlog.md) |
+| **Связи** | BR-08, BR-18, BR-20, BR-22, BR-26; UC-05; AC-APP-02, AC-APP-02b, AC-APP-03, AC-APP-08, AC-APP-10, AC-DRAFT-01, AC-DRAFT-02; уведомления — [docs/backlog.md](../backlog.md) |
 
 ### FR-REQ-04 — Просмотр заявки
 | Поле | Содержание |
@@ -262,7 +262,7 @@ AUTH, NOTIF, ADMIN и часть CAB — [docs/backlog.md](../backlog.md).
 | **Основной сценарий** | 1) Статус approved 2) История |
 | **Альтернативы / исключения** | — |
 | **Postconditions** | BR-17; задач открытых нет |
-| **Связи** | AC-APP-05 |
+| **Связи** | BR-17; UC-07; AC-APP-05b |
 
 ---
 
@@ -322,17 +322,25 @@ Backlog FR (AUTH, CAB-01/03, NOTIF, ADMIN): см. [docs/backlog.md](../backlog.m
 | :--- | :--- | :--- | :--- |
 | FR-CAB-02 | BR-01 | UC-06 | — |
 | FR-CAT-01 | BR-10 | UC-03 | AC-CAT-01, AC-CAT-02 |
+| FR-CAT-02 | — | UC-03 | — |
+| FR-CAT-03 | — | UC-04 | — |
 | FR-REQ-01 | BR-19 | UC-04 | AC-APP-01 |
 | FR-REQ-02 | BR-26 | UC-04 | AC-DRAFT-01 |
-| FR-REQ-03 | BR-08, BR-18, BR-20, BR-22, BR-26 | UC-05 | AC-APP-02, AC-APP-03, AC-APP-10, AC-DRAFT-01, AC-DRAFT-02 |
+| FR-REQ-03 | BR-08, BR-18, BR-20, BR-22, BR-26 | UC-05 | AC-APP-02, AC-APP-02b, AC-APP-03, AC-APP-10, AC-DRAFT-01, AC-DRAFT-02 |
+| FR-REQ-04 | BR-01, BR-14 | UC-06 | AC-ACC-01, AC-ACC-06 |
+| FR-REQ-05 | — | UC-06 | — |
 | FR-REQ-06 | BR-25, BR-28 | UC-06 | AC-REQ-06 |
 | FR-REQ-07 | BR-07 | UC-10 | AC-REQ-07 |
+| FR-REQ-08 | BR-05 | UC-09 | AC-APP-07 |
 | FR-REQ-09 | BR-06, BR-22, BR-26 | UC-05 | AC-APP-08, AC-DRAFT-02 |
+| FR-APP-01 | BR-14 | UC-07 | — |
 | FR-APP-02 | BR-14 | UC-07 | AC-ACC-06 |
 | FR-APP-03 | BR-03, BR-17, BR-21, BR-25 | UC-07 | AC-APP-04, AC-APP-09 |
 | FR-APP-04 | BR-04, BR-21, BR-25 | UC-08 | AC-APP-06 |
 | FR-APP-05 | BR-05, BR-21, BR-25 | UC-09 | AC-APP-07 |
 | FR-APP-06 | BR-02, BR-03 | UC-07 | AC-APP-05 |
+| FR-APP-07 | BR-17 | UC-07 | AC-APP-05b |
 | FR-AUDIT-01 | BR-24 | UC-14 | — |
+| FR-AUDIT-02 | BR-24 | UC-14 | — |
 
 Backlog-трассировка — [docs/backlog.md](../backlog.md).
