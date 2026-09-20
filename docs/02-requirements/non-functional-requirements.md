@@ -2,14 +2,19 @@
 
 **Проект:** Employee Service  
 **Документ:** Non-Functional Requirements  
+**ID:** DOC-NFR  
 **Версия:** 1.0  
-**Статус:** Draft (Этап 2)
+**Статус:** Baseline v1.0
+
+MVP Baseline (этап 3). NFR вне Baseline — [docs/backlog.md](../backlog.md).
+
+> **Замечание по поставке (Vision §11 vs NFR-DEP-01):** Vision §11 предполагает локальный стенд + Render + Neon; **NFR-DEP-01** фиксирует поставку через **Docker Compose** для локального/демо-стенда. Новый NFR не создаётся — расхождение зафиксировано здесь и в причине NFR-DEP-01 в backlog-карте этапа 3.
 
 ---
 
 ## 1. Назначение
 
-NFR задают проверяемые ограничения качества MVP.
+NFR задают проверяемые ограничения качества MVP Baseline.
 
 ---
 
@@ -20,11 +25,11 @@ NFR задают проверяемые ограничения качества 
 **Проверка:** нагрузочный/смоук-сценарий с замером latency p95.
 
 ### NFR-PERF-02 — Время ответа API (запись)
-Для 95% успешных write-операций (создание заявки, submit, approve/reject/return, CRUD админки) время ответа ≤ **1000 мс** при той же нагрузке.  
+Для 95% успешных write-операций (создание заявки, submit, approve/reject/return) время ответа ≤ **1000 мс** при той же нагрузке.  
 **Проверка:** замеры p95 на критичных сценариях.
 
 ### NFR-PERF-03 — Пагинация списков
-Списки заявок, задач, уведомлений и реестра админа поддерживают пагинацию. Размер страницы по умолчанию **20**, максимум **100**.  
+Списки заявок и задач поддерживают пагинацию (уведомления и реестр admin — [docs/backlog.md](../backlog.md)). Размер страницы по умолчанию **20**, максимум **100**.  
 **Проверка:** запрос с `page_size=101` отклоняется валидацией.
 
 ### NFR-PERF-04 — Baseline объёма данных для performance testing
@@ -35,33 +40,23 @@ NFR задают проверяемые ограничения качества 
 
 ## 3. Availability
 
+
 ### NFR-AVL-01 — Режим поставки MVP
 Целевой режим — локальный/демо-стенд через Docker Compose. SLA production **не применяется**.  
 **Проверка:** `docker compose up` поднимает db + api + web без ручных шагов кроме documented env.
 
 ### NFR-AVL-02 — Восстановление после рестарта
-После рестарта контейнеров api/db данные PostgreSQL сохраняются в volume; сессии JWT не требуют sticky-state на сервере.  
-**Проверка:** restart api/db → данные заявок на месте; валидный токен продолжает работать до expiry.
+После рестарта контейнеров api/db данные PostgreSQL сохраняются в volume; сервер API остаётся **stateless** (без sticky-state / server-side session store).  
+**Проверка:** restart api/db → данные заявок на месте.
 
 ---
 
 ## 4. Security
 
-### NFR-SEC-01 — Аутентификация
-Доступ к защищённым операциям возможен только с валидным JWT. Невалидный/просроченный токен → HTTP 401.  
-**Проверка:** запросы без токена и с битым токеном.
 
 ### NFR-SEC-02 — Авторизация по ролям и владению
-Доступ разграничивается по ролям и правилам BR-01, BR-13–15, BR-21. Нарушение → HTTP 403.  
+Доступ разграничивается по ролям и правилам BR-01, BR-14, BR-15, BR-21 (admin-видимость — [docs/backlog.md](../backlog.md)). Нарушение → HTTP 403.  
 **Проверка:** AC-ACC-01, AC-ACC-02 и матрица RBAC.
-
-### NFR-SEC-03 — Хранение паролей
-Пароли хранятся только в виде безопасного password hash. Используется **bcrypt** или эквивалентный современный password hashing algorithm (например argon2). Plain-text запрещён.  
-**Проверка:** инспекция БД / unit-тест хеширования.
-
-### NFR-SEC-04 — Срок жизни токена
-Access token TTL = **8 часов**. Refresh tokens в MVP отсутствуют (повторный login).  
-**Проверка:** токен старше TTL → 401.
 
 ### NFR-SEC-05 — Скрытие чужих ресурсов
 Запрос ресурса, существование которого пользователь не должен видеть (например чужая заявка для employee), возвращает **HTTP 404** и `ERR_NOT_FOUND`.  
@@ -74,6 +69,7 @@ Access token TTL = **8 часов**. Refresh tokens в MVP отсутствую�
 ---
 
 ## 5. Reliability
+
 
 ### NFR-REL-01 — Целостность перехода статусов
 Переходы статусов заявки и задач выполняются атомарно с записью истории: не допускается «approve без истории» или «смена статуса без закрытия задач этапа» при first-approve.  
@@ -91,6 +87,7 @@ Snapshot маршрута после первого submit неизменяем 
 
 ## 6. Maintainability
 
+
 ### NFR-MNT-01 — OpenAPI как контракт
 Публичный REST API описывается OpenAPI 3.x и соответствует реализации (Этап 4+).  
 **Проверка:** сверка спецификации и фактических ответов.
@@ -107,9 +104,6 @@ Snapshot маршрута после первого submit неизменяем 
 
 ## 7. Scalability
 
-### NFR-SCL-01 — Готовность к нескольким экземплярам API
-Multi-instance deployment **не входит в MVP**. Архитектура API должна оставаться **stateless** (JWT, без server-side session store), чтобы не создавать искусственных ограничений для последующего перехода к нескольким экземплярам. Фактический деплой ≥2 инстансов в MVP не требуется.  
-**Проверка:** архитектурный review — отсутствие sticky session / server session store.
 
 ### NFR-SCL-02 — Рост числа типов заявок
 Система поддерживает ≥ **50** активных типов заявок и ≥ **10** этапов на маршрут без изменения архитектуры.  
@@ -119,9 +113,10 @@ Multi-instance deployment **не входит в MVP**. Архитектура A
 
 ## 8. Logging / Audit
 
+
 ### NFR-LOG-01 — Технические логи API
 API логирует: method, path, status code, latency, request_id, user_id (если аутентифицирован). Пароли и токены в лог не пишутся.  
-**Проверка:** sample логов на login и submit.
+**Проверка:** sample логов на submit (login — [docs/backlog.md](../backlog.md)).
 
 ### NFR-LOG-02 — Прикладной аудит заявок
 Значимые бизнес-события пишутся в историю заявки (BR-24) с actor, timestamp, action, from/to, comment.  
@@ -136,6 +131,7 @@ API логирует: method, path, status code, latency, request_id, user_id (�
 ---
 
 ## 9. Usability
+
 
 ### NFR-USB-01 — Понятность статусов
 В карточке заявки пользователь видит человекочитаемый статус и текущий этап (если `in_approval`).  
@@ -153,16 +149,17 @@ UI и пользовательские сообщения — **русский**
 
 ## 10. Deployment
 
+
 ### NFR-DEP-01 — Docker Compose
 Проект поставляется с Docker Compose, включающим PostgreSQL, backend, frontend.  
-**Проверка:** чистый clone → documented start → login демо-пользователем.
+**Проверка:** чистый clone → documented start → API/web поднимаются.
 
 ### NFR-DEP-02 — Seed-данные
 После первого запуска доступны демо-пользователи всех ролей и ≥ 2 активных типа заявок с валидным маршрутом.  
-**Проверка:** login под employee/approver/admin; каталог не пуст.
+**Проверка:** seed данных + смоук каталога/очереди (login UI — [docs/backlog.md](../backlog.md)).
 
 ### NFR-DEP-03 — Конфигурация через env
-Секреты (DB URL, JWT secret) задаются переменными окружения, не хардкодятся в репозитории.  
+Секреты (DB URL и др.) задаются переменными окружения, не хардкодятся в репозитории.  
 **Проверка:** review конфигурации.
 
 ---
@@ -171,16 +168,50 @@ UI и пользовательские сообщения — **русский**
 
 **Обязательных открытых NFR-вопросов для Этапа 3 нет.**
 
-Все ранее перечисленные OQ-NFR закрыты (см. [business-rules.md](./business-rules.md) §9).
+Ранее закрытые OQ по JWT/password/multi-instance — в [docs/backlog.md](../backlog.md) и [business-rules.md](./business-rules.md) §9.
 
 ---
 
-## 12. Трассировка (фрагмент)
+## 12. Трассировка (фрагмент Baseline)
 
 | NFR | Связанные FR / BR / AC |
 | :--- | :--- |
-| NFR-SEC-01 | FR-AUTH-01, FR-AUTH-02 |
-| NFR-SEC-02 | BR-01, BR-13–16, BR-21, AC-ACC-* |
+| NFR-SEC-02 | BR-01, BR-14–16, BR-21, AC-ACC-01, AC-ACC-02, AC-ACC-03, AC-ACC-06 |
 | NFR-REL-01 | BR-03–05, BR-20, AC-APP-* |
 | NFR-LOG-02 | FR-AUDIT-01, BR-24, UC-14 |
-| NFR-DEP-01 | Vision scope §13 |
+| NFR-DEP-01 | Docker Compose (локальная поставка); Vision §11 также описывает Render+Neon — без нового NFR |
+
+Backlog NFR — [docs/backlog.md](../backlog.md).
+
+## 13. Сводка NFR (Baseline)
+
+| ID | Область |
+| :--- | :--- |
+| NFR-AVL-01 | AVL |
+| NFR-AVL-02 | AVL |
+| NFR-DEP-01 | DEP |
+| NFR-DEP-02 | DEP |
+| NFR-DEP-03 | DEP |
+| NFR-LOG-01 | LOG |
+| NFR-LOG-02 | LOG |
+| NFR-LOG-03 | LOG |
+| NFR-MNT-01 | MNT |
+| NFR-MNT-02 | MNT |
+| NFR-MNT-03 | MNT |
+| NFR-PERF-01 | PERF |
+| NFR-PERF-02 | PERF |
+| NFR-PERF-03 | PERF |
+| NFR-PERF-04 | PERF |
+| NFR-REL-01 | REL |
+| NFR-REL-02 | REL |
+| NFR-REL-03 | REL |
+| NFR-SCL-02 | SCL |
+| NFR-SEC-02 | SEC |
+| NFR-SEC-05 | SEC |
+| NFR-SEC-06 | SEC |
+| NFR-USB-01 | USB |
+| NFR-USB-02 | USB |
+| NFR-USB-03 | USB |
+
+**Количество NFR (Baseline): 25**  
+Полный инвентарь всех NFR проекта (29, включая backlog): см. [docs/backlog.md](../backlog.md) и `docs/_stage3-id-map.json` (PERF×4, AVL×2, SEC×6, REL×3, MNT×3, SCL×2, LOG×3, USB×3, DEP×3).

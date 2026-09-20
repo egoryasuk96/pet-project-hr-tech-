@@ -2,44 +2,13 @@
 
 **Проект:** Employee Service  
 **Документ:** Use Cases  
+**ID:** DOC-UC  
 **Версия:** 1.0  
-**Статус:** Draft (Этап 2)
+**Статус:** Baseline v1.0
 
-Нумерация UC Этапа 2 детализирует список Vision (разделение Create/Submit и др.).
+MVP Baseline (этап 3). Сценарии вне Baseline — [docs/backlog.md](../backlog.md).
 
----
-
-## UC-01 — Login
-
-| Поле | Содержание |
-| :--- | :--- |
-| **Goal** | Аутентифицироваться и получить доступ к системе |
-| **Primary actor** | Любой пользователь |
-| **Preconditions** | Учётная запись существует |
-| **Trigger** | Пользователь открывает форму входа и отправляет логин/пароль |
-| **Main flow** | 1. Ввод логина и пароля 2. Система проверяет данные 3. Выдаётся JWT (TTL 8 часов) со списком всех ролей 4. Отображается **ЛК**; доступна навигация ко всем разделам по объединению permissions (BR-16); выбор активной роли не выполняется |
-| **Alternative flows** | A1. Несколько ролей — в навигации одновременно ЛК, очередь согласования, админка (если роли это позволяют) |
-| **Exceptions** | E1. Неверные данные → сообщение ERR_INVALID_CREDENTIALS, повтор ввода |
-| **Postconditions** | Пользователь аутентифицирован; видит ЛК |
-| **Related FR** | FR-AUTH-01, FR-AUTH-02, FR-AUTH-03 |
-| **Related BR** | BR-16 |
-
----
-
-## UC-02 — View Profile
-
-| Поле | Содержание |
-| :--- | :--- |
-| **Goal** | Просмотреть свои персональные данные |
-| **Primary actor** | employee (также любой аутентифицированный — свой профиль) |
-| **Preconditions** | UC-01 выполнен |
-| **Trigger** | Открытие раздела «Профиль» |
-| **Main flow** | 1. Запрос профиля 2. Отображение ФИО, email, должность, отдел |
-| **Alternative flows** | — |
-| **Exceptions** | E1. Сессия истекла → ERR_UNAUTHORIZED, возврат на login |
-| **Postconditions** | Данные не изменены |
-| **Related FR** | FR-CAB-01, FR-AUTH-02 |
-| **Related BR** | — |
+Нумерация UC детализирует список Vision (разделение Create/Submit и др.).
 
 ---
 
@@ -85,12 +54,12 @@
 | **Primary actor** | employee (инициатор) |
 | **Preconditions** | Заявка в `draft` или `returned`; пользователь — инициатор |
 | **Trigger** | Команда «Отправить» |
-| **Main flow** | 1. Валидация полей по **актуальной** схеме типа (BR-26) 2. Проверка маршрута (BR-18) 3. Если `draft` — создание snapshot маршрута (BR-08) 4. Если `returned` — snapshot маршрута не меняется (BR-22) 5. Фиксация схемы и значений полей (BR-26) 6. Статус `in_approval` 7. Создание задач текущего этапа 8. Уведомления согласующим в той же транзакции (BR-29) 9. История |
+| **Main flow** | 1. Валидация полей по **актуальной** схеме типа (BR-26) 2. Проверка маршрута (BR-18) 3. Если `draft` — создание snapshot маршрута (BR-08) 4. Если `returned` — snapshot маршрута не меняется (BR-22) 5. Фиксация схемы и значений полей (BR-26) 6. Статус `in_approval` 7. Создание задач текущего этапа 8. История (in-app уведомления — [docs/backlog.md](../backlog.md)) |
 | **Alternative flows** | A1. Повторный submit после return — этап тот же (BR-06); схема/значения перезаписываются новым snapshot |
 | **Exceptions** | E1. ERR_VALIDATION  E2. ERR_ROUTE_CONFIG  E3. ERR_INVALID_STATE  E4. ERR_INACTIVE_TYPE |
 | **Postconditions** | Заявка на согласовании; задачи созданы; данные зафиксированы |
-| **Related FR** | FR-REQ-03, FR-REQ-09, FR-APP-01, FR-NOTIF-01 |
-| **Related BR** | BR-06, BR-08, BR-18, BR-20, BR-22, BR-26, BR-29 |
+| **Related FR** | FR-REQ-03, FR-REQ-09, FR-APP-01, см. [docs/backlog.md](../backlog.md) |
+| **Related BR** | BR-06, BR-08, BR-18, BR-20, BR-22, BR-26, см. [docs/backlog.md](../backlog.md) |
 
 ---
 
@@ -119,12 +88,12 @@
 | **Primary actor** | approver |
 | **Preconditions** | Есть открытая задача, пользователь — assignee; не инициатор заявки |
 | **Trigger** | Действие Approve в карточке задачи |
-| **Main flow** | 1. Просмотр **полной** карточки заявки (BR-14) 2. Approve (комментарий необязателен, BR-25) 3. Задача завершена 4. Остальные активные задачи этапа → `cancelled` (BR-03) 5. Если есть следующий этап — создание его задач (FR-APP-06) 6. Если последний — статус `approved` 7. История + уведомления (BR-29) |
+| **Main flow** | 1. Просмотр **полной** карточки заявки (BR-14) 2. Approve (комментарий необязателен, BR-25) 3. Задача завершена 4. Остальные активные задачи этапа → `cancelled` (BR-03) 5. Если есть следующий этап — создание его задач (FR-APP-06) 6. Если последний — статус `approved` 7. История (in-app уведомления — [docs/backlog.md](../backlog.md)) |
 | **Alternative flows** | A1. Несколько assignees — достаточно одного approve (BR-03) |
 | **Exceptions** | E1. ERR_FORBIDDEN_APPROVAL  E2. ERR_TASK_DONE  E3. Самосогласование → ERR_FORBIDDEN_APPROVAL (BR-21) |
 | **Postconditions** | Этап пройден или заявка `approved` |
 | **Related FR** | FR-APP-02, FR-APP-03, FR-APP-06, FR-APP-07 |
-| **Related BR** | BR-02, BR-03, BR-14, BR-15, BR-17, BR-21, BR-25, BR-29 |
+| **Related BR** | BR-02, BR-03, BR-14, BR-15, BR-17, BR-21, BR-25, см. [docs/backlog.md](../backlog.md) |
 
 ---
 
@@ -136,11 +105,11 @@
 | **Primary actor** | approver |
 | **Preconditions** | Открытая задача; assignee; не инициатор |
 | **Trigger** | Действие Reject |
-| **Main flow** | 1. Reject + **обязательный** комментарий (BR-25) 2. Статус `rejected` 3. Закрытие открытых задач этапа 4. История 5. Уведомление инициатору |
+| **Main flow** | 1. Reject + **обязательный** комментарий (BR-25) 2. Статус `rejected` 3. Закрытие открытых задач этапа 4. История |
 | **Alternative flows** | — |
 | **Exceptions** | E1. ERR_FORBIDDEN_APPROVAL  E2. ERR_TASK_DONE  E3. Пустой комментарий → ERR_VALIDATION |
 | **Postconditions** | Заявка `rejected`; маршрут завершён |
-| **Related FR** | FR-APP-04, FR-NOTIF-01, FR-AUDIT-02 |
+| **Related FR** | FR-APP-04, FR-AUDIT-02; уведомления — [docs/backlog.md](../backlog.md) |
 | **Related BR** | BR-04, BR-15, BR-21, BR-25 |
 
 ---
@@ -153,7 +122,7 @@
 | **Primary actor** | approver |
 | **Preconditions** | Открытая задача; assignee; не инициатор |
 | **Trigger** | Действие Return |
-| **Main flow** | 1. Return + **обязательный** комментарий (BR-25) 2. Статус `returned` 3. Фиксация текущего этапа для будущего resubmit 4. Закрытие задач этапа 5. История 6. Уведомление инициатору |
+| **Main flow** | 1. Return + **обязательный** комментарий (BR-25) 2. Статус `returned` 3. Фиксация текущего этапа для будущего resubmit 4. Закрытие задач этапа 5. История |
 | **Alternative flows** | A1. Инициатор далее редактирует (FR-REQ-02) и делает UC-05 |
 | **Exceptions** | E1. ERR_FORBIDDEN_APPROVAL  E2. ERR_TASK_DONE  E3. Пустой комментарий → ERR_VALIDATION |
 | **Postconditions** | BR-05; заявка доступна инициатору для правки |
@@ -179,88 +148,20 @@
 
 ---
 
-## UC-11 — Configure Request Type
-
-| Поле | Содержание |
-| :--- | :--- |
-| **Goal** | Создать или изменить тип заявки и поля формы |
-| **Primary actor** | admin |
-| **Preconditions** | Роль admin |
-| **Trigger** | Работа в разделе типов заявок |
-| **Main flow** | 1. Создание/редактирование типа (имя, описание, is_active) 2. CRUD полей формы 3. При необходимости привязка справочников 4. При активации — проверка валидности маршрута (BR-18) 5. Сохранение |
-| **Alternative flows** | A1. Деактивация типа — тип исчезает из каталога (BR-10) |
-| **Exceptions** | E1. ERR_VALIDATION  E2. ERR_FORBIDDEN  E3. Активация при невалидном маршруте → ERR_ROUTE_CONFIG |
-| **Postconditions** | Конфигурация сохранена; snapshot маршрута/данных запущенных заявок не затрагивается (BR-09); draft/returned при edit видят актуальную схему (BR-26) |
-| **Related FR** | FR-ADMIN-01, FR-ADMIN-02, FR-ADMIN-06 |
-| **Related BR** | BR-09, BR-10, BR-18, BR-26, BR-27 |
-
----
-
-## UC-12 — Configure Approval Route
-
-| Поле | Содержание |
-| :--- | :--- |
-| **Goal** | Настроить последовательный маршрут, этапы и назначения |
-| **Primary actor** | admin |
-| **Preconditions** | Тип заявки существует; роль admin |
-| **Trigger** | Редактирование маршрута типа |
-| **Main flow** | 1. Задание этапов и порядка 2. Назначение роли и/или пользователей на каждый этап 3. Сохранение 4. При активации связанного типа — валидация маршрута (BR-18) |
-| **Alternative flows** | A1. Изменение маршрута после того, как заявки уже запущены — влияет только на новые submit |
-| **Exceptions** | E1. Некорректные назначения → ERR_VALIDATION  E2. Попытка активировать тип с невалидным маршрутом → ERR_ROUTE_CONFIG |
-| **Postconditions** | Маршрут сохранён; BR-02, BR-09, BR-12, BR-18 |
-| **Related FR** | FR-ADMIN-03, FR-ADMIN-04, FR-ADMIN-05 |
-| **Related BR** | BR-02, BR-09, BR-12, BR-18 |
-
----
-
-## UC-13 — View Notifications
-
-| Поле | Содержание |
-| :--- | :--- |
-| **Goal** | Просмотреть in-app уведомления и отметить прочитанными |
-| **Primary actor** | Любой аутентифицированный пользователь |
-| **Preconditions** | Аутентификация |
-| **Trigger** | Открытие раздела уведомлений |
-| **Main flow** | 1. Список своих уведомлений 2. Открытие/прочтение 3. Mark as read |
-| **Alternative flows** | A1. Переход к связанной заявке/задаче из уведомления |
-| **Exceptions** | E1. Чужое уведомление → ERR_NOT_FOUND |
-| **Postconditions** | Выбранные уведомления прочитаны |
-| **Related FR** | FR-NOTIF-01, FR-NOTIF-02, FR-NOTIF-03, FR-CAB-03 |
-| **Related BR** | BR-11, BR-23 |
-
----
-
 ## UC-14 — View Request History
 
 | Поле | Содержание |
 | :--- | :--- |
 | **Goal** | Просмотреть историю действий по заявке |
-| **Primary actor** | employee / approver / admin (в рамках прав) |
+| **Primary actor** | employee / approver (в рамках прав Baseline; admin-реестр — [docs/backlog.md](../backlog.md)) |
 | **Preconditions** | Право на просмотр заявки |
 | **Trigger** | Открытие вкладки «История» |
 | **Main flow** | 1. Запрос событий 2. Отображение хронологии (кто, когда, действие, from/to, комментарий) |
 | **Alternative flows** | — |
 | **Exceptions** | E1. Нет доступа → ERR_NOT_FOUND |
 | **Postconditions** | — |
-| **Related FR** | FR-AUDIT-01, FR-AUDIT-02, FR-ADMIN-08 |
+| **Related FR** | FR-AUDIT-01, FR-AUDIT-02, см. [docs/backlog.md](../backlog.md) |
 | **Related BR** | BR-24 |
-
----
-
-## UC-15 — Admin View Requests
-
-| Поле | Содержание |
-| :--- | :--- |
-| **Goal** | Просмотреть реестр всех заявок |
-| **Primary actor** | admin |
-| **Preconditions** | Роль admin |
-| **Trigger** | Открытие реестра в админке |
-| **Main flow** | 1. Список всех заявок с фильтрами 2. Открытие карточки 3. При необходимости — история (UC-14) |
-| **Alternative flows** | A1. Фильтр по статусу/типу |
-| **Exceptions** | E1. ERR_FORBIDDEN для не-admin |
-| **Postconditions** | — |
-| **Related FR** | FR-ADMIN-07, FR-ADMIN-08, FR-REQ-04 |
-| **Related BR** | BR-13 |
 
 ---
 
@@ -268,8 +169,6 @@
 
 | ID | Название |
 | :--- | :--- |
-| UC-01 | Login |
-| UC-02 | View Profile |
 | UC-03 | Browse Service Catalog |
 | UC-04 | Create Request |
 | UC-05 | Submit Request |
@@ -278,13 +177,10 @@
 | UC-08 | Reject Request |
 | UC-09 | Return Request |
 | UC-10 | Cancel Request |
-| UC-11 | Configure Request Type |
-| UC-12 | Configure Approval Route |
-| UC-13 | View Notifications |
 | UC-14 | View Request History |
-| UC-15 | Admin View Requests |
 
-**Количество UC: 15**
+**Количество UC (Baseline): 9**  
+Backlog UC: см. [docs/backlog.md](../backlog.md).
 
 ---
 
@@ -297,4 +193,5 @@
 
 ## Трассировка
 
-См. таблицы Related FR / Related BR в каждом UC. Обратная трассировка FR→UC — в [functional-requirements.md](./functional-requirements.md) §11.
+См. таблицы Related FR / Related BR в каждом UC. Обратная трассировка FR→UC — в [functional-requirements.md](./functional-requirements.md).  
+Backlog-требования — [docs/backlog.md](../backlog.md).
