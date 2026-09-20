@@ -86,7 +86,7 @@
 
 ## 6. Границы этапа
 
-ERD / OpenAPI / код / микросервисы / cloud сверх NFR — вне этого индекса. Новые FR/BR/NFR этим файлом не вводятся. Перепись NFR-DEP-01 и docs/README — этап 6.
+ERD / OpenAPI / код / микросервисы / cloud сверх NFR — вне этого индекса. Новые FR/BR/NFR этим файлом не вводятся. Поставка — NFR-DEP-01 (Python + Neon/local PG; Render + Neon).
 
 ---
 

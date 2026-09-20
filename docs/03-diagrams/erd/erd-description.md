@@ -40,7 +40,7 @@
 | **Конфигурация** | Live-настройки admin (каталог, маршрут, справочники) | RequestType, RequestFieldDefinition, ApprovalRoute, ApprovalStage, StageAssignment, Dictionary, DictionaryItem |
 | **Runtime** | Состояние исполнения заявки | Request (status, currentStageNumber), RequestFieldValue, ApprovalTask |
 | **Snapshot / historical** | Замороженные копии и прикладной аудит | RouteInstance, RouteInstanceStage, RouteInstanceAssignment, FieldValueVersion, HistoryEvent |
-| **Технические** | RBAC, credentials, флаги доставки | Role, UserRole, User.passwordHash, Notification |
+| **Технические** | RBAC, credentials; Notification (**Future / backlog**) | Role, UserRole, User.passwordHash, Notification |
 
 Одна сущность может участвовать в нескольких классах (например, Request — бизнес + runtime). Классификация нужна, чтобы не смешивать **live config**, **working values** и **frozen snapshots**.
 
@@ -58,9 +58,9 @@
 | Snapshot | RouteInstance*, FieldValueVersion |
 | Approval Engine | ApprovalTask (читает RouteInstance) |
 | Audit | HistoryEvent |
-| Notification | Notification |
+| Notification | Notification (**Future / backlog**) |
 
-Транзакционные границы submit/approve (status + snapshots/tasks + audit + notifications) заданы Architecture ADR-TX-* и BR-29 / NFR-REL-01; ERD обеспечивает сущности для этих границ, не вводя очереди/outbox.
+Транзакционные границы submit/approve (status + snapshots/tasks + audit; + notifications **Future / backlog** при BR-29) заданы Architecture ADR-TX-* и NFR-REL-01; ERD обеспечивает сущности для этих границ, не вводя очереди/outbox.
 
 ---
 

@@ -813,7 +813,7 @@ Access token TTL = **8 часов**. Refresh tokens в MVP отсутствую�
 | AC-REQ-07 | Baseline | Отмена — ядро |
 | NFR-AVL-01 | Baseline | Режим поставки — ядро |
 | NFR-AVL-02 | Baseline | Восстановление после рестарта — ядро |
-| NFR-DEP-01 | Baseline | Docker Compose — локальная поставка (≠ Vision Render+Neon) |
+| NFR-DEP-01 | Baseline | Python + Neon/local PG локально; Render + Neon в облаке |
 | NFR-DEP-02 | Baseline | Seed-данные — Vision §9 |
 | NFR-DEP-03 | Baseline | Конфигурация через env — ядро |
 | NFR-LOG-01 | Baseline | Технические логи — ядро |

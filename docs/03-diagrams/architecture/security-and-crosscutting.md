@@ -170,7 +170,7 @@
 
 | Тема | Источник |
 | :--- | :--- |
-| Docker Compose: формулировка NFR-DEP-01 | NFR-DEP-01, NFR-AVL-01 — перепись wording на этапе 6; runtime: FastAPI + статика + PostgreSQL ([ADR-UI-01](./adr-static-web-client.md)) |
+| Локальный запуск и облачный деплой | NFR-DEP-01, NFR-AVL-01 — Python + Neon/local PG локально; Render + Neon в облаке; runtime: FastAPI + статика + PostgreSQL ([ADR-UI-01](./adr-static-web-client.md)) |
 | Seed пользователи/типы | NFR-DEP-02 |
 | Secrets через env (DB URL; JWT secret — при полной auth) | NFR-DEP-03 |
 | HTTPS на внешнем демо | NFR-SEC-06 |
@@ -200,4 +200,4 @@ Cloud/K8s не проектируются.
 - Не вводятся 2FA, SSO, refresh token, email/push.
 - Не создаются новые коды ошибок.
 - ADR помечены явно и не маскируются под FR/BR/NFR.
-- NFR-DEP-01 не переписывается здесь (этап 6).
+- NFR-DEP-01 задан в NFR; здесь только архитектурное отражение.

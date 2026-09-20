@@ -59,7 +59,7 @@
 | :--- | :--- | :--- |
 | **ApprovalTask** | status (`open` / `completed` / `cancelled`), stageNumber | Задача согласующего по snapshot этапа |
 | **Comment** | text, kind (free / decision) | Свободный комментарий инициатора или комментарий решения |
-| **Notification** | text, read, eventType | In-app уведомление (BR-11) |
+| **Notification** | text, read, eventType | In-app уведомление (BR-11) — **Future / backlog** |
 | **HistoryEvent** | action, fromState, toState, at, comment | Событие истории (BR-24) |
 
 ---
@@ -192,7 +192,7 @@ classDiagram
 | Тип | ID |
 | :--- | :--- |
 | **UC** | косвенно UC-03…UC-15 (структура предметной области) |
-| **FR** | FR-CAT-*, FR-REQ-*, FR-APP-*, FR-ADMIN-01…06, FR-NOTIF-*, FR-AUDIT-* |
+| **FR** | FR-CAT-*, FR-REQ-*, FR-APP-*, FR-AUDIT-*; FR-ADMIN-01…06, FR-NOTIF-* — **Future / backlog** где применимо |
 | **BR** | BR-01, BR-03, BR-08, BR-09, BR-11–16, BR-21, BR-22, BR-24–27 |
 | **AC** | AC-APP-08…10b, AC-DRAFT-01, AC-DRAFT-02, AC-ACC-* (через visibility/self-approval) |
 | **Глоссарий** | термины Этапа 1 |

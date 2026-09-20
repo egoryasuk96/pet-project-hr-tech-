@@ -50,7 +50,7 @@
 3. Snapshot: создать **FieldValueVersion** #1 (BR-26).
 4. Статус → `in_approval` (BR-20).
 5. TaskFactory: задачи первого этапа по RouteInstance.
-6. Audit (+ Notification при наличии в scope) в одной транзакции с бизнес-событием.
+6. Audit (+ Notification **Future / backlog**, если в scope) в одной транзакции с бизнес-событием.
 
 ### 3.3. Resubmit из `returned`
 
@@ -58,7 +58,7 @@
 2. Snapshot: **не** rebuild RouteInstance (BR-22).
 3. Snapshot: **новая** FieldValueVersion (BR-26, BR-22).
 4. Статус → `in_approval`; `currentStageNumber` → 1; задачи **первого** этапа (BR-06).
-5. Audit + Notification (BR-29).
+5. Audit + Notification (**Future / backlog**, BR-29).
 
 ### 3.4. Cancel
 
@@ -100,7 +100,7 @@ sequenceDiagram
     Sys->>Sys: status = in_approval
     Sys->>Sys: TaskFactory: задачи этапа 1 по RouteInstance
     Sys->>Sys: Audit: событие submit
-    Sys->>Sys: Notification: in-app согласующим (та же транзакция, BR-29)
+    Sys->>Sys: Notification: in-app согласующим (**Future / backlog**; та же TX, BR-29)
     Sys-->>Init: заявка на согласовании
   end
 ```
@@ -152,9 +152,9 @@ sequenceDiagram
 | Тип | ID |
 | :--- | :--- |
 | **UC** | UC-04, UC-05, UC-10 |
-| **FR** | FR-REQ-01, FR-REQ-02, FR-REQ-03, FR-REQ-07, FR-REQ-09; FR-NOTIF-01; FR-AUDIT-02 |
-| **BR** | BR-06, BR-07, BR-08, BR-18, BR-19, BR-20, BR-22, BR-23, BR-24, BR-26, BR-29 |
-| **AC** | AC-APP-01, AC-APP-02, AC-APP-02b, AC-APP-03, AC-APP-08, AC-REQ-07, AC-DRAFT-01, AC-DRAFT-02, AC-NOTIF-01 |
+| **FR** | FR-REQ-01, FR-REQ-02, FR-REQ-03, FR-REQ-07, FR-REQ-09; FR-AUDIT-02; FR-NOTIF-01 — **Future / backlog** |
+| **BR** | BR-06, BR-07, BR-08, BR-18, BR-19, BR-20, BR-22, BR-24, BR-26; BR-23, BR-29 — **Future / backlog** |
+| **AC** | AC-APP-01, AC-APP-02, AC-APP-02b, AC-APP-03, AC-APP-08, AC-REQ-07, AC-DRAFT-01, AC-DRAFT-02; AC-NOTIF-01 — **Future / backlog** |
 | **RBAC** | создание/edit/submit/cancel — `employee` (инициатор); BR-27 |
 | **BPMN** | BPMN-01 |
 

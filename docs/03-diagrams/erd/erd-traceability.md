@@ -29,7 +29,7 @@
 | ApprovalTask | FR-APP-01…07 | BR-03…06, BR-15, BR-17, BR-21 | UC-07…09 |
 | Comment | FR-REQ-06, FR-APP-03…05 | BR-25, BR-28 | UC-05, UC-07…09 |
 | HistoryEvent | FR-AUDIT-01…02, FR-ADMIN-08 | BR-24; retention NFR-LOG-02, NFR-LOG-03 п.2 | UC-14 |
-| Notification | FR-NOTIF-01…03, FR-CAB-03 | BR-11, BR-23, BR-29 | UC-13 |
+| Notification (**Future / backlog**) | FR-NOTIF-01…03, FR-CAB-03 | BR-11, BR-23, BR-29 | UC-13 |
 
 ---
 
@@ -45,7 +45,7 @@
 | BR-07 | status enum + constraint cancel only draft/returned |
 | BR-08 / BR-09 | RouteInstance 1—0..1 write-once; config tables изолированы |
 | BR-10 | RequestType.is_active |
-| BR-11 / BR-23 / BR-29 | Notification entity; TX — runtime/architecture |
+| BR-11 / BR-23 / BR-29 | Notification entity (**Future / backlog**); TX — runtime/architecture when in scope |
 | BR-12 | StageAssignment role/user; нет org entities |
 | BR-13 / BR-14 | данные + AuthZ; Approver через наличие ApprovalTask |
 | BR-15 | ApprovalTask.assignee_id |
@@ -74,8 +74,8 @@
 
 | BPMN | Сущности |
 | :--- | :--- |
-| BPMN-01 Request lifecycle | Request, RequestFieldValue, RouteInstance*, FieldValueVersion, ApprovalTask, HistoryEvent, Notification, Comment |
-| BPMN-02 Approval stage | ApprovalTask, RouteInstance*, Request, Comment, HistoryEvent, Notification |
+| BPMN-01 Request lifecycle | Request, RequestFieldValue, RouteInstance*, FieldValueVersion, ApprovalTask, HistoryEvent, Comment; Notification — **Future / backlog** |
+| BPMN-02 Approval stage | ApprovalTask, RouteInstance*, Request, Comment, HistoryEvent; Notification — **Future / backlog** |
 | BPMN-03 Admin configure | RequestType, FieldDefinition, ApprovalRoute/Stage/Assignment, Dictionary*; **не** мутирует in-flight RouteInstance |
 
 ---
@@ -98,15 +98,15 @@
 | Module | Owns / reads |
 | :--- | :--- |
 | Auth / Authorization | User, Role, UserRole |
-| Cabinet | User profile fields; entry to Notification |
+| Cabinet | User profile fields; entry to Notification (**Future / backlog**) |
 | Catalog | RequestType, RequestFieldDefinition (active) |
 | Request | Request, RequestFieldValue, Comment |
-| Submit Orchestrator | оркестрация → Snapshot + ApprovalTask + Audit + Notification |
+| Submit Orchestrator | оркестрация → Snapshot + ApprovalTask + Audit (+ Notification **Future / backlog**) |
 | Snapshot | RouteInstance*, FieldValueVersion |
 | Approval Engine | ApprovalTask; reads RouteInstance |
 | Admin Config | live config entities; не пишет RouteInstance заявок |
 | Audit | HistoryEvent |
-| Notification | Notification |
+| Notification | Notification (**Future / backlog**) |
 | Persistence | все выше в одной PostgreSQL |
 
 ---

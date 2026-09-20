@@ -218,6 +218,8 @@ erDiagram
   }
 ```
 
+**Notification** — сущность сохранена; in-app путь (BR-23/29, FR-NOTIF-*) — **Future / backlog**, не MVP Baseline.
+
 ---
 
 ## 3. Кардинальности и обязательность связей
@@ -244,7 +246,7 @@ erDiagram
 | Request | Comment | 1 — 0..N | |
 | Comment | ApprovalTask | N — 0..1 | Для kind=decision — желательная связь |
 | Request | HistoryEvent | 1 — 0..N | Append-only прикладной аудит |
-| User | Notification | 1 — 0..N | Только получатель видит свои (FR-NOTIF-02) |
+| User | Notification | 1 — 0..N | **Future / backlog**; только получатель видит свои (FR-NOTIF-02) |
 
 ---
 
@@ -259,7 +261,7 @@ erDiagram
 | ApprovalTask.status | `open`, `completed`, `cancelled` | ApprovalTask |
 | ApprovalTask.decision | `approve`, `reject`, `return` (nullable пока open) | ApprovalTask |
 | Comment.kind | `free`, `decision` | Comment |
-| Notification.event_type | минимум по BR-23 (new_task, status_change, …) | Notification |
+| Notification.event_type | минимум по BR-23 (new_task, status_change, …); **Future / backlog** | Notification |
 
 ---
 
@@ -281,7 +283,7 @@ erDiagram
 | C-12 | `RequestFieldDefinition.code` уникален в рамках RequestType | FR-ADMIN-02 |
 | C-13 | StageAssignment: хотя бы одно из role_id / user_id задано | BR-12 |
 | C-14 | HistoryEvent не хранит полный snapshot payload как обязательное поле | Stage 3.4 decision / BR-24 |
-| C-15 | Notification создаётся в той же логической транзакции, что и бизнес-событие | BR-29 |
+| C-15 | Notification создаётся в той же логической транзакции, что и бизнес-событие (**Future / backlog**) | BR-29 |
 
 Optimistic locking / version columns — **не** моделируются (вне MVP).
 

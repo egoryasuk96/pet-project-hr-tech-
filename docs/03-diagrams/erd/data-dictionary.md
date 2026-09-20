@@ -237,6 +237,8 @@
 
 ## 7. Audit / Notifications
 
+HistoryEvent — Baseline. **Notification** — **Future / backlog** (сущность сохранена; см. §7.2).
+
 ### 7.1. HistoryEvent
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
@@ -253,7 +255,9 @@
 **Retention:** прикладная история заявок — **60 дней** (NFR-LOG-03 п.2).  
 **Не путать** с technical API logs (NFR-LOG-01, retention **14 дней**, NFR-LOG-03 п.1) — вне ERD.
 
-### 7.2. Notification
+### 7.2. Notification (**Future / backlog**)
+
+Сущность сохраняется в модели; in-app уведомления (FR-NOTIF-*, BR-11/23/29) — не MVP Baseline, см. [docs/backlog.md](../../backlog.md).
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |

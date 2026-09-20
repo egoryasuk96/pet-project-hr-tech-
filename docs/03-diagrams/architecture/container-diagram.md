@@ -22,7 +22,7 @@
 | **API (Backend)** | Python + FastAPI | Бизнес-логика, AuthN stub / AuthZ, согласование, snapshot, audit; REST |
 | **Database** | PostgreSQL | Персистентность сущностей предметной области (логическая; ERD — позже) |
 
-**Поставка:** NFR-DEP-01 описывает Docker Compose (db + api + web). Для Baseline runtime предпочтительно **один** FastAPI-процесс (API + статика); отдельный React/SPA-контейнер не используется ([ADR-UI-01](./adr-static-web-client.md)). Детальная перепись NFR-DEP-01 — этап 6. Секреты через env (NFR-DEP-03). Локально Compose опционален как удобный способ поднять PostgreSQL + приложение.
+**Поставка:** NFR-DEP-01 — локально Python + Neon/local PostgreSQL; в облаке Render + Neon. Для Baseline runtime предпочтительно **один** FastAPI-процесс (API + статика); отдельный React/SPA-контейнер не используется ([ADR-UI-01](./adr-static-web-client.md)). Секреты через env (NFR-DEP-03).
 
 **Вне Baseline Web:** admin, уведомления, профиль — [backlog](../../backlog.md) (Vision §12 п.9).
 
@@ -68,7 +68,7 @@ flowchart LR
 | Демо-роль заголовком; без login/JWT в Baseline | Vision §12 п.7; ADR-AUTH-DEMO-01 |
 | Stateless API (без server session) | NFR-SCL-01, NFR-AVL-02 |
 | HTTPS на внешнем демо | NFR-SEC-06 |
-| JWT / Compose wording | NFR-SEC-01/04, NFR-DEP-01 — backlog / этап 6 |
+| JWT (полная auth) | NFR-SEC-01/04 — backlog; поставка — NFR-DEP-01 |
 
 ### 5.2. ADR / предположения MVP
 
@@ -112,4 +112,4 @@ flowchart LR
 - Нет описания K8s, CDN, reverse proxy topology (кроме упоминания HTTPS для внешнего стенда).
 - Нет OpenAPI paths и схем JSON.
 - Нет ERD.
-- Перепись NFR-DEP-01 — не в этом файле (этап 6).
+- Детали облачной топологии Render/Neon сверх NFR-DEP-01 — вне этого файла.

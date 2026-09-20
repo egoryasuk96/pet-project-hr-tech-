@@ -47,7 +47,7 @@
 5. Snapshot: определить next step **по существующему route snapshot**.
 6. Есть следующий этап → TaskFactory создаёт задачи; статус остаётся `in_approval`.
 7. Нет следующего → статус `approved` (BR-17).
-8. Audit + Notification (BR-29).
+8. Audit + Notification (**Future / backlog**, BR-29).
 
 ### 3.2. Reject
 
@@ -97,12 +97,12 @@ sequenceDiagram
     Sys->>Sys: Snapshot: next step по route snapshot (только чтение)
     alt Есть следующий этап
       Sys->>Sys: TaskFactory: задачи следующего этапа
-      Sys->>Sys: Audit + Notification новым assignees
+      Sys->>Sys: Audit + Notification новым assignees (**Future / backlog**)
       Sys-->>A: этап пройден; заявка in_approval
     else Последний этап
       Sys->>Sys: status = approved
-      Sys->>Sys: Audit + Notification инициатору
-      Sys-->>Init: уведомление approved
+      Sys->>Sys: Audit + Notification инициатору (**Future / backlog**)
+      Sys-->>Init: уведомление approved (**Future / backlog**)
       Sys-->>A: маршрут завершён
     end
   end
@@ -129,8 +129,8 @@ sequenceDiagram
       Sys-->>Appr: ERR_VALIDATION
     else OK
       Sys->>Sys: status = rejected; закрыть задачи этапа
-      Sys->>Sys: Audit + Notification инициатору
-      Sys-->>Init: уведомление rejected
+      Sys->>Sys: Audit + Notification инициатору (**Future / backlog**)
+      Sys-->>Init: уведомление rejected (**Future / backlog**)
       Sys-->>Appr: заявка rejected
     end
   else Return
@@ -140,8 +140,8 @@ sequenceDiagram
       Sys-->>Appr: ERR_VALIDATION
     else OK
       Sys->>Sys: status = returned; сохранить этап N; закрыть задачи
-      Sys->>Sys: Audit + Notification инициатору
-      Sys-->>Init: уведомление returned
+      Sys->>Sys: Audit + Notification инициатору (**Future / backlog**)
+      Sys-->>Init: уведомление returned (**Future / backlog**)
       Sys-->>Appr: заявка returned
     end
   else Самосогласование
@@ -158,8 +158,8 @@ sequenceDiagram
 | Тип | ID |
 | :--- | :--- |
 | **UC** | UC-07, UC-08, UC-09 |
-| **FR** | FR-APP-01…07; FR-REQ-08; FR-NOTIF-01; FR-AUDIT-02 |
-| **BR** | BR-02, BR-03, BR-04, BR-05, BR-14, BR-15, BR-17, BR-21, BR-25, BR-29 |
+| **FR** | FR-APP-01…07; FR-REQ-08; FR-AUDIT-02; FR-NOTIF-01 — **Future / backlog** |
+| **BR** | BR-02, BR-03, BR-04, BR-05, BR-14, BR-15, BR-17, BR-21, BR-25; BR-29 — **Future / backlog** |
 | **AC** | AC-APP-04, AC-APP-04b, AC-APP-05, AC-APP-05b, AC-APP-06, AC-APP-06b, AC-APP-07, AC-APP-07b, AC-APP-09, AC-ACC-02, AC-ACC-03, AC-ACC-06 |
 | **RBAC/ACL** | ACL-02, ACL-03, ACL-07 |
 | **BPMN** | BPMN-02 |

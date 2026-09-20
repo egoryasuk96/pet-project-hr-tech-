@@ -31,7 +31,7 @@
 | PostgreSQL | персистентность | — | NFR-AVL-02, NFR-DEP-01, NFR-MNT-02 | — | Baseline |
 | Cabinet Module | FR-CAB-01 | — | — | UC-02 | Backlog |
 | Admin Config Module | FR-ADMIN-01…08 | BR-09, BR-10, BR-12, BR-18, BR-27 | ACL-04, ACL-09 | UC-11, UC-12, UC-15 | Future / backlog |
-| Notification Module | FR-NOTIF-01…03 | BR-11, BR-23, BR-29 | — | UC-13 | Backlog |
+| Notification Module | FR-NOTIF-01…03 | BR-11, BR-23, BR-29 | — | UC-13 | Future / backlog |
 
 ---
 
@@ -48,7 +48,7 @@
 | Comment required reject/return | BR-25 | Approval Engine validation | `ERR_VALIDATION` |
 | RBAC / ownership | BR-01/14–16, ACL-* | Authorization Module | 403 / 404 по NFR-SEC-02/05 |
 | История | BR-24, NFR-LOG-02 | Audit Module | та же TX (NFR-REL-01) |
-| In-app notifications | BR-11, BR-23, BR-29 | Notification Module | backlog; TX wording «если в scope» |
+| In-app notifications | BR-11, BR-23, BR-29 | Notification Module | Future / backlog; TX wording «если в scope» |
 
 ---
 
@@ -74,9 +74,9 @@
 | NFR-PERF-01…04 | Монолит + pagination; измерения — этап реализации |
 | NFR-SCL-01/02 | Без server-side session (демо-заголовок / JWT в backlog); конфиг 50 типов / 10 этапов |
 | NFR-LOG-01…03 | HTTP logs + Audit Module; retention как политика |
-| NFR-DEP-01…03 | Compose wording — этап 6; runtime FastAPI+static+DB; secrets env |
+| NFR-DEP-01…03 | Python + Neon/local PG локально; Render + Neon в облаке; runtime FastAPI+static+DB; secrets env |
 | NFR-USB-01…03 | UI-зоны static + error mapping RU |
-| NFR-AVL-01/02 | Compose/volume; без sticky session |
+| NFR-AVL-01/02 | Локальный/демо-стенд по DEP-01; API stateless (без sticky session); персистентность PostgreSQL |
 
 ---
 

@@ -57,7 +57,7 @@
 | UC-10 | Cancel Request | Primary | — | — | — |
 | UC-11 | Configure Request Type | — | — | Primary | — |
 | UC-12 | Configure Approval Route | — | — | Primary | — |
-| UC-13 | View Notifications | — | — | — | Primary |
+| UC-13 | View Notifications | — | — | — | Primary (**Future / backlog**) |
 | UC-14 | View Request History | Primary* | Primary* | Primary | — |
 | UC-15 | Admin View Requests | — | — | Primary | — |
 
