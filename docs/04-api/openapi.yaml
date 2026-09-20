@@ -1,1 +1,1532 @@
-openapi: 3.0.0)
+openapi: 3.0.3
+info:
+  title: Employee Service API
+  version: 1.0.0
+  description: |
+    Baseline MVP contract formalized from Stage 4.1
+    (`docs/04-api/api-contract-analysis.md`).
+
+    This specification does not resolve the 12 REQUIRES REVIEW items from
+    Stage 4.1 §10. They remain OPEN and are recorded in `x-requires-review`.
+
+    Demo identity is supplied through an HTTP-header stub, but header names,
+    formats, requiredness, and related error handling are not fixed.
+    Consequently, no OpenAPI security scheme is declared.
+
+x-requires-review:
+  - number: 1
+    title: Demo headers
+    status: OPEN
+    description: Exact demo user/role header names, requiredness, formats, and error handling are not fixed.
+  - number: 2
+    title: Inactive type read
+    status: OPEN
+    description: The documented interim behavior is 404 ERR_NOT_FOUND for inactive type detail/schema reads.
+  - number: 3
+    title: Dictionary items
+    status: OPEN
+    description: Whether active items are embedded in the schema response or exposed by a separate Baseline read endpoint is not fixed.
+  - number: 4
+    title: ApprovalTask date
+    status: OPEN
+    description: The source of the queue item created_at value is not fixed.
+  - number: 5
+    title: Approver card route
+    status: OPEN
+    description: The aggregate task-card route is analyzed, but the route decision remains under review.
+  - number: 6
+    title: Task visibility error
+    status: OPEN
+    description: ERR_NOT_FOUND versus ERR_FORBIDDEN_APPROVAL for a foreign or nonexistent task read is not fixed.
+  - number: 7
+    title: Cancelled card data
+    status: OPEN
+    description: The schema/value source after cancellation from returned is not fixed.
+  - number: 8
+    title: Free comment states
+    status: OPEN
+    description: The complete set of states permitting a free initiator comment is not fixed.
+  - number: 9
+    title: History pagination
+    status: OPEN
+    description: Whether request history requires pagination is not fixed.
+  - number: 10
+    title: Pagination contract
+    status: OPEN
+    description: Page/cursor navigation and the response envelope are not fixed.
+  - number: 11
+    title: Error response envelope
+    status: OPEN
+    description: The ErrorResponse structure is recommended, not mandatory.
+  - number: 12
+    title: Traceability convention for OpenAPI
+    status: OPEN
+    description: The project has UC/FR/AC identifiers but no US identifiers; no x-requirement value is declared.
+
+tags:
+  - name: RequestTypes
+    description: Active request type catalog and live form schema.
+  - name: Requests
+    description: Employee requests, working values, comments, lifecycle actions, and history.
+  - name: ApprovalTasks
+    description: Approver queue, task card, and decisions.
+
+paths:
+  /request-types:
+    get:
+      tags: [RequestTypes]
+      summary: Get active request types
+      description: |
+        Returns only active request types. An empty catalog returns `200` and `[]`.
+        Roles: `employee`, `admin`. Traceability: UC-03; FR-CAT-01.
+      responses:
+        "200":
+          description: Active request types.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RequestTypeSummary"
+              example:
+                - id: 11111111-1111-4111-8111-111111111111
+                  name: Annual leave
+                  description: Annual leave request
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /request-types/{type_id}:
+    get:
+      tags: [RequestTypes]
+      summary: Get an active request type
+      description: |
+        Returns an existing active request type.
+        An absent or inactive type returns `404 ERR_NOT_FOUND`; the inactive-type
+        inconsistency remains OPEN in Stage 4.1 §10.2.
+        Roles: `employee`, `admin`. Traceability: UC-03; FR-CAT-02.
+      parameters:
+        - $ref: "#/components/parameters/TypeId"
+      responses:
+        "200":
+          description: Active request type.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestTypeSummary"
+              example:
+                id: 11111111-1111-4111-8111-111111111111
+                name: Annual leave
+                description: Annual leave request
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: "`ERR_NOT_FOUND` — the type does not exist or is inactive."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error_code: ERR_NOT_FOUND
+                message: Объект не найден
+                details: {}
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /request-types/{type_id}/schema:
+    get:
+      tags: [RequestTypes]
+      summary: Get the live request form schema
+      description: |
+        Returns the active type's live form schema. Fields are ordered by
+        `order_no`; an empty `fields` array is valid. Dictionary item delivery
+        remains OPEN in Stage 4.1 §10.3.
+        An absent or inactive type returns `404 ERR_NOT_FOUND`.
+        Roles: `employee`, `admin`. Traceability: UC-03, UC-04; FR-CAT-03.
+      parameters:
+        - $ref: "#/components/parameters/TypeId"
+      responses:
+        "200":
+          description: Current live form schema.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestTypeSchema"
+              example:
+                request_type_id: 11111111-1111-4111-8111-111111111111
+                fields:
+                  - code: start_date
+                    name: Start date
+                    data_type: date
+                    required: true
+                    order_no: 1
+                    dictionary_id: null
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: "`ERR_NOT_FOUND` — the type does not exist or is inactive."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error_code: ERR_NOT_FOUND
+                message: Объект не найден
+                details: {}
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /requests:
+    post:
+      tags: [Requests]
+      summary: Create a draft request
+      description: |
+        Creates a draft for an active request type. The initiator is derived
+        from the current demo user. RouteInstance and FieldValueVersion are not
+        created. Request creation and its history event are atomic.
+        Role: `employee`. Traceability: UC-04; FR-REQ-01.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRequestInput"
+            example:
+              request_type_id: 11111111-1111-4111-8111-111111111111
+      responses:
+        "201":
+          description: Draft request created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedRequest"
+              example:
+                id: 22222222-2222-4222-8222-222222222222
+                request_type_id: 11111111-1111-4111-8111-111111111111
+                initiator_id: 33333333-3333-4333-8333-333333333333
+                status: draft
+                current_stage_number: null
+                created_at: "2026-09-21T09:00:00Z"
+                updated_at: "2026-09-21T09:00:00Z"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: "`ERR_NOT_FOUND` — request type does not exist."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: "`ERR_INACTIVE_TYPE` — request type is inactive."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: "`ERR_VALIDATION` — invalid request_type_id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    get:
+      tags: [Requests]
+      summary: Get the current employee's requests
+      description: |
+        Returns only requests initiated by the current user. The status filter
+        does not expand visibility. Envelope/navigation format is not fixed;
+        see Stage 4.1 §10.10. The response is represented as an item array
+        without adding page, cursor, total, or another envelope.
+        Role: `employee`. Traceability: UC-06; FR-CAB-02, FR-REQ-05.
+      parameters:
+        - $ref: "#/components/parameters/RequestStatusFilter"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Request list items; the pagination envelope remains OPEN.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RequestListItem"
+              example:
+                - id: 22222222-2222-4222-8222-222222222222
+                  request_type:
+                    id: 11111111-1111-4111-8111-111111111111
+                    name: Annual leave
+                  status: in_approval
+                  current_stage:
+                    number: 1
+                    name: Line manager
+                  created_at: "2026-09-21T09:00:00Z"
+                  updated_at: "2026-09-21T09:10:00Z"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: "`ERR_VALIDATION` — unknown status or invalid page_size."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /requests/{request_id}:
+    get:
+      tags: [Requests]
+      summary: Get the current employee's request card
+      description: |
+        Returns the current employee's own request card. Draft/returned cards
+        use working values and the live schema; in_approval/approved/rejected
+        cards use the latest FieldValueVersion. The source after cancellation
+        from returned remains OPEN in Stage 4.1 §10.7. A foreign request is
+        hidden with `404 ERR_NOT_FOUND`.
+        Role: `employee` (own). Traceability: UC-06; FR-REQ-04, FR-REQ-05, FR-REQ-06.
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          description: Request card.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestCard"
+              example:
+                id: 22222222-2222-4222-8222-222222222222
+                request_type:
+                  id: 11111111-1111-4111-8111-111111111111
+                  name: Annual leave
+                initiator:
+                  id: 33333333-3333-4333-8333-333333333333
+                status: draft
+                current_stage: null
+                created_at: "2026-09-21T09:00:00Z"
+                updated_at: "2026-09-21T09:00:00Z"
+                schema:
+                  request_type_id: 11111111-1111-4111-8111-111111111111
+                  fields: []
+                values: []
+                value_source: working
+                comments: []
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/RequestNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [Requests]
+      summary: Save working values
+      description: |
+        Saves the initiator's working values against the live schema only in
+        draft or returned. Partial draft data is allowed; complete required
+        field validation occurs on submit. Existing FieldValueVersion records
+        are not changed or created.
+        Role: `employee` (initiator). Traceability: UC-04, UC-09; FR-REQ-02.
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateValuesInput"
+            example:
+              values:
+                - field_code: start_date
+                  value: "2026-10-01"
+      responses:
+        "200":
+          description: Updated working values and current live schema.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdatedRequestValues"
+              example:
+                id: 22222222-2222-4222-8222-222222222222
+                status: draft
+                schema:
+                  request_type_id: 11111111-1111-4111-8111-111111111111
+                  fields: []
+                values:
+                  - field_code: start_date
+                    value: "2026-10-01"
+                updated_at: "2026-09-21T09:05:00Z"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/RequestNotFound"
+        "409":
+          description: "`ERR_INVALID_STATE` — request is not draft or returned."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: "`ERR_VALIDATION` — unknown field code or invalid value/type/catalog value."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /requests/{request_id}/submit:
+    post:
+      tags: [Requests]
+      summary: Submit or resubmit a request
+      description: |
+        Submits an own draft/returned request after live schema and route
+        validation. First submit creates RouteInstance once; every successful
+        submit appends FieldValueVersion. Resubmit preserves RouteInstance,
+        returns to stage 1, and creates stage-1 tasks. Request, snapshots,
+        tasks, and history are atomic.
+        Role: `employee` (initiator). Traceability: UC-05; FR-REQ-03, FR-REQ-09.
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          description: Request submitted or resubmitted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmitRequestResult"
+              example:
+                id: 22222222-2222-4222-8222-222222222222
+                status: in_approval
+                current_stage:
+                  number: 1
+                  name: Line manager
+                submit_number: 1
+                updated_at: "2026-09-21T09:10:00Z"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/RequestNotFound"
+        "409":
+          description: |
+            `ERR_INVALID_STATE` — not draft/returned;
+            `ERR_INACTIVE_TYPE` — type inactive;
+            `ERR_ROUTE_CONFIG` — route has no stages or assignments.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: "`ERR_VALIDATION` — working values do not satisfy the live schema."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /requests/{request_id}/cancel:
+    post:
+      tags: [Requests]
+      summary: Cancel a request
+      description: |
+        Cancels an own draft or returned request. Status change and history
+        event are atomic.
+        Role: `employee` (initiator). Traceability: UC-10; FR-REQ-07.
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          description: Request cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancelRequestResult"
+              example:
+                id: 22222222-2222-4222-8222-222222222222
+                status: cancelled
+                updated_at: "2026-09-21T09:05:00Z"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/RequestNotFound"
+        "409":
+          description: "`ERR_INVALID_STATE` — request is not draft or returned."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /requests/{request_id}/comments:
+    post:
+      tags: [Requests]
+      summary: Add a free initiator comment
+      description: |
+        Adds an own-request free comment. The server supplies kind, author_id,
+        and approval_task_id. The complete allowed state set remains OPEN in
+        Stage 4.1 §10.8; in_approval is explicitly allowed.
+        Role: `employee` (initiator). Traceability: UC-06; FR-REQ-06.
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentInput"
+            example:
+              text: Please review this request.
+      responses:
+        "201":
+          description: Free comment created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedComment"
+              example:
+                id: 44444444-4444-4444-8444-444444444444
+                request_id: 22222222-2222-4222-8222-222222222222
+                author_id: 33333333-3333-4333-8333-333333333333
+                kind: free
+                text: Please review this request.
+                created_at: "2026-09-21T09:15:00Z"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/RequestNotFound"
+        "422":
+          description: "`ERR_VALIDATION` — text is empty after trim."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /requests/{request_id}/history:
+    get:
+      tags: [Requests]
+      summary: Get request history and submitted value versions
+      description: |
+        Returns chronological history events and append-only submitted value
+        versions. History pagination remains OPEN in Stage 4.1 §10.9.
+        Roles: `employee` (own), `approver` (via own task).
+        Traceability: UC-14; FR-AUDIT-01.
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          description: Request history.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestHistory"
+              example:
+                events:
+                  - id: 55555555-5555-4555-8555-555555555555
+                    actor:
+                      id: 33333333-3333-4333-8333-333333333333
+                    action: request_created
+                    from_state: null
+                    to_state: draft
+                    comment: null
+                    at: "2026-09-21T09:00:00Z"
+                field_value_versions: []
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: "`ERR_NOT_FOUND` — request does not exist or is not visible."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /approval-tasks:
+    get:
+      tags: [ApprovalTasks]
+      summary: Get the current approver's open tasks
+      description: |
+        Returns only open tasks assigned to the current user.
+        Envelope/navigation format is not fixed; see Stage 4.1 §10.10.
+        The response is represented as an item array without adding page,
+        cursor, total, or another envelope. The source of `created_at` remains
+        OPEN in Stage 4.1 §10.4.
+        Role: `approver`. Traceability: UC-07; FR-APP-01.
+      parameters:
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Open approval task items; the pagination envelope remains OPEN.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApprovalTaskListItem"
+              example:
+                - id: 66666666-6666-4666-8666-666666666666
+                  request_id: 22222222-2222-4222-8222-222222222222
+                  request_type:
+                    id: 11111111-1111-4111-8111-111111111111
+                    name: Annual leave
+                  stage:
+                    number: 1
+                    name: Line manager
+                  status: open
+                  created_at: "2026-09-21T09:10:00Z"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: "`ERR_VALIDATION` — invalid page_size."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /approval-tasks/{task_id}:
+    get:
+      tags: [ApprovalTasks]
+      summary: Get an approval task and request card
+      description: |
+        Returns the current approver's own task in any status and an aggregate
+        snapshot-based request card. For an open task the current version is
+        used; completed decisions remain tied to their FieldValueVersion.
+        The route decision remains OPEN in Stage 4.1 §10.5.
+        For a foreign/nonexistent task, choosing between `404 ERR_NOT_FOUND`
+        and `403 ERR_FORBIDDEN_APPROVAL` remains OPEN in §10.6.
+        Role: `approver` (assignee). Traceability: UC-07; FR-APP-02,
+        FR-REQ-04, FR-REQ-05.
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Approval task and full request card.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalTaskCard"
+              example:
+                task:
+                  id: 66666666-6666-4666-8666-666666666666
+                  request_id: 22222222-2222-4222-8222-222222222222
+                  stage_number: 1
+                  assignee_id: 77777777-7777-4777-8777-777777777777
+                  status: open
+                  decision: null
+                  value_version_id: 88888888-8888-4888-8888-888888888888
+                request:
+                  id: 22222222-2222-4222-8222-222222222222
+                  request_type:
+                    id: 11111111-1111-4111-8111-111111111111
+                    name: Annual leave
+                  initiator:
+                    id: 33333333-3333-4333-8333-333333333333
+                  status: in_approval
+                  current_stage:
+                    number: 1
+                    name: Line manager
+                  created_at: "2026-09-21T09:00:00Z"
+                  updated_at: "2026-09-21T09:10:00Z"
+                  schema:
+                    request_type_id: 11111111-1111-4111-8111-111111111111
+                    fields: []
+                  values: []
+                  value_source: submitted_version
+                  submit_number: 1
+                  comments: []
+                available_actions: [approve, reject, return]
+        "403":
+          description: |
+            `ERR_FORBIDDEN` — user lacks the approver role.
+            `ERR_FORBIDDEN_APPROVAL` is an unresolved alternative for a foreign task (§10.6).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: |
+            `ERR_NOT_FOUND` — task absent or not linked to current approver.
+            Selection versus ERR_FORBIDDEN_APPROVAL remains OPEN (§10.6).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /approval-tasks/{task_id}/approve:
+    post:
+      tags: [ApprovalTasks]
+      summary: Approve the current stage
+      description: |
+        Completes an own open task with approve. Self-approval is forbidden.
+        First-approve-wins cancels sibling open tasks. The next stage and tasks
+        use RouteInstance; final-stage approval marks the request approved.
+        Decision, tasks, request state/stage, and history are atomic and tied
+        to the task's FieldValueVersion.
+        Role: `approver` (assignee). Traceability: UC-07; FR-APP-03,
+        FR-APP-06, FR-APP-07.
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveInput"
+            example:
+              comment: Approved.
+      responses:
+        "200":
+          description: Approval decision applied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApproveResult"
+              example:
+                task:
+                  id: 66666666-6666-4666-8666-666666666666
+                  status: completed
+                  decision: approve
+                  value_version_id: 88888888-8888-4888-8888-888888888888
+                request:
+                  id: 22222222-2222-4222-8222-222222222222
+                  status: approved
+                  current_stage:
+                    number: 1
+                    name: Line manager
+        "403":
+          $ref: "#/components/responses/ForbiddenApproval"
+        "409":
+          description: |
+            `ERR_TASK_DONE` — task is completed/cancelled;
+            `ERR_DUP_ACTION` — duplicate action in a race/retry;
+            `ERR_INVALID_STATE` — request/task state does not allow approval.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /approval-tasks/{task_id}/reject:
+    post:
+      tags: [ApprovalTasks]
+      summary: Reject a request
+      description: |
+        Completes an own open task with reject. Self-approval is forbidden and
+        a non-empty trimmed comment is required. All current-stage open tasks
+        close, no later-stage tasks are created, and the decision is tied to
+        the current FieldValueVersion. Decision, tasks, request state, and
+        history are atomic.
+        Role: `approver` (assignee). Traceability: UC-08; FR-APP-04.
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequiredDecisionInput"
+            example:
+              comment: Required information is missing.
+      responses:
+        "200":
+          description: Rejection decision applied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RejectResult"
+              example:
+                task:
+                  id: 66666666-6666-4666-8666-666666666666
+                  status: completed
+                  decision: reject
+                  value_version_id: 88888888-8888-4888-8888-888888888888
+                request:
+                  id: 22222222-2222-4222-8222-222222222222
+                  status: rejected
+                  current_stage:
+                    number: 1
+                    name: Line manager
+        "403":
+          $ref: "#/components/responses/ForbiddenApproval"
+        "409":
+          $ref: "#/components/responses/DecisionConflict"
+        "422":
+          description: "`ERR_VALIDATION` — comment is absent or empty after trim."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /approval-tasks/{task_id}/return:
+    post:
+      tags: [ApprovalTasks]
+      summary: Return a request for revision
+      description: |
+        Completes an own open task with return. Self-approval is forbidden and
+        a non-empty trimmed comment is required. Current-stage open tasks
+        close; RouteInstance and existing FieldValueVersion records do not
+        change. The request retains the return stage for audit. Decision,
+        tasks, request state, and history are atomic.
+        Role: `approver` (assignee). Traceability: UC-09; FR-APP-05, FR-REQ-08.
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequiredDecisionInput"
+            example:
+              comment: Please correct the dates.
+      responses:
+        "200":
+          description: Return decision applied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnResult"
+              example:
+                task:
+                  id: 66666666-6666-4666-8666-666666666666
+                  status: completed
+                  decision: return
+                  value_version_id: 88888888-8888-4888-8888-888888888888
+                request:
+                  id: 22222222-2222-4222-8222-222222222222
+                  status: returned
+                  current_stage:
+                    number: 1
+                    name: Line manager
+        "403":
+          $ref: "#/components/responses/ForbiddenApproval"
+        "409":
+          $ref: "#/components/responses/DecisionConflict"
+        "422":
+          description: "`ERR_VALIDATION` — comment is absent or empty after trim."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  parameters:
+    TypeId:
+      name: type_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RequestId:
+      name: request_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TaskId:
+      name: task_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PageSize:
+      name: page_size
+      in: query
+      required: false
+      description: Number of list items. No other navigation parameter is fixed.
+      schema:
+        type: integer
+        default: 20
+        maximum: 100
+    RequestStatusFilter:
+      name: status
+      in: query
+      required: false
+      schema:
+        $ref: "#/components/schemas/RequestStatus"
+
+  responses:
+    Forbidden:
+      description: "`ERR_FORBIDDEN` — role does not permit the operation."
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: ERR_FORBIDDEN
+            message: Недостаточно прав для выполнения операции
+            details: {}
+    ForbiddenApproval:
+      description: "`ERR_FORBIDDEN_APPROVAL` — user is not assignee or self-approval is attempted."
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: ERR_FORBIDDEN_APPROVAL
+            message: Вы не можете выполнить действие по этой задаче
+            details: {}
+    RequestNotFound:
+      description: "`ERR_NOT_FOUND` — request does not exist or belongs to another employee."
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: ERR_NOT_FOUND
+            message: Объект не найден
+            details: {}
+    DecisionConflict:
+      description: |
+        `ERR_TASK_DONE` — task is completed/cancelled;
+        `ERR_DUP_ACTION` — duplicate action in a race/retry;
+        `ERR_INVALID_STATE` — request/task state does not allow the decision.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: "`ERR_INTERNAL` — unexpected server error; mutations are rolled back."
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error_code: ERR_INTERNAL
+            message: Произошла внутренняя ошибка. Попробуйте позже
+            details: {}
+
+  schemas:
+    RequestStatus:
+      type: string
+      enum: [draft, in_approval, returned, approved, rejected, cancelled]
+
+    ErrorCode:
+      type: string
+      enum:
+        - ERR_FORBIDDEN
+        - ERR_FORBIDDEN_APPROVAL
+        - ERR_NOT_FOUND
+        - ERR_VALIDATION
+        - ERR_INACTIVE_TYPE
+        - ERR_INVALID_STATE
+        - ERR_TASK_DONE
+        - ERR_DUP_ACTION
+        - ERR_ROUTE_CONFIG
+        - ERR_INTERNAL
+
+    ErrorResponse:
+      type: object
+      description: |
+        Recommended, not mandatory error envelope from Stage 4.1.
+        Its mandatory JSON shape remains OPEN in Stage 4.1 §10.11.
+      required: [error_code, message, details]
+      properties:
+        error_code:
+          $ref: "#/components/schemas/ErrorCode"
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+    RequestTypeSummary:
+      type: object
+      required: [id, name, description]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+
+    RequestTypeRef:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
+    RequestFieldDefinition:
+      type: object
+      required: [code, name, data_type, required, order_no, dictionary_id]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        data_type:
+          type: string
+          enum: [text, date, number, catalog]
+        required:
+          type: boolean
+        order_no:
+          type: integer
+        dictionary_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Dictionary reference for catalog fields; item delivery remains OPEN (§10.3).
+
+    RequestTypeSchema:
+      type: object
+      required: [request_type_id, fields]
+      properties:
+        request_type_id:
+          type: string
+          format: uuid
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/RequestFieldDefinition"
+
+    CurrentStage:
+      type: object
+      required: [number, name]
+      properties:
+        number:
+          type: integer
+        name:
+          type: string
+
+    UserReference:
+      type: object
+      description: |
+        User reference. Stage 4.1 names initiator/author/actor but does not fix
+        their complete JSON shape.
+      additionalProperties: true
+
+    FieldValue:
+      type: object
+      required: [field_code, value]
+      properties:
+        field_code:
+          type: string
+        value:
+          type: string
+          nullable: true
+          description: Logical value carrier; its format is validated according to the field data_type.
+
+    Comment:
+      type: object
+      required: [id, kind, text, author, approval_task_id, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [free, decision]
+        text:
+          type: string
+        author:
+          $ref: "#/components/schemas/UserReference"
+        approval_task_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    CreateRequestInput:
+      type: object
+      required: [request_type_id]
+      additionalProperties: false
+      properties:
+        request_type_id:
+          type: string
+          format: uuid
+
+    CreatedRequest:
+      type: object
+      required:
+        - id
+        - request_type_id
+        - initiator_id
+        - status
+        - current_stage_number
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        request_type_id:
+          type: string
+          format: uuid
+        initiator_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [draft]
+        current_stage_number:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    RequestListItem:
+      type: object
+      required: [id, request_type, status, current_stage, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        request_type:
+          $ref: "#/components/schemas/RequestTypeRef"
+        status:
+          $ref: "#/components/schemas/RequestStatus"
+        current_stage:
+          allOf:
+            - $ref: "#/components/schemas/CurrentStage"
+          nullable: true
+          description: Required to be non-null when status is in_approval.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    RequestCard:
+      type: object
+      required:
+        - id
+        - request_type
+        - initiator
+        - status
+        - current_stage
+        - created_at
+        - updated_at
+        - schema
+        - values
+        - value_source
+        - comments
+      properties:
+        id:
+          type: string
+          format: uuid
+        request_type:
+          $ref: "#/components/schemas/RequestTypeRef"
+        initiator:
+          $ref: "#/components/schemas/UserReference"
+        status:
+          $ref: "#/components/schemas/RequestStatus"
+        current_stage:
+          allOf:
+            - $ref: "#/components/schemas/CurrentStage"
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        schema:
+          $ref: "#/components/schemas/RequestTypeSchema"
+        values:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldValue"
+        value_source:
+          type: string
+          enum: [working, submitted_version]
+        submit_number:
+          type: integer
+          description: Present for snapshot-based display.
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Comment"
+
+    UpdateValuesInput:
+      type: object
+      required: [values]
+      additionalProperties: false
+      properties:
+        values:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldValue"
+
+    UpdatedRequestValues:
+      type: object
+      required: [id, status, schema, values, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/RequestStatus"
+        schema:
+          $ref: "#/components/schemas/RequestTypeSchema"
+        values:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldValue"
+        updated_at:
+          type: string
+          format: date-time
+
+    SubmitRequestResult:
+      type: object
+      required: [id, status, current_stage, submit_number, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [in_approval]
+        current_stage:
+          $ref: "#/components/schemas/CurrentStage"
+        submit_number:
+          type: integer
+        updated_at:
+          type: string
+          format: date-time
+
+    CancelRequestResult:
+      type: object
+      required: [id, status, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [cancelled]
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateCommentInput:
+      type: object
+      required: [text]
+      additionalProperties: false
+      properties:
+        text:
+          type: string
+          description: Must be non-empty after trim.
+
+    CreatedComment:
+      type: object
+      required: [id, request_id, author_id, kind, text, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        request_id:
+          type: string
+          format: uuid
+        author_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [free]
+        text:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    HistoryEvent:
+      type: object
+      required: [id, actor, action, from_state, to_state, comment, at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        actor:
+          allOf:
+            - $ref: "#/components/schemas/UserReference"
+          nullable: true
+        action:
+          type: string
+        from_state:
+          type: string
+          nullable: true
+        to_state:
+          type: string
+          nullable: true
+        comment:
+          type: string
+          nullable: true
+        at:
+          type: string
+          format: date-time
+        value_version_id:
+          type: string
+          format: uuid
+
+    FieldValueVersion:
+      type: object
+      required: [id, submit_number, schema_document, values_document, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        submit_number:
+          type: integer
+        schema_document:
+          description: JSON copy of the submitted schema.
+        values_document:
+          description: JSON copy of the submitted values.
+        created_at:
+          type: string
+          format: date-time
+
+    RequestHistory:
+      type: object
+      required: [events, field_value_versions]
+      properties:
+        events:
+          type: array
+          description: Chronological order.
+          items:
+            $ref: "#/components/schemas/HistoryEvent"
+        field_value_versions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldValueVersion"
+
+    ApprovalTaskListItem:
+      type: object
+      required: [id, request_id, request_type, stage, status, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        request_id:
+          type: string
+          format: uuid
+        request_type:
+          $ref: "#/components/schemas/RequestTypeRef"
+        stage:
+          $ref: "#/components/schemas/CurrentStage"
+        status:
+          type: string
+          enum: [open]
+        created_at:
+          type: string
+          format: date-time
+          description: Required by FR-APP-01; its model source remains OPEN (§10.4).
+
+    ApprovalTask:
+      type: object
+      required:
+        - id
+        - request_id
+        - stage_number
+        - assignee_id
+        - status
+        - decision
+        - value_version_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        request_id:
+          type: string
+          format: uuid
+        stage_number:
+          type: integer
+        assignee_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [open, completed, cancelled]
+        decision:
+          type: string
+          enum: [approve, reject, return]
+          nullable: true
+        value_version_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    ApprovalTaskCard:
+      type: object
+      required: [task, request, available_actions]
+      properties:
+        task:
+          $ref: "#/components/schemas/ApprovalTask"
+        request:
+          allOf:
+            - $ref: "#/components/schemas/RequestCard"
+            - type: object
+              required: [submit_number]
+              properties:
+                value_source:
+                  type: string
+                  enum: [submitted_version]
+        available_actions:
+          type: array
+          description: Available for an open task; empty for completed/cancelled.
+          items:
+            type: string
+
+    ApproveInput:
+      type: object
+      additionalProperties: false
+      properties:
+        comment:
+          type: string
+
+    RequiredDecisionInput:
+      type: object
+      required: [comment]
+      additionalProperties: false
+      properties:
+        comment:
+          type: string
+          description: Must be non-empty after trim.
+
+    CompletedTaskApprove:
+      type: object
+      required: [id, status, decision, value_version_id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [completed]
+        decision:
+          type: string
+          enum: [approve]
+        value_version_id:
+          type: string
+          format: uuid
+
+    CompletedTaskReject:
+      type: object
+      required: [id, status, decision, value_version_id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [completed]
+        decision:
+          type: string
+          enum: [reject]
+        value_version_id:
+          type: string
+          format: uuid
+
+    CompletedTaskReturn:
+      type: object
+      required: [id, status, decision, value_version_id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [completed]
+        decision:
+          type: string
+          enum: [return]
+        value_version_id:
+          type: string
+          format: uuid
+
+    ApproveRequestResult:
+      type: object
+      required: [id, status, current_stage]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [in_approval, approved]
+        current_stage:
+          allOf:
+            - $ref: "#/components/schemas/CurrentStage"
+          nullable: true
+
+    RejectRequestResult:
+      type: object
+      required: [id, status, current_stage]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [rejected]
+        current_stage:
+          allOf:
+            - $ref: "#/components/schemas/CurrentStage"
+          nullable: true
+
+    ReturnRequestResult:
+      type: object
+      required: [id, status, current_stage]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [returned]
+        current_stage:
+          $ref: "#/components/schemas/CurrentStage"
+
+    ApproveResult:
+      type: object
+      required: [task, request]
+      properties:
+        task:
+          $ref: "#/components/schemas/CompletedTaskApprove"
+        request:
+          $ref: "#/components/schemas/ApproveRequestResult"
+
+    RejectResult:
+      type: object
+      required: [task, request]
+      properties:
+        task:
+          $ref: "#/components/schemas/CompletedTaskReject"
+        request:
+          $ref: "#/components/schemas/RejectRequestResult"
+
+    ReturnResult:
+      type: object
+      required: [task, request]
+      properties:
+        task:
+          $ref: "#/components/schemas/CompletedTaskReturn"
+        request:
+          $ref: "#/components/schemas/ReturnRequestResult"
