@@ -10,11 +10,11 @@
 
 ## 1. Назначение
 
-Аналитическая (conceptual) модель сущностей предметной области Employee Service — мост между глоссарием / BR и будущим ERD.
+Аналитическая (conceptual) модель сущностей предметной области Employee Service — мост между глоссарием / BR и ERD.
 
 ### Важно: это не ERD
 
-| Conceptual Class (здесь) | ERD (позже, вне 3.2) |
+| Conceptual Class (здесь) | ERD ([erd/](../erd/)) |
 | :--- | :--- |
 | Классы анализа, смысл предметной области | Таблицы, колонки, типы SQL |
 | Связи и кратности на уровне бизнеса | PK / FK / индексы / нормализация |
@@ -50,6 +50,7 @@
 | Класс | Атрибуты (анализ) | Смысл |
 | :--- | :--- | :--- |
 | **Request** | status, currentStageNumber | Экземпляр заявки; инициатор = User |
+| **RequestFieldValue** | fieldCode, value | Working values заявки (live schema в draft/returned); не FieldValueVersion. Канон: Snapshot Model / DD §4.2 |
 | **RouteInstance** | stagesOrder, assignmentsCopy | Экземпляр маршрута при **первом** submit (BR-08); при resubmit не rebuild (BR-22). Ранее: RouteSnapshot |
 | **FieldValueVersion** | submitNumber, fieldSchemaCopy, fieldValuesCopy | Версия схемы+значений на каждый successful submit (BR-26); решение bound to version. Ранее: SchemaValueSnapshot |
 
@@ -57,7 +58,7 @@
 
 | Класс | Атрибуты (анализ) | Смысл |
 | :--- | :--- | :--- |
-| **ApprovalTask** | status (`open` / `completed` / `cancelled`), stageNumber | Задача согласующего по snapshot этапа |
+| **ApprovalTask** | status (`open` / `completed` / `cancelled`), stageNumber | Задача согласующего по этапу RouteInstance |
 | **Comment** | text, kind (free / decision) | Свободный комментарий инициатора или комментарий решения |
 | **Notification** | text, read, eventType | In-app уведомление (BR-11) — **Future / backlog** |
 | **HistoryEvent** | action, fromState, toState, at, comment | Событие истории (BR-24) |
@@ -69,6 +70,7 @@
 | Тема | Ограничение (существующие BR) |
 | :--- | :--- |
 | RouteInstance | `Request` имеет не более одного после первого submit; создаётся только из `draft` |
+| RequestFieldValue | Working values; мутабельны в `draft`/`returned` по live schema (BR-26) |
 | FieldValueVersion | Append-only на каждый successful submit; решение bound to version |
 | Задачи | `ApprovalTask` из назначений **RouteInstance**, не из live `StageAssignment` |
 | First-approve | При approve прочие `open` задачи того же stageNumber → `cancelled` (BR-03) |
@@ -128,6 +130,10 @@ classDiagram
     status
     currentStageNumber
   }
+  class RequestFieldValue {
+    fieldCode
+    value
+  }
   class RouteInstance {
     stagesOrder
     assignmentsCopy
@@ -170,6 +176,7 @@ classDiagram
   Dictionary "1" --> "many" DictionaryItem : contains
 
   RequestType "1" --> "many" Request : typedAs
+  Request "1" --> "0..*" RequestFieldValue : workingValues
   Request "1" --> "0..1" RouteInstance : firstSubmit
   Request "1" --> "0..*" FieldValueVersion : eachSubmit
   Request "1" --> "many" ApprovalTask : has
@@ -179,6 +186,7 @@ classDiagram
   Request "1" --> "many" HistoryEvent : auditedBy
   User "1" --> "many" Notification : receives
 
+  note for RequestFieldValue "Working values (draft/returned).\nНе FieldValueVersion. См. Snapshot Model."
   note for RouteInstance "Создаётся только при первом submit (BR-08).\nПри resubmit не rebuild (BR-22).\nКонфиг не ретроактивен (BR-09)."
   note for FieldValueVersion "Новая версия на каждый successful submit (BR-26).\nРешение bound to version. См. Snapshot Model."
   note for ApprovalTask "First-approve: прочие open → cancelled (BR-03).\nИсполнитель ≠ инициатор Request (BR-21)."

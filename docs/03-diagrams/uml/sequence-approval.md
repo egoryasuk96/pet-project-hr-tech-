@@ -15,7 +15,7 @@
 - **first-approve wins** (BR-03);
 - **запрет самосогласования** (BR-21);
 - **обязательность комментария** при reject/return (BR-25);
-- чтение **route snapshot** без пересоздания.
+- чтение **RouteInstance** без пересоздания.
 
 ---
 
@@ -30,7 +30,7 @@
 
 ### 2.1. Логические области ответственности (не архитектура)
 
-Имена **Validation**, **Snapshot** (чтение route snapshot), **TaskFactory**, **Audit**, **Notification** — **логические роли / области ответственности на уровне анализа**.
+Имена **Validation**, **Snapshot** (чтение RouteInstance), **TaskFactory**, **Audit**, **Notification** — **логические роли / области ответственности на уровне анализа**.
 
 Они **не** микросервисы, **не** компоненты архитектуры и **не** API.
 
@@ -44,7 +44,7 @@
 2. Validation: задача открыта и принадлежит A (BR-15); A ≠ инициатор (BR-21).
 3. Approve; комментарий необязателен (BR-25).
 4. Задача A → completed; прочие **активные** задачи этапа → `cancelled` (BR-03).
-5. Snapshot: определить next step **по существующему route snapshot**.
+5. Snapshot: определить next step **по существующему RouteInstance**.
 6. Есть следующий этап → TaskFactory создаёт задачи; статус остаётся `in_approval`.
 7. Нет следующего → статус `approved` (BR-17).
 8. Audit + Notification (**Future / backlog**, BR-29).
@@ -94,7 +94,7 @@ sequenceDiagram
     Sys->>Sys: задача A = completed
     Sys->>Sys: first-approve: активные задачи этапа → cancelled (BR-03)
     Note over B: задача B cancelled
-    Sys->>Sys: Snapshot: next step по route snapshot (только чтение)
+    Sys->>Sys: Snapshot: next step по RouteInstance (только чтение)
     alt Есть следующий этап
       Sys->>Sys: TaskFactory: задачи следующего этапа
       Sys->>Sys: Audit + Notification новым assignees (**Future / backlog**)
@@ -169,6 +169,6 @@ sequenceDiagram
 ## 7. Границы
 
 - Create / submit / resubmit / cancel — UML-SEQ-01.
-- Route snapshot в этом сценарии **только читается**.
+- RouteInstance в этом сценарии **только читается**.
 - HTTP / микросервисы **не** моделируются.
 - Новые правила не вводятся.

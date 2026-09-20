@@ -214,7 +214,7 @@ AUTH, NOTIF, ADMIN и часть CAB — [docs/backlog.md](../backlog.md).
 | **Основной сценарий** | 1) Approve (комментарий необязателен, BR-25) 2) Задача completed 3) Прочие активные задачи этапа → `cancelled` (BR-03) 4) Переход/завершение 5) История |
 | **Альтернативы / исключения** | ERR_FORBIDDEN_APPROVAL; ERR_TASK_DONE; ERR_DUP_ACTION |
 | **Postconditions** | Этап завершён успешно |
-| **Связи** | BR-03, BR-17, BR-21, BR-25; UC-07; AC-APP-04, AC-APP-09 |
+| **Связи** | BR-03, BR-21, BR-25; UC-07; AC-APP-04, AC-APP-09 |
 
 ### FR-APP-04 — Reject
 | Поле | Содержание |
@@ -244,11 +244,11 @@ AUTH, NOTIF, ADMIN и часть CAB — [docs/backlog.md](../backlog.md).
 | Поле | Содержание |
 | :--- | :--- |
 | **Название** | Переход после approve |
-| **Описание** | Если после approve есть следующий этап в snapshot, система делает его текущим и создаёт задачи назначенным согласующим |
+| **Описание** | Если после approve есть следующий этап в RouteInstance, система делает его текущим и создаёт задачи назначенным согласующим |
 | **Actor** | Система |
 | **Preconditions** | Успешный approve; есть следующий этап (BR-02) |
 | **Основной сценарий** | 1) Определение next step 2) Создание задач 3) История перехода |
-| **Альтернативы / исключения** | Нет назначений на следующем этапе в snapshot — не должно возникать, если snapshot валиден; иначе ERR_INTERNAL + лог |
+| **Альтернативы / исключения** | Нет назначений на следующем этапе в RouteInstance — не должно возникать, если RouteInstance валиден; иначе ERR_INTERNAL + лог |
 | **Postconditions** | Заявка остаётся `in_approval` |
 | **Связи** | BR-02, BR-03; AC-APP-05 |
 
@@ -258,7 +258,7 @@ AUTH, NOTIF, ADMIN и часть CAB — [docs/backlog.md](../backlog.md).
 | **Название** | Финальный approve |
 | **Описание** | Approve на последнем этапе → статус `approved` |
 | **Actor** | Система |
-| **Preconditions** | Approve на последнем этапе snapshot |
+| **Preconditions** | Approve на последнем этапе RouteInstance |
 | **Основной сценарий** | 1) Статус approved 2) История |
 | **Альтернативы / исключения** | — |
 | **Postconditions** | BR-17; задач открытых нет |
@@ -335,7 +335,7 @@ Backlog FR (AUTH, CAB-01/03, NOTIF, ADMIN): см. [docs/backlog.md](../backlog.m
 | FR-REQ-09 | BR-06, BR-22, BR-26 | UC-05 | AC-APP-08, AC-DRAFT-02 |
 | FR-APP-01 | BR-14 | UC-07 | — |
 | FR-APP-02 | BR-14 | UC-07 | AC-ACC-06 |
-| FR-APP-03 | BR-03, BR-17, BR-21, BR-25 | UC-07 | AC-APP-04, AC-APP-09 |
+| FR-APP-03 | BR-03, BR-21, BR-25 | UC-07 | AC-APP-04, AC-APP-09 |
 | FR-APP-04 | BR-04, BR-21, BR-25 | UC-08 | AC-APP-06 |
 | FR-APP-05 | BR-05, BR-21, BR-25 | UC-09 | AC-APP-07 |
 | FR-APP-06 | BR-02, BR-03 | UC-07 | AC-APP-05 |

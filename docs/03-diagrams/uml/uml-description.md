@@ -36,12 +36,12 @@ UML дополняет BPMN:
 
 ### 2.1. RouteInstance / FieldValueVersion (без новых правил)
 
-| Вид snapshot | Когда создаётся | После return / resubmit |
+| Механизм | Когда создаётся | После return / resubmit |
 | :--- | :--- | :--- |
-| **Route snapshot** | При **первом** submit из `draft` (BR-08) | **Не изменяется** (BR-22) |
-| **Schema/value snapshot** | При **каждом** успешном submit (BR-26, BR-22) | **Обновляется** по итогам валидации актуальной схемы |
+| **RouteInstance** | При **первом** submit из `draft` (BR-08) | **Не изменяется** (BR-22) |
+| **FieldValueVersion** | При **каждом** успешном submit (BR-26, BR-22) | Создаётся **новая** версия (append-only); прошлые не переписываются |
 
-Изменение live-конфигурации не меняет route snapshot уже отправленных заявок (BR-09). Admin UI как способ изменения конфигурации — **Future / backlog**.
+Изменение live-конфигурации не меняет RouteInstance уже отправленных заявок (BR-09). Admin UI как способ изменения конфигурации — **Future / backlog**. Канон: [Snapshot Model](../erd/snapshot-model.md).
 
 ### 2.2. Критичные правила, обязательные на диаграммах
 

@@ -30,7 +30,7 @@
 | Web static client (UI-зоны) | отображение FR областей ядра | — | NFR-USB-01/03 | UI экранов ядра | Baseline |
 | PostgreSQL | персистентность | — | NFR-AVL-02, NFR-DEP-01, NFR-MNT-02 | — | Baseline |
 | Cabinet Module | FR-CAB-01 | — | — | UC-02 | Backlog |
-| Admin Config Module | FR-ADMIN-01…08 | BR-09, BR-10, BR-12, BR-18, BR-27 | ACL-04, ACL-09 | UC-11, UC-12, UC-15 | Future / backlog |
+| Admin Config Module | FR-ADMIN-01…08 | BR-09, BR-10, BR-12, BR-18, BR-27 | ACL-04, ACL-09 (backlog; см. consistency-review RR-ACL-01) | UC-11, UC-12, UC-15 | Future / backlog |
 | Notification Module | FR-NOTIF-01…03 | BR-11, BR-23, BR-29 | — | UC-13 | Future / backlog |
 
 ---

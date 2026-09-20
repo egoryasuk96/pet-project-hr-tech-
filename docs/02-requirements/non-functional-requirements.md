@@ -77,8 +77,8 @@ NFR задают проверяемые ограничения качества 
 Повторный approve/reject/return по уже завершённой задаче не меняет состояние повторно и возвращает ошибку duplicate/invalid state.  
 **Проверка:** error-matrix ERR_DUP_ACTION, ERR_TASK_DONE.
 
-### NFR-REL-03 — Сохранность snapshot
-Snapshot маршрута после первого submit неизменяем прикладными операциями.  
+### NFR-REL-03 — Сохранность RouteInstance
+RouteInstance после первого submit неизменяем прикладными операциями.  
 **Проверка:** AC-APP-10.
 
 ---
@@ -174,7 +174,8 @@ MVP поднимается без Docker Desktop: локально — Python-о
 
 | NFR | Связанные FR / BR / AC |
 | :--- | :--- |
-| NFR-SEC-02 | BR-01, BR-14–16, BR-21, AC-ACC-01, AC-ACC-02, AC-ACC-03, AC-ACC-06 |
+| NFR-SEC-02 | BR-01, BR-14–16, BR-21, AC-ACC-02, AC-ACC-03, AC-ACC-06 |
+| NFR-SEC-05 | BR-01, BR-14, AC-ACC-01, AC-ACC-06; см. также [consistency-review.md](../consistency-review.md) RR-AUTHZ-01 |
 | NFR-REL-01 | BR-03–05, BR-20, AC-APP-* |
 | NFR-LOG-02 | FR-AUDIT-01, BR-24, UC-14 |
 | NFR-DEP-01 | Локальный Python + PostgreSQL (Neon/local); облако Render + Neon; env (NFR-DEP-03); Vision §11 |

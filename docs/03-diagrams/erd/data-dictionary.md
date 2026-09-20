@@ -118,7 +118,7 @@
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | id | UUID | yes | no | Назначение | PK | FR-ADMIN-05 |
 | stage_id | UUID | yes | no | Этап | FK → ApprovalStage | FR-ADMIN-05 |
-| assignment_kind | enum | yes | no | role / user / both | — | BR-12 |
+| assignment_kind | enum | yes | no | `role` / `user` / `role_and_user` | — | BR-12 |
 | role_id | UUID | no | yes | Роль | FK → Role; ≥1 из role/user | BR-12 |
 | user_id | UUID | no | yes | Пользователь | FK → User; ≥1 из role/user | BR-12 |
 
@@ -163,7 +163,7 @@
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | Snapshot маршрута | PK | BR-08 |
+| id | UUID | yes | no | Экземпляр маршрута | PK | BR-08 |
 | request_id | UUID | yes | no | Заявка | FK → Request; **unique** (1—0..1) | BR-08 |
 | created_at | datetime | yes | no | Момент first submit | write-once | BR-08 |
 
@@ -173,20 +173,20 @@
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | Этап snapshot | PK | BR-08 |
-| route_snapshot_id | UUID | yes | no | Snapshot | FK → RouteInstance | BR-08 |
+| id | UUID | yes | no | Этап экземпляра маршрута | PK | BR-08 |
+| route_instance_id | UUID | yes | no | RouteInstance | FK → RouteInstance | BR-08 |
 | name | string | yes | no | Имя на момент submit | — | BR-08 |
-| sequence_no | int | yes | no | Порядок | unique per snapshot | BR-02, BR-08 |
+| sequence_no | int | yes | no | Порядок | unique per RouteInstance | BR-02, BR-08 |
 
 ### 5.3. RouteInstanceAssignment
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | Назначение snapshot | PK | BR-08 |
-| snapshot_stage_id | UUID | yes | no | Этап snapshot | FK → RouteInstanceStage | BR-08 |
-| assignment_kind | enum | yes | no | role / user / both | — | BR-12 |
-| role_id | UUID | no | yes | Роль на момент snapshot | FK → Role | BR-08 |
-| user_id | UUID | no | yes | User на момент snapshot | FK → User | BR-08 |
+| id | UUID | yes | no | Назначение этапа экземпляра | PK | BR-08 |
+| instance_stage_id | UUID | yes | no | Этап экземпляра | FK → RouteInstanceStage | BR-08 |
+| assignment_kind | enum | yes | no | `role` / `user` / `role_and_user` | — | BR-12 |
+| role_id | UUID | no | yes | Роль на момент submit | FK → Role | BR-08 |
+| user_id | UUID | no | yes | User на момент submit | FK → User | BR-08 |
 
 **Constraints:** ApprovalTask строятся из этих назначений (не из live StageAssignment для in-flight).
 
@@ -217,7 +217,8 @@
 | assignee_id | UUID | yes | no | Исполнитель | FK → User | BR-15 |
 | status | enum | yes | no | `open` \| `completed` \| `cancelled` | First-approve → siblings cancelled | BR-03 |
 | decision | enum | no | yes | `approve` \| `reject` \| `return` | Только после решения | FR-APP-03…05 |
-| value_version_id | UUID | no | yes | Версия значений, на которой принято решение | FK → FieldValueVersion | BR-26 |
+| value_version_id | UUID | no | yes | Версия значений, на которой принято решение | FK → FieldValueVersion; кардинальность vs ERD — [consistency-review.md](../../consistency-review.md) RR-FK-01 | BR-26 |
+| decided_at | datetime | no | yes | Момент решения | Заполняется при decision | FR-APP-03…05 |
 
 **Constraints:** действие только по своей open задаче (BR-15); assignee ≠ initiator (BR-21); повтор по closed → ошибка (NFR-REL-02).
 

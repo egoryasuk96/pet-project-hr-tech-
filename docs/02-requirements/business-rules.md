@@ -59,8 +59,8 @@
 **Связи:** FR-REQ-08, FR-APP-05, UC-09, AC-APP-07
 
 ### BR-17 — Завершение маршрута
-Если выполнен `approve` на последнем этапе snapshot маршрута, заявка переходит в статус `approved`.  
-**Связи:** FR-APP-07, AC-APP-05
+Если выполнен `approve` на последнем этапе RouteInstance, заявка переходит в статус `approved`.  
+**Связи:** FR-APP-07, AC-APP-05b
 
 ### BR-18 — Валидация маршрута при активации и при submit
 Маршрут считается валидным, если содержит минимум один этап и каждый этап имеет хотя бы одно назначение (роль и/или пользователь).
@@ -92,7 +92,7 @@
 **Связи:** FR-REQ-01, FR-REQ-02, UC-04
 
 ### BR-20 — Submit переводит в in_approval
-Успешный submit из `draft` или повторный submit из `returned` переводит заявку в `in_approval`, создаёт задачи текущего этапа и фиксирует RouteInstance / FieldValueVersion согласно BR-08 / BR-22 / BR-26 ([Snapshot Model](../03-diagrams/erd/snapshot-model.md)).  
+Успешный submit из `draft` или повторный submit из `returned` переводит заявку в `in_approval`, создаёт задачи **первого** этапа RouteInstance и фиксирует RouteInstance / FieldValueVersion согласно BR-08 / BR-22 / BR-26 (при resubmit — тоже этап 1, BR-06; [Snapshot Model](../03-diagrams/erd/snapshot-model.md)).  
 **Связи:** FR-REQ-03, UC-05, AC-APP-02, AC-APP-03
 
 ### BR-21 — Запрет самосогласования
