@@ -6,7 +6,7 @@
 **Версия:** 1.0  
 **Статус:** Baseline v1.0
 
-MVP Baseline (этап 3). NFR вне Baseline — [docs/backlog.md](../backlog.md).
+MVP Baseline. NFR вне Baseline — [docs/backlog.md](../backlog.md).
 
 ---
 
@@ -87,7 +87,7 @@ Snapshot маршрута после первого submit неизменяем 
 
 
 ### NFR-MNT-01 — OpenAPI как контракт
-Публичный REST API описывается OpenAPI 3.x и соответствует реализации (Этап 4+).  
+Публичный REST API описывается OpenAPI 3.x и соответствует реализации (после Baseline / будущий контракт API).  
 **Проверка:** сверка спецификации и фактических ответов.
 
 ### NFR-MNT-02 — Миграции БД
@@ -124,7 +124,7 @@ API логирует: method, path, status code, latency, request_id, user_id (�
 1. **Технические логи API:** retention **14 дней** (или ротация по размеру volume с эквивалентным целевым окном).  
 2. **История заявок (прикладной аудит):** retention для MVP — **60 дней**.
 
-**Проверка:** конфигурация ротации логов; политика очистки/архивации history (реализация на Этапе 6+).
+**Проверка:** конфигурация ротации логов; политика очистки/архивации history (реализация после Baseline).
 
 ---
 
@@ -164,7 +164,7 @@ MVP поднимается без Docker Desktop: локально — Python-о
 
 ## 11. Open Questions / TBD
 
-**Обязательных открытых NFR-вопросов для Этапа 3 нет.**
+**Обязательных открытых NFR-вопросов для Baseline нет.**
 
 Ранее закрытые OQ по JWT/password/multi-instance — в [docs/backlog.md](../backlog.md) и [business-rules.md](./business-rules.md) §9.
 

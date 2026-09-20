@@ -1,4 +1,4 @@
-# Stage 3.4 — ERD + Data Dictionary
+# ERD + Data Dictionary
 
 **Продукт:** Employee Service  
 **ID:** ERD-00-INDEX  
@@ -12,7 +12,7 @@
 
 Аналитическая модель данных Employee Service: сущности, атрибуты, связи, кардинальности, инварианты RouteInstance / FieldValueVersion, data dictionary и трассировка к требованиям.
 
-Это **не** физическая схема PostgreSQL, **не** SQL-миграции и **не** Stage OpenAPI.
+Это **не** физическая схема PostgreSQL, **не** SQL-миграции и **не** OpenAPI.
 
 ---
 
@@ -20,7 +20,7 @@
 
 | ID | Файл | Кратко |
 | :--- | :--- | :--- |
-| ERD-00 | [erd-description.md](./erd-description.md) | Индекс этапа, уровни модели, классификация сущностей |
+| ERD-00 | [erd-description.md](./erd-description.md) | Индекс раздела, уровни модели, классификация сущностей |
 | ERD-DM | [erd-domain-model.md](./erd-domain-model.md) | Mermaid ER-диаграмма, кардинальности |
 | ERD-SNAP | [snapshot-model.md](./snapshot-model.md) | **Канон:** RouteInstance + FieldValueVersion (вариант B) |
 | ERD-DD | [data-dictionary.md](./data-dictionary.md) | Словарь сущностей и полей |
@@ -74,5 +74,5 @@
 
 | Версия | Дата | Описание |
 | :--- | :--- | :--- |
-| 1.0 | 2026-09-19 | Первая версия Stage 3.4 |
+| 1.0 | 2026-09-19 | Первая версия ERD + Data Dictionary |
 | 1.1 | 2026-09-20 | Вариант B; краткая сводка вместо dual snapshot essay |

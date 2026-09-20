@@ -10,7 +10,7 @@
 
 ## Контекст
 
-Ранее в Stage 3.3 архитектура предполагала отдельный **React + TypeScript SPA** как deployable Web-контейнер с login UI и хранением JWT на клиенте (ADR-CNT-03, ADR-SEC-02, ADR-CMP-02 в части SPA). Vision §12 зафиксировал иной контур для Baseline MVP: портфолио-демо без React/SPA и без настоящей аутентификации.
+Ранее в ранних версиях архитектуры предполагался отдельный **React + TypeScript SPA** как deployable Web-контейнер с login UI и хранением JWT на клиенте (ADR-CNT-03, ADR-SEC-02, ADR-CMP-02 в части SPA). Vision §12 зафиксировал иной контур для Baseline MVP: портфолио-демо без React/SPA и без настоящей аутентификации.
 
 Нужно явно заменить UI-стек Baseline, сохранив историю прежних ADR как **Superseded**.
 

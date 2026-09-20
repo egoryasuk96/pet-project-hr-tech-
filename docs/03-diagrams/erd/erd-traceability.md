@@ -1,4 +1,4 @@
-﻿# ERD-MAP — Traceability (Stage 3.4)
+﻿# ERD-MAP — Traceability
 
 **Продукт:** Employee Service  
 **ID:** ERD-MAP  

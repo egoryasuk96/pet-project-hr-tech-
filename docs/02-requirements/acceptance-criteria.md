@@ -7,7 +7,7 @@
 **Статус:** Baseline v1.0
 
 Формат преимущественно Given / When / Then. Каждый AC имеет ID и ссылки на FR/BR.  
-MVP Baseline (этап 3). AC вне Baseline — [docs/backlog.md](../backlog.md).
+MVP Baseline. AC вне Baseline — [docs/backlog.md](../backlog.md).
 
 > **AC-ACC** = Access (проверки контроля доступа / access control), не «account».
 
@@ -430,7 +430,7 @@ Backlog AC: см. [docs/backlog.md](../backlog.md).
 
 ## 16. Open Questions / TBD
 
-**Обязательных открытых вопросов для Этапа 3 нет.**
+**Обязательных открытых вопросов для Baseline нет.**
 
 ---
 

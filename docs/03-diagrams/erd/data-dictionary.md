@@ -287,4 +287,4 @@ HistoryEvent — Baseline. **Notification** — **Future / backlog** (сущно
 
 | Версия | Дата | Описание |
 | :--- | :--- | :--- |
-| 1.0 | 2026-09-19 | Первая версия Data Dictionary Stage 3.4 |
+| 1.0 | 2026-09-19 | Первая версия Data Dictionary |

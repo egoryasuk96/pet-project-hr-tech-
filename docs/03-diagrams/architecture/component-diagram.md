@@ -155,7 +155,7 @@ flowchart TB
 
 Хранилище сущностей conceptual model UML-CL-01: User, Role, RequestType, RequestFieldDefinition, Dictionary*, ApprovalRoute/Stage/Assignment, Request, RouteInstance, FieldValueVersion, ApprovalTask, Comment, Notification, HistoryEvent.
 
-**Не проектируется** на Stage 3.3: таблицы, PK/FK, индексы, JSON vs нормализация snapshot.
+**Не проектируется** в Architecture: таблицы, PK/FK, индексы, JSON vs нормализация snapshot.
 
 ---
 

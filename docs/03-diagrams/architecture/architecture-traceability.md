@@ -10,7 +10,7 @@
 
 ## 1. Назначение
 
-Связать логические компоненты Stage 3.3 с FR / BR / NFR / UC / ACL и явно показать архитектурное отражение критичных правил. Новые требования **не вводятся**.
+Связать логические компоненты Architecture с FR / BR / NFR / UC / ACL и явно показать архитектурное отражение критичных правил. Новые требования **не вводятся**.
 
 ---
 
@@ -66,7 +66,7 @@
 
 ## 5. NFR → архитектурный ответ
 
-| NFR | Ответ Stage 3.3 |
+| NFR | Ответ Architecture |
 | :--- | :--- |
 | NFR-SEC-01…04 (JWT/login) | Backlog; Baseline AuthN = ADR-AUTH-DEMO-01 |
 | NFR-SEC-02/05/06 | Authorization + HTTPS внешний демо |
@@ -105,19 +105,19 @@
 
 ```mermaid
 flowchart LR
-  Req[Stage1_2_Requirements]
-  Bpmn[Stage3_1_BPMN]
-  Uml[Stage3_2_UML]
-  Arch[Stage3_3_Architecture]
-  Erd[Stage3_4_ERD_later]
-  Api[Stage4_OpenAPI_later]
+  Req[Requirements]
+  Bpmn[BPMN]
+  Uml[UML]
+  Arch[Architecture]
+  Erd[ERD]
+  Api[OpenAPI_planned]
 
   Req --> Bpmn
   Req --> Uml
   Bpmn --> Arch
   Uml --> Arch
-  Arch -.->|не в этом этапе| Erd
-  Arch -.->|не в этом этапе| Api
+  Arch --> Erd
+  Arch -.->|planned| Api
 ```
 
 ---

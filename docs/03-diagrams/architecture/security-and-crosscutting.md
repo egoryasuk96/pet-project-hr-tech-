@@ -10,7 +10,7 @@
 
 ## 1. Назначение
 
-Свести на архитектурном уровне AuthN/AuthZ, ошибки, логирование, аудит, уведомления, производительность и масштабируемость — с разделением **требований Stage 1–3.2 / Vision**, **Baseline runtime** и **ADR / предположений MVP**.
+Свести на архитектурном уровне AuthN/AuthZ, ошибки, логирование, аудит, уведомления, производительность и масштабируемость — с разделением **требований Vision / Baseline**, **Baseline runtime** и **ADR / предположений MVP**.
 
 ---
 
@@ -46,7 +46,7 @@
 
 #### Исходный текст ADR-SEC-02 (Superseded)
 
-> SPA хранит access JWT на клиенте и передаёт в заголовке Authorization. Способ хранения (localStorage / sessionStorage / memory) **не** зафиксирован в Stage 1–3.2.
+> SPA хранит access JWT на клиенте и передаёт в заголовке Authorization. Способ хранения (localStorage / sessionStorage / memory) **не** зафиксирован в ранних версиях архитектуры.
 
 #### Исходный текст ADR-SEC-03 (Superseded для Baseline)
 
@@ -84,7 +84,7 @@
 
 | Тема | Источник |
 | :--- | :--- |
-| Единые коды error-matrix | Stage 2 error-matrix |
+| Единые коды error-matrix | error-matrix (требования) |
 | Пользовательские сообщения на русском; без stack trace клиенту | NFR-USB-02, NFR-USB-03 |
 | `ERR_INTERNAL` → rollback + tech log | error-matrix / практика надёжности NFR-REL |
 
@@ -114,7 +114,7 @@
 
 - **Audit Module** пишет HistoryEvent в той же TX, что бизнес-событие ([data-flows.md](./data-flows.md)).
 - **HTTP Layer** пишет tech logs (**ADR-LOG-01**: структурированный лог с request_id).
-- Политика cleanup/retention — требование NFR-LOG-03; механизм очистки — этап реализации, не Stage 3.3.
+- Политика cleanup/retention — требование NFR-LOG-03; механизм очистки — этап реализации, не Architecture.
 
 ---
 
@@ -153,7 +153,7 @@
 
 - Один монолит + одна БД достаточны для заявленных объёмов MVP.
 - Отсутствие server-side session (демо-заголовок сейчас; JWT в backlog) снимает sticky-session ограничения (NFR-SCL-01).
-- Индексы/кэш — решения реализации/ERD позже; на Stage 3.3 фиксируется только готовность модели конфига к NFR-SCL-02.
+- Индексы/кэш — решения реализации/ERD позже; в Architecture фиксируется только готовность модели конфига к NFR-SCL-02.
 
 ---
 

@@ -6,7 +6,7 @@
 **Версия:** 1.0  
 **Статус:** Baseline v1.0
 
-MVP Baseline (этап 3). Формат ID: `FR-<AREA>-NN`.  
+MVP Baseline. Формат ID: `FR-<AREA>-NN`.  
 Области Baseline: CAB (частично), CAT, REQ, APP, AUDIT.  
 AUTH, NOTIF, ADMIN и часть CAB — [docs/backlog.md](../backlog.md).
 
@@ -311,7 +311,7 @@ Backlog FR (AUTH, CAB-01/03, NOTIF, ADMIN): см. [docs/backlog.md](../backlog.m
 
 ## 7. Open Questions / TBD
 
-**Обязательных открытых вопросов для Этапа 3 нет.**  
+**Обязательных открытых вопросов для Baseline нет.**  
 См. сводку закрытых решений в [business-rules.md](./business-rules.md) §9–10.
 
 ---

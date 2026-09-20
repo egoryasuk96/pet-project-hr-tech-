@@ -82,7 +82,7 @@ flowchart LR
 
 #### ADR-CNT-03 — исходный текст (Superseded)
 
-> SPA хранит access JWT на клиенте (например `localStorage` или memory+sessionStorage — выбор реализации) и передаёт в `Authorization`. Не является новым NFR; способ хранения **не** зафиксирован в Stage 1–3.2.
+> SPA хранит access JWT на клиенте (например `localStorage` или memory+sessionStorage — выбор реализации) и передаёт в `Authorization`. Не является новым NFR; способ хранения **не** зафиксирован в ранних версиях архитектуры.
 
 **Замена Baseline:** клиент передаёт демо-роль заголовком; полноценный JWT — backlog.
 

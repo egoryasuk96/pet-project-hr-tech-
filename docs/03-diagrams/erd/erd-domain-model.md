@@ -282,7 +282,7 @@ erDiagram
 | C-11 | Валидный маршрут при activate и submit: ≥1 stage, каждый ≥1 assignment | BR-18 |
 | C-12 | `RequestFieldDefinition.code` уникален в рамках RequestType | FR-ADMIN-02 |
 | C-13 | StageAssignment: хотя бы одно из role_id / user_id задано | BR-12 |
-| C-14 | HistoryEvent не хранит полный snapshot payload как обязательное поле | Stage 3.4 decision / BR-24 |
+| C-14 | HistoryEvent не хранит полный snapshot payload как обязательное поле | ERD decision / BR-24 |
 | C-15 | Notification создаётся в той же логической транзакции, что и бизнес-событие (**Future / backlog**) | BR-29 |
 
 Optimistic locking / version columns — **не** моделируются (вне MVP).
@@ -291,7 +291,7 @@ Optimistic locking / version columns — **не** моделируются (вн
 
 ## 6. Соответствие UML-CL-01
 
-| UML class | ERD entity | Уточнение Stage 3.4 |
+| UML class | ERD entity | Уточнение ERD |
 | :--- | :--- | :--- |
 | User, Role | USER, ROLE, USER_ROLE | + login, password_hash |
 | RequestType, RequestFieldDefinition | то же | |

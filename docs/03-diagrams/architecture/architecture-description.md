@@ -23,7 +23,7 @@
 | **Формат** | Markdown = source of truth; визуал — Mermaid |
 | **Язык** | Русский |
 | **Трассировка** | Ссылки на UC / FR / BR / AC / NFR / RBAC |
-| **Требование vs ADR** | Зафиксированное в Stage 1–3.2 / Vision — требование; иное — **ADR / предположение MVP** |
+| **Требование vs ADR** | Зафиксированное в Vision / требованиях — требование; иное — **ADR / предположение MVP** |
 | **Логические модули** | Разбиение монолита, не микросервисы |
 | **Snapshot** | Полная механика только в [Snapshot Model](../erd/snapshot-model.md) |
 
@@ -41,7 +41,7 @@
 - [ADR-AUTH-DEMO-01](./adr-demo-role-header.md) — демо-роль через заголовок + экран выбора роли;
 - [ADR-UI-01](./adr-static-web-client.md) — static HTML+JS от FastAPI; React SPA superseded.
 
-Прочие ADR (модули, TX) — в файлах этапа. Superseded: ADR-CNT-03, ADR-SEC-02, ADR-SEC-03 (Baseline JWT/SPA).
+Прочие ADR (модули, TX) — в файлах Architecture. Superseded: ADR-CNT-03, ADR-SEC-02, ADR-SEC-03 (Baseline JWT/SPA).
 
 ---
 
@@ -84,7 +84,7 @@
 
 ---
 
-## 6. Границы этапа
+## 6. Границы
 
 ERD / OpenAPI / код / микросервисы / cloud сверх NFR — вне этого индекса. Новые FR/BR/NFR этим файлом не вводятся. Поставка — NFR-DEP-01 (Python + Neon/local PG; Render + Neon).
 
@@ -103,6 +103,6 @@ ERD / OpenAPI / код / микросервисы / cloud сверх NFR — в�
 
 | Версия | Дата | Описание |
 | :--- | :--- | :--- |
-| 1.0 | 2026-09-19 | Первая версия Stage 3.3 |
+| 1.0 | 2026-09-19 | Первая версия Architecture |
 | 1.1 | 2026-09-20 | ADR-SNAP-01 / ADR-AUTH-DEMO-01; вариант B |
 | 1.2 | 2026-09-20 | ADR-UI-01; выравнивание под Vision §12 (static UI, demo header) |

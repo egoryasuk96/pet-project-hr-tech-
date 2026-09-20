@@ -6,7 +6,7 @@
 **Версия:** 1.0  
 **Статус:** Baseline v1.0
 
-MVP Baseline (этап 3). Сценарии вне Baseline — [docs/backlog.md](../backlog.md).
+MVP Baseline. Сценарии вне Baseline — [docs/backlog.md](../backlog.md).
 
 Нумерация UC детализирует список Vision (разделение Create/Submit и др.).
 
@@ -186,7 +186,7 @@ Backlog UC: см. [docs/backlog.md](../backlog.md).
 
 ## Open Questions / TBD
 
-**Обязательных открытых вопросов для Этапа 3 нет.**  
+**Обязательных открытых вопросов для Baseline нет.**  
 Закрытые решения — [business-rules.md](./business-rules.md) §9.
 
 ---
