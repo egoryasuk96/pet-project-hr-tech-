@@ -4,7 +4,7 @@
 **ID:** DOC-HUB  
 **Версия:** 1.0  
 **Статус:** Baseline v1.0  
-**Связанные документы:** [Vision & Scope](./01-vision-and-scope/vision-scope.md), [backlog](./backlog.md)
+**Связанные документы:** [Vision & Scope](./01-vision-and-scope/vision-scope.md), [backlog](./backlog.md), [Consistency Review](./consistency-review.md)
 
 ---
 
@@ -43,7 +43,9 @@ Employee Service — сервис заявок сотрудников (отпу�
 | [03-diagrams/uml/](./03-diagrams/uml/) | UML: UC, state, sequence, class |
 | [03-diagrams/architecture/](./03-diagrams/architecture/) | C4-подобные схемы, ADR, трассировка |
 | [03-diagrams/erd/](./03-diagrams/erd/) | ERD, snapshot, data dictionary |
-| [04-api/openapi.yaml](./04-api/openapi.yaml) | Заготовка OpenAPI (контракт — отдельная задача) |
+| [04-api/api-contract-analysis.md](./04-api/api-contract-analysis.md) | Stage 4.1 — анализ API-контракта (зафиксирован) |
+| [04-api/openapi.yaml](./04-api/openapi.yaml) | OpenAPI (Stage 4.2 — отдельно; сейчас stub) |
+| [consistency-review.md](./consistency-review.md) | Реестр safe-fixes и OPEN / REQUIRES REVIEW |
 | [backlog.md](./backlog.md) | Требования вне MVP Baseline |
 
 Интерфейс описывается через экраны и сценарии в требованиях; отдельного Figma-прототипа в репозитории нет.

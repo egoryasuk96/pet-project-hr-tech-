@@ -30,7 +30,7 @@
    - если первый submit (`draft`) → Snapshot: **создать** RouteInstance (BR-08);
    - если resubmit (`returned`) → Snapshot: **не** rebuild RouteInstance (BR-22);
    - Snapshot: **новая** FieldValueVersion (BR-26; канон — [Snapshot Model](../erd/snapshot-model.md));
-   - статус → `in_approval`; создать ApprovalTask текущего этапа по RouteInstance;
+   - статус → `in_approval`; создать ApprovalTask **первого** этапа по RouteInstance (BR-06 / BR-20);
    - Audit: событие submit/resubmit (+ связь с версией значений, BR-24);
    - Notification: если в scope (иначе backlog).
 4. Commit. Ошибка Audit/Snapshot (и Notification при наличии) → rollback.
@@ -131,7 +131,7 @@ sequenceDiagram
 
 **Требования (когда вернётся):** BR-09, BR-10, BR-12, BR-18, BR-27; FR-ADMIN-01…06.
 
-1. AuthZ: роль `admin` (ACL-04); admin не создаёт заявки за сотрудников (BR-27).
+1. AuthZ: роль `admin` (ACL-04 — backlog; не определён в Baseline rbac-matrix); admin не создаёт заявки за сотрудников (BR-27).
 2. Admin Config пишет **live** конфигурацию (тип, поля, этапы, назначения, справочники).
 3. **Snapshot isolation (BR-09):** запись конфига **не** изменяет существующие RouteInstance in-flight заявок.
 4. Activate: валидация маршрута (BR-18); иначе тип остаётся неактивным.

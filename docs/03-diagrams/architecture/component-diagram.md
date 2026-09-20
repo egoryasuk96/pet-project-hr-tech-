@@ -53,7 +53,7 @@
 | **Catalog Module** | Активные типы; отдача live schema для edit | FR-CAT-*, BR-10, BR-26 (live при edit) |
 | **Request Module** | Create draft, edit полей, card/list, free comments, cancel | FR-REQ-*, BR-07/19/28 |
 | **Submit Orchestrator** | Координация первого submit и resubmit | UC-05, BR-08/18/20/22/26 |
-| **Snapshot Module** | Route snapshot (create-once); schema/value snapshot (каждый успешный submit); immutability route | BR-08/09/22/26, NFR-REL-03 |
+| **Snapshot Module** | RouteInstance (create-once); FieldValueVersion (append-only на каждый успешный submit); immutability route | BR-08/09/22/26, NFR-REL-03 |
 | **Approval Engine** | Задачи этапа; approve / reject / return; first-approve; next stage / final | FR-APP-*, BR-02–05/15/17/21/25 |
 | **Audit Module** | Запись и чтение HistoryEvent | FR-AUDIT-*, BR-24, NFR-LOG-02 |
 | **Persistence Adapter** | Доступ к PostgreSQL (логический слой) | NFR-MNT-02 (миграции — этап реализации) |
@@ -138,9 +138,9 @@ flowchart TB
 
 | Правило | Модуль-владелец | Примечание |
 | :--- | :--- | :--- |
-| BR-08 route snapshot при первом submit | Snapshot (+ Submit Orchestrator) | Create iff первый submit из `draft` |
+| BR-08 RouteInstance при первом submit | Snapshot (+ Submit Orchestrator) | Create iff первый submit из `draft` |
 | BR-22 route не пересоздаётся на resubmit | Snapshot (+ Submit Orchestrator) | Skip create; читать существующий |
-| BR-26 schema/value на каждом успешном submit | Snapshot (+ Submit Orchestrator) | Создать новую append-only версию после валидации live schema |
+| BR-26 FieldValueVersion на каждом успешном submit | Snapshot (+ Submit Orchestrator) | Создать новую append-only версию после валидации live schema |
 | BR-09 конфиг не ретроактивен | Admin Config (Future) пишет live; runtime читает RouteInstance | Approval Engine / Submit не читают live assignments для in-flight |
 | BR-03 first-approve wins | Approval Engine | В одной TX с закрытием sibling tasks |
 | BR-21 self-approval | Authorization + Approval Engine | До мутаций → `ERR_FORBIDDEN_APPROVAL` |
@@ -153,7 +153,7 @@ flowchart TB
 
 ## 6. Database (логический уровень)
 
-Хранилище сущностей conceptual model UML-CL-01: User, Role, RequestType, RequestFieldDefinition, Dictionary*, ApprovalRoute/Stage/Assignment, Request, RouteInstance, FieldValueVersion, ApprovalTask, Comment, Notification, HistoryEvent.
+Хранилище сущностей conceptual model UML-CL-01: User, Role, RequestType, RequestFieldDefinition, Dictionary*, ApprovalRoute/Stage/Assignment, Request, RequestFieldValue, RouteInstance, FieldValueVersion, ApprovalTask, Comment, Notification, HistoryEvent.
 
 **Не проектируется** в Architecture: таблицы, PK/FK, индексы, JSON vs нормализация snapshot.
 

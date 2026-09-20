@@ -55,6 +55,9 @@
 ### ACL-03 — Самосогласование
 Инициатор не выполняет решения по своей заявке (BR-21). → **403** / `ERR_FORBIDDEN_APPROVAL`.
 
+### ACL-04 / ACL-09 — не определены в Baseline
+`ACL-04` и `ACL-09` упоминаются в backlog (AC-ACC-04) и Future-диаграммах admin. В Baseline rbac-matrix **не определены**; семантика — [consistency-review.md](../consistency-review.md) RR-ACL-01.
+
 ### ACL-05 — Неактивный тип
 Создание заявки по неактивному типу запрещено (BR-10). → `ERR_INACTIVE_TYPE`.
 
@@ -102,6 +105,7 @@ Submit/cancel/edit/approve и т.д. вне допустимых статусо�
 | ACL-02 | BR-15 | FR-APP-03–05 | AC-ACC-02 |
 | ACL-03 | BR-21 | FR-APP-03–05 | AC-ACC-03 |
 | ACL-05 | BR-10 | FR-REQ-01 | AC-CAT-01 |
+| ACL-04, ACL-09 | — | — | backlog AC-ACC-04; не определены в Baseline ([consistency-review.md](../consistency-review.md) RR-ACL-01) |
 | ACL-08 | BR-16 | см. [backlog.md](../backlog.md) | см. [backlog.md](../backlog.md) |
 | Полная карточка approver | BR-14 | FR-APP-02 | AC-ACC-06 |
 

@@ -161,7 +161,7 @@
 
 | Тема | Источник | Архитектура |
 | :--- | :--- | :--- |
-| Route snapshot неизменяем прикладными операциями после первого submit | NFR-REL-03, BR-08/09/22 | Snapshot Module; Admin Config (Future) не пишет в snapshot заявок |
+| RouteInstance неизменяем прикладными операциями после первого submit | NFR-REL-03, BR-08/09/22 | Snapshot Module; Admin Config (Future) не пишет в RouteInstance заявок |
 | Повтор approve/reject/return по завершённой задаче | NFR-REL-02 | Approval Engine: без повторной мутации; ошибка |
 
 ---
