@@ -1,20 +1,24 @@
-# Employee Service — документация
+﻿# Employee Service — документация
 
 **Продукт:** Employee Service  
 **ID:** DOC-HUB  
 **Версия:** 1.0  
-**Статус:** Baseline v1.0 (структура каталога)  
-**Связанные документы:** [Vision & Scope](./01-vision-and-scope/vision-scope.md), [backlog](./backlog.md) (появится на следующем этапе)
+**Статус:** Baseline v1.0  
+**Связанные документы:** [Vision & Scope](./01-vision-and-scope/vision-scope.md), [backlog](./backlog.md)
 
 ---
 
 ## Что это
 
-Employee Service — сервис заявок сотрудников (отпуск, справки и т.п.) с последовательным workflow согласования. Проект для портфолио системного аналитика: главный результат — аналитическая документация; код MVP вторичен.
+Employee Service — сервис заявок сотрудников (отпуск, справки и т.п.) с согласованием руководителем: от подачи заявки до решения в одной системе.
+
+**Проблема (кратко):** кадровые вопросы решаются устно или по почте без единой системы статусов — руководитель забывает или тянет, кадры требуют отдельное подтверждение, сотрудники лишний раз спрашивают статус.
 
 **Стек реализации (зафиксировано):** FastAPI + PostgreSQL; лёгкий веб-клиент — статические HTML-страницы с JavaScript, которые отдаёт тот же FastAPI. Без настоящей авторизации: роль передаётся в заголовке.
 
 **Экраны MVP (5):** выбор роли, мои заявки, создание заявки, карточка заявки, очередь согласующего.
+
+Требования вне Baseline — [backlog.md](./backlog.md).
 
 ---
 
@@ -22,10 +26,10 @@ Employee Service — сервис заявок сотрудников (отпу�
 
 1. [Vision & Scope](./01-vision-and-scope/vision-scope.md) — цели, границы, роли  
 2. [Use Cases](./02-requirements/use-cases.md) — сценарии  
-3. [Business Rules](./02-requirements/business-rules.md) — ключевые правила (+ [Snapshot Model](./03-diagrams/erd/snapshot-model.md))  
+3. [Business Rules](./02-requirements/business-rules.md) — ключевые правила согласования  
 4. [Acceptance Criteria](./02-requirements/acceptance-criteria.md) — проверяемые критерии  
 5. [Архитектура](./03-diagrams/architecture/architecture-description.md) — контейнеры и границы системы  
-6. [ERD](./03-diagrams/erd/README.md) — модель данных  
+6. [ERD](./03-diagrams/erd/erd-description.md) — модель данных  
 
 ---
 
@@ -40,5 +44,6 @@ Employee Service — сервис заявок сотрудников (отпу�
 | [03-diagrams/architecture/](./03-diagrams/architecture/) | C4-подобные схемы, ADR, трассировка |
 | [03-diagrams/erd/](./03-diagrams/erd/) | ERD, snapshot, data dictionary |
 | [04-api/openapi.yaml](./04-api/openapi.yaml) | Заготовка OpenAPI (контракт — отдельная задача) |
+| [backlog.md](./backlog.md) | Требования вне MVP Baseline |
 
 Интерфейс описывается через экраны и сценарии в требованиях; отдельного Figma-прототипа в репозитории нет.

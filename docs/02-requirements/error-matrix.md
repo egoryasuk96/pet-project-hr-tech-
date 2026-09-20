@@ -40,12 +40,7 @@
 
 ## 1b. Backlog auth errors (отложено вместе с login/JWT)
 
-Коды остаются в словаре API, но сценарии login/JWT — backlog ([docs/backlog.md](../backlog.md), UC-01, FR-AUTH-*, NFR-SEC-01/04):
-
-| Error code | HTTP status | Condition | User message | System behavior | Статус |
-| :--- | :---: | :--- | :--- | :--- | :--- |
-| ERR_INVALID_CREDENTIALS | 401 | Неверный логин и/или пароль | Неверный логин или пароль | Токен не выдаётся; факт существования логина не уточняется | **Deferred** (с login) |
-| ERR_UNAUTHORIZED | 401 | Нет токена, токен просрочен или повреждён | Требуется аутентификация | Запрос отклоняется до бизнес-логики | **Deferred** (с JWT/login) |
+Коды `ERR_INVALID_CREDENTIALS` и `ERR_UNAUTHORIZED` остаются в словаре API; сценарии login/JWT отложены. Отложенные функции и ACL admin/login — см. [backlog.md](../backlog.md).
 
 ---
 

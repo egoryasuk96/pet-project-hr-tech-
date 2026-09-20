@@ -8,8 +8,6 @@
 
 MVP Baseline (этап 3). NFR вне Baseline — [docs/backlog.md](../backlog.md).
 
-> **Замечание по поставке (Vision §11 vs NFR-DEP-01):** Vision §11 предполагает локальный стенд + Render + Neon; **NFR-DEP-01** фиксирует поставку через **Docker Compose** для локального/демо-стенда. Новый NFR не создаётся — расхождение зафиксировано здесь и в причине NFR-DEP-01 в backlog-карте этапа 3.
-
 ---
 
 ## 1. Назначение
@@ -150,9 +148,9 @@ UI и пользовательские сообщения — **русский**
 ## 10. Deployment
 
 
-### NFR-DEP-01 — Docker Compose
-Проект поставляется с Docker Compose, включающим PostgreSQL, backend, frontend.  
-**Проверка:** чистый clone → documented start → API/web поднимаются.
+### NFR-DEP-01 — Локальный запуск и облачный деплой
+MVP поднимается без Docker Desktop: локально — Python-окружение + управляемая PostgreSQL (Neon) либо локальный PostgreSQL; в облаке — API на Render, БД на Neon. Секреты и URL БД — только через переменные окружения (см. NFR-DEP-03).  
+**Проверка:** documented start на машине без Docker; смоук на Render после деплоя (выбор роли → создание заявки → решение согласующего).
 
 ### NFR-DEP-02 — Seed-данные
 После первого запуска доступны демо-пользователи всех ролей и ≥ 2 активных типа заявок с валидным маршрутом.  
@@ -179,7 +177,7 @@ UI и пользовательские сообщения — **русский**
 | NFR-SEC-02 | BR-01, BR-14–16, BR-21, AC-ACC-01, AC-ACC-02, AC-ACC-03, AC-ACC-06 |
 | NFR-REL-01 | BR-03–05, BR-20, AC-APP-* |
 | NFR-LOG-02 | FR-AUDIT-01, BR-24, UC-14 |
-| NFR-DEP-01 | Docker Compose (локальная поставка); Vision §11 также описывает Render+Neon — без нового NFR |
+| NFR-DEP-01 | Локальный Python + PostgreSQL (Neon/local); облако Render + Neon; env (NFR-DEP-03); Vision §11 |
 
 Backlog NFR — [docs/backlog.md](../backlog.md).
 
@@ -214,4 +212,4 @@ Backlog NFR — [docs/backlog.md](../backlog.md).
 | NFR-USB-03 | USB |
 
 **Количество NFR (Baseline): 25**  
-Полный инвентарь всех NFR проекта (29, включая backlog): см. [docs/backlog.md](../backlog.md) и `docs/_stage3-id-map.json` (PERF×4, AVL×2, SEC×6, REL×3, MNT×3, SCL×2, LOG×3, USB×3, DEP×3).
+Полный инвентарь всех NFR проекта (29, включая backlog): см. [docs/backlog.md](../backlog.md) (PERF×4, AVL×2, SEC×6, REL×3, MNT×3, SCL×2, LOG×3, USB×3, DEP×3).

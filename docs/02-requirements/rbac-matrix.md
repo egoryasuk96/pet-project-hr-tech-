@@ -11,7 +11,7 @@
 
 Права пользователя с несколькими ролями объединяются (**union**, BR-16).
 
-Ядро Baseline: роли `employee` / `approver`. Admin-only операции и ACL-04/ACL-09 — см. раздел Backlog ниже и [docs/backlog.md](../backlog.md).
+Ядро Baseline: роли `employee` / `approver`. Отложенные функции и ACL admin/login — см. [backlog.md](../backlog.md).
 
 ---
 
@@ -39,7 +39,7 @@
 - `approver` без роли `employee` не создаёт заявки.
 - Для reject/return комментарий обязателен (BR-25); для approve — нет.
 - Инициатор может оставлять свободные комментарии в `in_approval` (BR-28).
-- Login / профиль / in-app уведомления / CRUD админки — [docs/backlog.md](../backlog.md).
+- Login / профиль / in-app уведомления / CRUD админки — [backlog.md](../backlog.md).
 
 ---
 
@@ -72,19 +72,7 @@ Submit/cancel/edit/approve и т.д. вне допустимых статусо�
 
 ## 3. Backlog (admin / auth UI)
 
-Следующие строки и ACL отложены вместе с admin/AUTH/NOTIF:
-
-| Function / ACL | Примечание |
-| :--- | :--- |
-| Login / получить текущую сессию | backlog (UC-01, FR-AUTH-*) |
-| Просмотр своего профиля | backlog (UC-02, FR-CAB-01) |
-| Просмотр своих in-app уведомлений / mark read | backlog (UC-13, FR-NOTIF-*) |
-| CRUD типов / полей / маршрутов / справочников | backlog (UC-11, UC-12, FR-ADMIN-01…06) |
-| Реестр всех заявок / история любой заявки | backlog (UC-15, FR-ADMIN-07/08, BR-13) |
-| **ACL-04** — Недоступность админки | backlog (AC-ACC-04) |
-| **ACL-09** — Admin не создаёт заявки от сотрудника | backlog (BR-27, AC-ACC-04) |
-
-Полные тексты — [docs/backlog.md](../backlog.md).
+Отложенные функции и ACL admin/login — см. [backlog.md](../backlog.md).
 
 ---
 
@@ -114,7 +102,7 @@ Submit/cancel/edit/approve и т.д. вне допустимых статусо�
 | ACL-02 | BR-15 | FR-APP-03–05 | AC-ACC-02 |
 | ACL-03 | BR-21 | FR-APP-03–05 | AC-ACC-03 |
 | ACL-05 | BR-10 | FR-REQ-01 | AC-CAT-01 |
-| ACL-08 | BR-16 | см. backlog (AUTH) | см. backlog (AC-AUTH-01) |
+| ACL-08 | BR-16 | см. [backlog.md](../backlog.md) | см. [backlog.md](../backlog.md) |
 | Полная карточка approver | BR-14 | FR-APP-02 | AC-ACC-06 |
 
-ACL-04 / ACL-09 — [docs/backlog.md](../backlog.md).
+Отложенные ACL admin — см. [backlog.md](../backlog.md).

@@ -688,3 +688,157 @@ Access token TTL = **8 часов**. Refresh tokens в MVP отсутствую�
 
 - **Условный restart после return:** возвращать согласование с первого этапа только при изменении **значимых** полей; если изменены только второстепенные поля — продолжать с того же этапа, на котором был return (компромисс между OQ-A и текущим OQ-B).
 
+
+---
+
+## Карта ID (Baseline / backlog)
+
+Полная карта всех ID требований по итогам этапа 3.
+
+| ID | Bucket | Причина |
+| :--- | :--- | :--- |
+| UC-01 | backlog | Login/JWT — Vision §5, §7.1 |
+| UC-02 | backlog | Профиль / ЛК — Vision §7.1 |
+| UC-03 | Baseline | Vision §8: каталог |
+| UC-04 | Baseline | Vision §8: создание и отправка |
+| UC-05 | Baseline | Vision §8: создание/отправка; доработка и повторная отправка |
+| UC-06 | Baseline | Vision §8: мои заявки и карточка |
+| UC-07 | Baseline | Vision §8: решения согласующего |
+| UC-08 | Baseline | Vision §8: решения согласующего |
+| UC-09 | Baseline | Vision §8: решения согласующего; доработка |
+| UC-10 | Baseline | Vision §8: отмена |
+| UC-11 | backlog | Админ-настройка типов — Vision §7.1 |
+| UC-12 | backlog | Админ-настройка маршрутов — Vision §7.1 |
+| UC-13 | backlog | In-app уведомления — Vision §7.1 |
+| UC-14 | Baseline | История на карточке заявки (ядро) |
+| UC-15 | backlog | Админ-реестр — Vision §7.1 |
+| FR-ADMIN-01 | backlog | Админ-панель — Vision §7.1 |
+| FR-ADMIN-02 | backlog | Админ-панель — Vision §7.1 |
+| FR-ADMIN-03 | backlog | Админ-панель — Vision §7.1 |
+| FR-ADMIN-04 | backlog | Админ-панель — Vision §7.1 |
+| FR-ADMIN-05 | backlog | Админ-панель — Vision §7.1 |
+| FR-ADMIN-06 | backlog | Админ-панель — Vision §7.1 |
+| FR-ADMIN-07 | backlog | Админ-реестр — Vision §7.1 |
+| FR-ADMIN-08 | backlog | Админ-история — Vision §7.1 |
+| FR-APP-01 | Baseline | Очередь согласующего — Vision §8 |
+| FR-APP-02 | Baseline | Карточка для approver — Vision §8 |
+| FR-APP-03 | Baseline | Approve — Vision §8 |
+| FR-APP-04 | Baseline | Reject — Vision §8 |
+| FR-APP-05 | Baseline | Return — Vision §8 |
+| FR-APP-06 | Baseline | Переход этапа — ядро |
+| FR-APP-07 | Baseline | Завершение маршрута — ядро |
+| FR-AUDIT-01 | Baseline | История на карточке — ядро |
+| FR-AUDIT-02 | Baseline | Фиксация событий истории — ядро |
+| FR-AUTH-01 | backlog | JWT/логин — Vision §7.1 |
+| FR-AUTH-02 | backlog | Сессия JWT — Vision §7.1 |
+| FR-AUTH-03 | backlog | AuthN через JWT — Vision §7.1 |
+| FR-CAB-01 | backlog | Профиль — Vision §7.1 |
+| FR-CAB-02 | Baseline | Список «Мои заявки» — Vision §8 |
+| FR-CAB-03 | backlog | Уведомления в кабинете — Vision §7.1 |
+| FR-CAT-01 | Baseline | Каталог — Vision §8 |
+| FR-CAT-02 | Baseline | Каталог — Vision §8 |
+| FR-CAT-03 | Baseline | Каталог / форма — Vision §8 |
+| FR-NOTIF-01 | backlog | In-app уведомления — Vision §7.1 |
+| FR-NOTIF-02 | backlog | In-app уведомления — Vision §7.1 |
+| FR-NOTIF-03 | backlog | In-app уведомления — Vision §7.1 |
+| FR-REQ-01 | Baseline | Создание — Vision §8 |
+| FR-REQ-02 | Baseline | Заполнение / доработка — Vision §8 |
+| FR-REQ-03 | Baseline | Отправка — Vision §8 |
+| FR-REQ-04 | Baseline | Карточка — Vision §8 |
+| FR-REQ-05 | Baseline | Статус на карточке — Vision §8 |
+| FR-REQ-06 | Baseline | Комментарии на карточке — Vision §6 |
+| FR-REQ-07 | Baseline | Отмена — Vision §8 |
+| FR-REQ-08 | Baseline | Return на стороне заявки — Vision §8 |
+| FR-REQ-09 | Baseline | Повторная отправка — Vision §8 |
+| BR-01 | Baseline | Видимость employee — ядро |
+| BR-02 | Baseline | Последовательный маршрут — Vision §12 |
+| BR-03 | Baseline | First-approve wins — Vision §12 |
+| BR-04 | Baseline | Reject — ядро |
+| BR-05 | Baseline | Return — ядро |
+| BR-06 | Baseline | Resubmit с этапа — Vision §12 |
+| BR-07 | Baseline | Отмена draft/returned — Vision §12 |
+| BR-08 | Baseline | Snapshot маршрута — Vision §6 |
+| BR-09 | Baseline | Изоляция snapshot — Vision §6 |
+| BR-10 | Baseline | Каталог активных типов — ядро |
+| BR-11 | backlog | Уведомления — Vision §7.1 |
+| BR-12 | Baseline | Нет auto-routing — Vision §7 |
+| BR-13 | backlog | Реестр admin — Vision §7.1 |
+| BR-14 | Baseline | Видимость approver — ядро |
+| BR-15 | Baseline | Действие по своей задаче — ядро |
+| BR-16 | Baseline | Несколько ролей — Vision §5 |
+| BR-17 | Baseline | Финальный approve — ядро |
+| BR-18 | Baseline | Валидация маршрута при submit — ядро |
+| BR-19 | Baseline | Создание draft — ядро |
+| BR-20 | Baseline | Submit → in_approval — ядро |
+| BR-21 | Baseline | Запрет самосогласования — ядро |
+| BR-22 | Baseline | Resubmit snapshot — ядро |
+| BR-23 | backlog | События уведомлений — Vision §7.1 |
+| BR-24 | Baseline | История на карточке — ядро |
+| BR-25 | Baseline | Комментарий reject/return — ядро |
+| BR-26 | Baseline | Схема/snapshot полей — ядро |
+| BR-27 | backlog | Правило admin — Vision §7.1 |
+| BR-28 | Baseline | Свободные комментарии на карточке — ядро |
+| BR-29 | backlog | Атомарность уведомлений — Vision §7.1 |
+| AC-ACC-01 | Baseline | Доступ employee — ядро |
+| AC-ACC-02 | Baseline | Доступ approver — ядро |
+| AC-ACC-03 | Baseline | Самосогласование — ядро |
+| AC-ACC-04 | backlog | Админка — Vision §7.1 |
+| AC-ACC-05 | backlog | Реестр admin — Vision §7.1 |
+| AC-ACC-06 | Baseline | Полная карточка approver — ядро |
+| AC-ADMIN-01 | backlog | Активация типа admin — Vision §7.1 |
+| AC-APP-01 | Baseline | Создание draft — ядро |
+| AC-APP-02 | Baseline | Submit — ядро |
+| AC-APP-02b | Baseline | Submit при плохом маршруте — ядро |
+| AC-APP-03 | Baseline | Задачи после submit — ядро |
+| AC-APP-04 | Baseline | Approve — ядро |
+| AC-APP-04b | Baseline | Approve с комментарием — ядро |
+| AC-APP-05 | Baseline | Следующий этап — ядро |
+| AC-APP-05b | Baseline | Завершение маршрута — ядро |
+| AC-APP-06 | Baseline | Reject — ядро |
+| AC-APP-06b | Baseline | Reject без комментария — ядро |
+| AC-APP-07 | Baseline | Return — ядро |
+| AC-APP-07b | Baseline | Return без комментария — ядро |
+| AC-APP-08 | Baseline | Resubmit — ядро |
+| AC-APP-09 | Baseline | First-approve wins — ядро |
+| AC-APP-10 | Baseline | Изоляция snapshot — ядро |
+| AC-APP-10b | Baseline | Новый submit / новая конфигурация — ядро |
+| AC-AUTH-01 | backlog | Login — Vision §7.1 |
+| AC-CAT-01 | Baseline | Неактивный тип — ядро |
+| AC-CAT-01b | Baseline | Живые заявки после деактивации — ядро |
+| AC-CAT-02 | Baseline | Пустой каталог — ядро |
+| AC-DRAFT-01 | Baseline | Актуальная схема при edit — ядро |
+| AC-DRAFT-02 | Baseline | Snapshot схемы/значений — ядро |
+| AC-NOTIF-01 | backlog | Уведомления — Vision §7.1 |
+| AC-REQ-06 | Baseline | Комментарий на карточке — ядро |
+| AC-REQ-07 | Baseline | Отмена — ядро |
+| NFR-AVL-01 | Baseline | Режим поставки — ядро |
+| NFR-AVL-02 | Baseline | Восстановление после рестарта — ядро |
+| NFR-DEP-01 | Baseline | Docker Compose — локальная поставка (≠ Vision Render+Neon) |
+| NFR-DEP-02 | Baseline | Seed-данные — Vision §9 |
+| NFR-DEP-03 | Baseline | Конфигурация через env — ядро |
+| NFR-LOG-01 | Baseline | Технические логи — ядро |
+| NFR-LOG-02 | Baseline | Прикладная история заявки — ядро |
+| NFR-LOG-03 | Baseline | Retention — ядро |
+| NFR-MNT-01 | Baseline | OpenAPI — Vision §11 |
+| NFR-MNT-02 | Baseline | Миграции БД — ядро |
+| NFR-MNT-03 | Baseline | Трассируемые ID — ядро |
+| NFR-PERF-01 | Baseline | Производительность чтения — ядро |
+| NFR-PERF-02 | Baseline | Производительность записи — ядро |
+| NFR-PERF-03 | Baseline | Пагинация — ядро |
+| NFR-PERF-04 | Baseline | Baseline объёма — ядро |
+| NFR-REL-01 | Baseline | Целостность статусов + история — ядро |
+| NFR-REL-02 | Baseline | Идемпотентность — ядро |
+| NFR-REL-03 | Baseline | Сохранность snapshot — ядро |
+| NFR-SCL-01 | backlog | Multi-instance вне MVP — отложено |
+| NFR-SCL-02 | Baseline | Рост числа типов — ядро |
+| NFR-SEC-01 | backlog | JWT-аутентификация — Vision §7.1 |
+| NFR-SEC-02 | Baseline | Авторизация ролей/владения — ядро |
+| NFR-SEC-03 | backlog | Хранение паролей — Vision §7.1 |
+| NFR-SEC-04 | backlog | TTL токена — Vision §7.1 |
+| NFR-SEC-05 | Baseline | Скрытие чужих ресурсов — ядро |
+| NFR-SEC-06 | Baseline | HTTPS внешнего стенда — ядро |
+| NFR-USB-01 | Baseline | Понятность статусов — ядро |
+| NFR-USB-02 | Baseline | Сообщения об ошибках — ядро |
+| NFR-USB-03 | Baseline | Русский UI — ядро |
+
+**Всего ID:** 143 (инвентарь: UC 15 + FR 38 + BR 29 + AC 32 + NFR 29 = 143).
