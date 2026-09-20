@@ -2,9 +2,9 @@
 
 **Продукт:** Employee Service  
 **ID:** ARCH-CTX  
-**Версия:** 1.0  
+**Версия:** 1.1  
 **Статус:** Baseline v1.0  
-**Связанные документы:** [architecture-description.md](./architecture-description.md)
+**Связанные документы:** [architecture-description.md](./architecture-description.md), [Vision](../../01-vision-and-scope/vision-scope.md), [ADR-AUTH-DEMO-01](./adr-demo-role-header.md), [ADR-UI-01](./adr-static-web-client.md)
 
 ---
 
@@ -16,15 +16,14 @@
 
 ## 2. Система и актёры
 
-| Участник | Тип | Смысл |
-| :--- | :--- | :--- |
-| **Employee Service** | Система | ЛК, каталог, заявки, согласование, admin, in-app уведомления, история |
-| **Сотрудник** (`employee`) | Актёр | Инициатор заявок, профиль, каталог |
-| **Согласующий** (`approver`) | Актёр | Очередь задач, approve / reject / return |
-| **Администратор** (`admin`) | Актёр | Конфигурация типов/маршрутов, реестр |
-| **Аутентифицированный пользователь** | Обобщение | Login, уведомления; роли — specialization (BR-16) |
+| Участник | Тип | Смысл | Scope |
+| :--- | :--- | :--- | :--- |
+| **Employee Service** | Система | Каталог, заявки, согласование, история на карточке; UI — static HTML/JS | Baseline |
+| **Сотрудник** (`employee`) | Актёр | Инициатор заявок, мои заявки, создание, карточка | Baseline |
+| **Согласующий** (`approver`) | Актёр | Очередь задач, approve / reject / return | Baseline |
+| **Администратор** (`admin`) | Актёр | Конфигурация типов/маршрутов, реестр | **Future / backlog** |
 
-Один пользователь может совмещать роли (union permissions, BR-16).
+Один пользователь может совмещать роли (union permissions, BR-16). В Baseline переключение актёра — экран выбора роли + заголовок ([ADR-AUTH-DEMO-01](./adr-demo-role-header.md)), без login/password + JWT.
 
 ---
 
@@ -35,7 +34,7 @@
 | Не используется | Основание |
 | :--- | :--- |
 | SSO / AD / LDAP | Out of scope |
-| Email / push | BR-11 — только in-app |
+| Email / push | BR-11 — только in-app (уведомления — backlog) |
 | Внешний BPM (Camunda и аналоги) | Out of scope; встроенный Approval Engine |
 | Оргструктура / auto-routing руководителя | BR-12, out of scope |
 | HRIS / payroll | Out of scope |
@@ -52,13 +51,13 @@ flowchart TB
   Apr[Согласующий approver]
   Adm[Администратор admin]
 
-  subgraph ES["Employee Service (граница MVP)"]
-    Core[ЛК / Каталог / Заявки / Согласование / Admin / In-app уведомления / История]
+  subgraph ES["Employee Service (граница Baseline)"]
+    Core[Каталог / Заявки / Согласование / История на карточке]
   end
 
   Emp -->|использует| Core
   Apr -->|использует| Core
-  Adm -->|настраивает и просматривает| Core
+  Adm -.->|Future / backlog| Core
 
   NoteOut[Внешние runtime-системы отсутствуют в MVP]
   Core -.->|нет интеграций| NoteOut
@@ -68,13 +67,16 @@ flowchart TB
 
 ## 5. Что внутри границы (обзор)
 
-1. Аутентификация login/password + JWT (FR-AUTH-*, NFR-SEC-*).
-2. Личный кабинет и профиль (FR-CAB-*).
+**Baseline:**
+
+1. Демо-идентичность: роль через заголовок + экран выбора роли (Vision §12 п.7; ADR-AUTH-DEMO-01). Login/password + JWT — [backlog](../../backlog.md).
+2. Лёгкий веб-клиент: static HTML+JS от FastAPI, пять экранов (Vision §12 п.8; ADR-UI-01).
 3. Каталог активных типов и формы (FR-CAT-*).
 4. Жизненный цикл заявки и RouteInstance / FieldValueVersion (FR-REQ-*, BR-08/22/26).
 5. Последовательное согласование (FR-APP-*, BR-02…05, BR-21, BR-25).
-6. Admin-конфигурация без ретроактивности snapshot (FR-ADMIN-*, BR-09).
-7. In-app уведомления и история (FR-NOTIF-*, FR-AUDIT-*, BR-23/24/29).
+6. История решений и статусов на карточке (FR-AUDIT-*, BR-24).
+
+**Future / backlog** (Vision §12 п.9): admin-конфигурация, in-app уведомления, профиль, полноценная auth.
 
 Детализация контейнеров — [container-diagram.md](./container-diagram.md).
 
@@ -84,10 +86,10 @@ flowchart TB
 
 | Тип | ID |
 | :--- | :--- |
-| **UC** | UC-01…UC-15 (обзор границ) |
-| **FR** | все области AUTH / CAB / CAT / REQ / APP / NOTIF / AUDIT / ADMIN |
-| **BR** | BR-11, BR-12 (отсутствие внешних каналов и auto-routing) |
-| **Vision** | Scope §6, Out of scope §7 |
+| **UC** | UC ядра Baseline; UC-01/02/11–13/15 — backlog |
+| **FR** | CAT / REQ / APP / AUDIT (Baseline); AUTH / CAB / NOTIF / ADMIN — backlog |
+| **BR** | BR ядра; BR-11/12/13/23/27/29 — по scope / backlog |
+| **Vision** | Scope §6, Out of scope §7, §12 |
 | **UML** | UML-UC-01 |
 
 ---

@@ -2,15 +2,15 @@
 
 **Продукт:** Employee Service  
 **ID:** ARCH-CNT  
-**Версия:** 1.0  
+**Версия:** 1.1  
 **Статус:** Baseline v1.0  
-**Связанные документы:** [architecture-description.md](./architecture-description.md), [ADR demo role](./adr-demo-role-header.md)
+**Связанные документы:** [architecture-description.md](./architecture-description.md), [ADR-UI-01](./adr-static-web-client.md), [ADR-AUTH-DEMO-01](./adr-demo-role-header.md)
 
 ---
 
 ## 1. Назначение
 
-Описать технические контейнеры MVP, уже заданные Vision / NFR: SPA, API, PostgreSQL, поставка через Docker Compose. Без cloud-топологии и без микросервисов.
+Описать технические контейнеры MVP, уже заданные Vision / NFR: лёгкий веб-клиент (статика), API, PostgreSQL. Без cloud-топологии и без микросервисов.
 
 ---
 
@@ -18,11 +18,13 @@
 
 | Контейнер | Технология (Vision / NFR) | Ответственность |
 | :--- | :--- | :--- |
-| **Web (SPA)** | React + TypeScript | UI личного кабинета, каталога, заявок, очереди согласующего, admin, уведомлений |
-| **API (Backend)** | Python + FastAPI | Бизнес-логика, AuthN/AuthZ, согласование, snapshot, audit, notifications; REST |
+| **Web (static)** | Статические HTML-страницы + JavaScript | UI пяти экранов Baseline: выбор роли, мои заявки, создание, карточка, очередь согласующего. Раздаётся **тем же** FastAPI (static mount / тот же процесс) |
+| **API (Backend)** | Python + FastAPI | Бизнес-логика, AuthN stub / AuthZ, согласование, snapshot, audit; REST |
 | **Database** | PostgreSQL | Персистентность сущностей предметной области (логическая; ERD — позже) |
 
-**Поставка (требование NFR-DEP-01):** Docker Compose поднимает db + api + web. Секреты через env (NFR-DEP-03).
+**Поставка:** NFR-DEP-01 описывает Docker Compose (db + api + web). Для Baseline runtime предпочтительно **один** FastAPI-процесс (API + статика); отдельный React/SPA-контейнер не используется ([ADR-UI-01](./adr-static-web-client.md)). Детальная перепись NFR-DEP-01 — этап 6. Секреты через env (NFR-DEP-03). Локально Compose опционален как удобный способ поднять PostgreSQL + приложение.
+
+**Вне Baseline Web:** admin, уведомления, профиль — [backlog](../../backlog.md) (Vision §12 п.9).
 
 ---
 
@@ -30,11 +32,11 @@
 
 | From → To | Протокол / смысл | Примечание |
 | :--- | :--- | :--- |
-| Актёр → Web | HTTPS или HTTP | HTTPS обязателен для **внешнего** демо (NFR-SEC-06); локально допустим HTTP |
-| Web → API | REST + JWT | Контракт OpenAPI — отдельный этап; здесь только факт REST |
-| API → Database | SQL через persistence-слой | Схема/миграции — позже (NFR-MNT-02 упоминается как требование, без проектирования ERD) |
+| Актёр → FastAPI (HTML/JS) | HTTPS или HTTP | Браузер получает страницы и скрипты от FastAPI; HTTPS обязателен для **внешнего** демо (NFR-SEC-06); локально допустим HTTP |
+| Браузер → FastAPI (REST) | REST + демо-роль в заголовке | [ADR-AUTH-DEMO-01](./adr-demo-role-header.md); OpenAPI — отдельный этап |
+| API → Database | SQL через persistence-слой | Схема/миграции — позже (NFR-MNT-02) |
 
-API **stateless** (NFR-SCL-01, NFR-AVL-02): нет server-side session store; состояние сессии — в JWT.
+API **без server-side session store** (дух NFR-SCL-01, NFR-AVL-02): в Baseline идентичность — заголовок демо-роли, не JWT. Полный JWT — [backlog](../../backlog.md).
 
 ---
 
@@ -44,14 +46,13 @@ API **stateless** (NFR-SCL-01, NFR-AVL-02): нет server-side session store; с
 flowchart LR
   User[Пользователь браузера]
 
-  subgraph compose ["Docker Compose (NFR-DEP-01)"]
-    Web["Web SPA\nReact + TypeScript"]
-    Api["API Monolith\nFastAPI"]
+  subgraph deploy ["Deployable (FastAPI + PostgreSQL)"]
+    Api["FastAPI\nREST + static HTML/JS"]
     Db[("PostgreSQL")]
   end
 
-  User -->|UI| Web
-  Web -->|"REST + JWT"| Api
+  User -->|"HTML/JS"| Api
+  User -->|"REST + demo role header"| Api
   Api --> Db
 ```
 
@@ -59,30 +60,38 @@ flowchart LR
 
 ## 5. Решения уровня контейнеров
 
-### 5.1. Из требований
+### 5.1. Из требований / Vision
 
 | Тема | Источник |
 | :--- | :--- |
-| Стек Web / API / DB / Compose | Vision Scope §13, NFR-DEP-01 |
-| JWT, TTL 8 часов, без refresh token | NFR-SEC-01, NFR-SEC-04 |
-| Stateless API | NFR-SCL-01, NFR-AVL-02 |
+| Стек: статический UI + FastAPI + PostgreSQL | Vision Scope §12 п.7–8, §13 |
+| Демо-роль заголовком; без login/JWT в Baseline | Vision §12 п.7; ADR-AUTH-DEMO-01 |
+| Stateless API (без server session) | NFR-SCL-01, NFR-AVL-02 |
 | HTTPS на внешнем демо | NFR-SEC-06 |
+| JWT / Compose wording | NFR-SEC-01/04, NFR-DEP-01 — backlog / этап 6 |
 
 ### 5.2. ADR / предположения MVP
 
-| ID | Решение | Не является |
+| ID | Решение | Не является / статус |
 | :--- | :--- | :--- |
-| **ADR-CNT-01** | Один API-процесс (модульный монолит), без выделения отдельных backend-сервисов | Новым FR/BR |
+| **ADR-CNT-01** | Один API-процесс (модульный монолит), без выделения отдельных backend-сервисов; статика отдаётся этим же процессом | Новым FR/BR |
 | **ADR-CNT-02** | Одна БД PostgreSQL на весь MVP | Требованием шардирования |
-| **ADR-CNT-03** | SPA хранит access JWT на клиенте (например `localStorage` или memory+sessionStorage — выбор реализации) и передаёт в `Authorization` | Новым NFR; способ хранения **не** зафиксирован в Stage 1–3.2 |
+| **ADR-CNT-03** | ~~SPA хранит access JWT на клиенте и передаёт в `Authorization`~~ | **Статус: Superseded** → [ADR-AUTH-DEMO-01](./adr-demo-role-header.md), [ADR-UI-01](./adr-static-web-client.md). Исходное решение сохранено в истории ниже |
 | **ADR-CNT-04** | Web не содержит authoritative бизнес-правил snapshot/approval; только UX и вызов API | Новым BR |
+| **ADR-UI-01** | Baseline UI = static HTML+JS от FastAPI; React SPA не используется | см. [adr-static-web-client.md](./adr-static-web-client.md) |
+
+#### ADR-CNT-03 — исходный текст (Superseded)
+
+> SPA хранит access JWT на клиенте (например `localStorage` или memory+sessionStorage — выбор реализации) и передаёт в `Authorization`. Не является новым NFR; способ хранения **не** зафиксирован в Stage 1–3.2.
+
+**Замена Baseline:** клиент передаёт демо-роль заголовком; полноценный JWT — backlog.
 
 ---
 
 ## 6. Связь с логическими модулями
 
 Внутри контейнера **API** располагаются логические модули ([component-diagram.md](./component-diagram.md)).  
-Внутри **Web** — UI-зоны по ролям.  
+Внутри **Web (static)** — UI-зоны по пяти экранам Baseline.  
 **Database** хранит сущности UML-CL-01 без детализации таблиц на этом этапе.
 
 ---
@@ -91,9 +100,9 @@ flowchart LR
 
 | Тип | ID |
 | :--- | :--- |
-| **Vision** | §13 технический контур |
-| **NFR** | NFR-DEP-01…03, NFR-SEC-01/04/06, NFR-SCL-01, NFR-AVL-01/02 |
-| **FR** | FR-AUTH-01 (JWT как результат login) |
+| **Vision** | §12 п.7–8; §13 технический контур |
+| **NFR** | NFR-DEP-01…03, NFR-SEC-06, NFR-SCL-01, NFR-AVL-01/02; JWT-NFR — backlog |
+| **ADR** | ADR-UI-01, ADR-AUTH-DEMO-01 |
 | **UML** | логические области SEQ → контейнер API |
 
 ---
@@ -103,3 +112,4 @@ flowchart LR
 - Нет описания K8s, CDN, reverse proxy topology (кроме упоминания HTTPS для внешнего стенда).
 - Нет OpenAPI paths и схем JSON.
 - Нет ERD.
+- Перепись NFR-DEP-01 — не в этом файле (этап 6).
