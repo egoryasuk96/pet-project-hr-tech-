@@ -1,68 +1,9 @@
-# Пет-проект: Employee Service — личный кабинет сотрудника и сервис заявок
+# Employee Service
 
-## Описание проекта
+Сервис заявок сотрудников (отпуск, справки и т.п.) с workflow согласования.  
+Портфолио системного аналитика: **документация — главный результат**.
 
-Employee Service — веб-система личного кабинета сотрудника и сервиса подачи заявок с последовательным согласованием по настраиваемому маршруту.
+**Стек:** FastAPI + PostgreSQL; лёгкий веб-клиент (статические HTML + JavaScript от FastAPI).
 
-Проект предназначен для портфолио системного аналитика: аналитическая документация и реализуемый MVP (PostgreSQL, FastAPI, React + TypeScript, Docker Compose, REST, OpenAPI).
-
----
-
-## Быстрый доступ к артефактам
-
-* [Vision & Scope](./01-vision-and-scope/vision-scope.md)
-* [Глоссарий](./01-vision-and-scope/glossary.md)
-* [BPMN-схемы процессов](./03-diagrams/bpmn/)
-* [UML-диаграммы](./03-diagrams/uml/)
-* [Архитектура](./03-diagrams/architecture/)
-* [ERD + Data Dictionary (Stage 3.4)](./03-diagrams/erd/)
-* [OpenAPI / Swagger спецификация](./04-api/openapi.yaml)
-* [UI-прототип (Figma)](./05-prototype/figma-links.md)
-
----
-
-## Ролевая модель (RBAC)
-
-| Роль | Ключевые возможности |
-| :--- | :--- |
-| **Сотрудник** (`employee`) | Профиль, каталог, создание заявок, отслеживание своих заявок, доработка после возврата, отмена `draft`/`returned` |
-| **Согласующий** (`approver`) | Очередь задач, approve / reject / return |
-| **Администратор** (`admin`) | Типы заявок, этапы и последовательность, назначения, справочники, реестр заявок, история |
-
----
-
-## Ключевые модули (MVP)
-
-1. **Личный кабинет** — профиль сотрудника, уведомления in-app.
-2. **Каталог и заявки** — типы заявок, форма создания, список и карточка, статусы, комментарии, история.
-3. **Согласование** — последовательный маршрут, snapshot при отправке, first-approve wins.
-4. **Административная панель** — конфигурация типов, маршрутов, назначений и справочников.
-
----
-
-## Структура репозитория
-
-```text
-.
-├── README.md                      # Главная страница проекта
-├── 01-vision-and-scope/
-│   ├── vision-scope.md            # Vision & Scope: цели, границы, роли, MVP
-│   └── glossary.md                # Глоссарий ключевых терминов
-├── 02-requirements/
-│   ├── use-cases.md               # Сценарии использования (Use Cases)
-│   ├── rbac-matrix.md             # Матрица прав доступа
-│   ├── functional-requirements.md
-│   ├── non-functional-requirements.md
-│   ├── business-rules.md
-│   ├── acceptance-criteria.md
-│   └── error-matrix.md
-├── 03-diagrams/
-│   ├── bpmn/                      # Диаграммы процессов (BPMN 2.0)
-│   ├── uml/                       # UML: use case, sequence, state, class
-│   ├── architecture/              # Логико-техническая архитектура (Stage 3.3)
-│   └── erd/                       # ERD + Data Dictionary (Stage 3.4)
-├── 04-api/
-│   └── openapi.yaml               # Контракт API (OpenAPI 3.0 / Swagger)
-└── 05-prototype/
-    └── figma-links.md             # Ссылки и описание интерактивного макета
-```
+Вся аналитическая документация: **[docs/README.md](./docs/README.md)**  
+Там же — порядок чтения за 5 минут.

@@ -52,16 +52,7 @@
 
 ---
 
-## 5. Legacy PNG (obsolete)
-
-Файл [`ERD (pet-project-hr-tech).png`](./ERD%20(pet-project-hr-tech).png) — **устаревший** эскиз (Vacation / sick_list / process_button). Он **не** соответствует BPMN / UML / Architecture TO-BE Employee Service.
-
-- Файл **не** перемещается и **не** переименовывается.
-- Актуальная модель Stage 3.4 — Markdown-артефакты выше.
-
----
-
-## 6. Связанные артефакты
+## 5. Связанные артефакты
 
 - [Vision & Scope](../../01-vision-and-scope/vision-scope.md)
 - [Глоссарий](../../01-vision-and-scope/glossary.md)
@@ -73,7 +64,7 @@
 
 ---
 
-## 7. Критерии готовности (DoD)
+## 6. Критерии готовности (DoD)
 
 1. Каталог содержит ERD-00…ERD-MAP.
 2. Mermaid ER покрывает сущности UML-CL-01 + уточнения Stage 3.4 (working values, snapshot children).
@@ -81,8 +72,7 @@
 4. Data Dictionary описывает поля на логическом уровне с ссылками на FR/BR.
 5. Traceability связывает сущности с FR/BR/UC/BPMN/UML/ARCH.
 6. Нет SQL, миграций, OpenAPI, кода.
-7. Legacy PNG помечен obsolete и оставлен на месте.
-8. Корневой README ссылается на Stage 3.4.
+7. [docs/README.md](../../README.md) ссылается на Stage 3.4.
 
 ---
 

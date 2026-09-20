@@ -38,7 +38,7 @@
 | Оргструктура / auto-routing руководителя | BR-12, out of scope |
 | HRIS / payroll | Out of scope |
 
-OpenAPI и Figma — артефакты документации/прототипа, не внешние системы в runtime.
+OpenAPI — артефакт документации (контракт API), не внешняя runtime-система.
 
 ---
 

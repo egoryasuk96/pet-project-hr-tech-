@@ -79,13 +79,7 @@
 
 ---
 
-## 6. Legacy PNG
-
-[`ERD (pet-project-hr-tech).png`](./ERD%20(pet-project-hr-tech).png) — **obsolete**. Оставлен на месте без переименования и перемещения. Актуальная модель — Markdown Stage 3.4.
-
----
-
-## 7. Связанные артефакты этапа
+## 6. Связанные артефакты этапа
 
 - [erd-domain-model.md](./erd-domain-model.md)
 - [snapshot-model.md](./snapshot-model.md)
@@ -94,9 +88,9 @@
 
 ---
 
-## 8. Критерии готовности (DoD)
+## 7. Критерии готовности (DoD)
 
-См. [README.md §7](./README.md).
+См. [README.md §6](./README.md).
 
 ---
 
