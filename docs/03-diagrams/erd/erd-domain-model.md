@@ -293,7 +293,7 @@ Optimistic locking / version columns — **не** моделируются (вн
 
 | UML class | ERD entity | Уточнение ERD |
 | :--- | :--- | :--- |
-| User, Role | USER, ROLE, USER_ROLE | + login, password_hash |
+| User, Role | USER, ROLE, USER_ROLE | + login; password_hash — Future / backlog auth |
 | RequestType, RequestFieldDefinition | то же | |
 | Dictionary, DictionaryItem | то же | |
 | ApprovalRoute/Stage, StageAssignment | то же | |

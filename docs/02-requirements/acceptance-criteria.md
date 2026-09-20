@@ -221,10 +221,10 @@ And система создаёт задачи следующего этапа �
 ## 10. Snapshot маршрута
 
 ### AC-APP-10 — Изоляция от изменений конфигурации
-**Related:** FR-REQ-03, конфиг admin — [docs/backlog.md](../backlog.md), BR-08, BR-09
+**Related:** FR-REQ-03, BR-08, BR-09; Admin UI — [docs/backlog.md](../backlog.md)
 
 Given заявка уже отправлена (есть snapshot с этапами E1→E2, assignees X)  
-When администратор меняет маршрут типа (добавляет E3 или меняет assignees на Y)  
+When live-конфигурация маршрута типа изменена через seed/test data или SQL/test script (добавлен E3 или assignees заменены на Y)  
 And согласующий выполняет approve по заявке  
 Then согласование продолжается по исходному snapshot (E1→E2, assignees X)  
 And новый этап E3 для этой заявки не появляется
@@ -232,9 +232,9 @@ And новый этап E3 для этой заявки не появляетс�
 ---
 
 ### AC-APP-10b — Новый submit использует новую конфигурацию
-**Related:** BR-08, BR-09
+**Related:** FR-REQ-03, BR-08, BR-09; Admin UI — [docs/backlog.md](../backlog.md)
 
-Given администратор изменил маршрут типа  
+Given live-конфигурация маршрута типа изменена через seed/test data или SQL/test script  
 When сотрудник создаёт новую заявку и делает первый submit  
 Then snapshot новой заявки соответствует актуальной конфигурации на момент submit
 
@@ -293,7 +293,7 @@ And пользователь без связанной задачи получа
 ### AC-CAT-01 — Неактивный тип скрыт и недоступен
 **Related:** FR-CAT-01, FR-REQ-01, BR-10
 
-Given тип T был активен, затем admin установил `is_active = false`  
+Given тип T был активен, затем в live-конфигурации через seed/test data или SQL/test script установлено `is_active = false`  
 When сотрудник открывает каталог  
 Then T отсутствует в списке  
 When сотрудник пытается создать заявку типа T (прямой запрос)  
@@ -306,7 +306,7 @@ And новая заявка не создаётся
 **Related:** BR-10, BR-09
 
 Given по типу T уже есть заявка в `in_approval`  
-When admin деактивирует T  
+When тип T деактивирован в live-конфигурации через seed/test data или SQL/test script  
 Then существующая заявка продолжает согласование  
 And тип T не показывается в каталоге для новых заявок
 
@@ -361,7 +361,7 @@ Then комментарий сохраняется и отображается �
 **Related:** FR-REQ-02, FR-REQ-03, схема admin — [docs/backlog.md](../backlog.md), BR-26
 
 Given существует draft заявки типа T  
-And администратор изменил схему типа T (добавил обязательное поле)  
+And live-схема типа T изменена через seed/test data или SQL/test script (добавлено обязательное поле)  
 When инициатор открывает draft для редактирования  
 Then отображается актуальная схема (включая новое обязательное поле)  
 When инициатор выполняет submit без заполнения нового обязательного поля  
@@ -376,10 +376,10 @@ Then используется актуальная схема типа
 ---
 
 ### AC-DRAFT-02 — После submit схема и значения зафиксированы версией
-**Related:** FR-REQ-03, FR-REQ-09, BR-26, BR-22
+**Related:** FR-REQ-03, FR-REQ-09, BR-09, BR-26, BR-22; Admin UI — [backlog](../backlog.md)
 
 Given заявка успешно отправлена (submit)  
-When администратор меняет схему типа (переименовывает/удаляет поле) — сценарий будущего admin UI, [backlog](../backlog.md)  
+When live-схема типа изменена через seed/test data или SQL/test script (поле переименовано/удалено)  
 And согласующий открывает карточку заявки  
 Then он видит **текущую версию** схемы и значений, зафиксированную на последнем successful submit  
 And изменение конфигурации типа не меняет отображаемые данные этой версии
@@ -440,24 +440,30 @@ Backlog AC: см. [docs/backlog.md](../backlog.md).
 | :--- | :--- | :--- |
 | AC-APP-01 | FR-REQ-01 | BR-19 |
 | AC-APP-02 | FR-REQ-03 | BR-08, BR-20, BR-26 |
+| AC-APP-02b | FR-REQ-03 | BR-18 |
 | AC-APP-03 | FR-REQ-03, FR-APP-01 | BR-20 |
 | AC-APP-04 | FR-APP-03 | BR-15, BR-25 |
+| AC-APP-04b | FR-APP-03 | BR-25 |
 | AC-APP-05 | FR-APP-06 | BR-02 |
 | AC-APP-05b | FR-APP-07 | BR-17 |
 | AC-APP-06 | FR-APP-04 | BR-04, BR-25 |
+| AC-APP-06b | FR-APP-04 | BR-25 |
 | AC-APP-07 | FR-APP-05 | BR-05, BR-25 |
+| AC-APP-07b | FR-APP-05 | BR-25 |
 | AC-APP-08 | FR-REQ-09 | BR-06, BR-22, BR-26 |
 | AC-APP-09 | FR-APP-03 | BR-03 |
 | AC-APP-10 | FR-REQ-03 | BR-08, BR-09 |
+| AC-APP-10b | FR-REQ-03 | BR-08, BR-09 |
 | AC-ACC-01 | FR-REQ-04 | BR-01 |
 | AC-ACC-02 | FR-APP-03–05 | BR-15 |
 | AC-ACC-03 | FR-APP-03–05 | BR-21 |
 | AC-ACC-06 | FR-APP-02 | BR-14 |
 | AC-CAT-01 | FR-CAT-01, FR-REQ-01 | BR-10 |
+| AC-CAT-01b | FR-CAT-01 | BR-09, BR-10 |
 | AC-CAT-02 | FR-CAT-01 | — |
 | AC-REQ-06 | FR-REQ-06 | BR-28 |
 | AC-REQ-07 | FR-REQ-07 | BR-07 |
 | AC-DRAFT-01 | FR-REQ-02, FR-REQ-03 | BR-26 |
-| AC-DRAFT-02 | FR-REQ-03, FR-REQ-09 | BR-26, BR-22 |
+| AC-DRAFT-02 | FR-REQ-03, FR-REQ-09 | BR-09, BR-22, BR-26 |
 
 Backlog AC — [docs/backlog.md](../backlog.md).

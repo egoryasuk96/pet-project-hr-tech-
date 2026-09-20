@@ -28,12 +28,14 @@
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | id | UUID | yes | no | Идентификатор пользователя | PK | FR-AUTH-02 |
 | login | string | yes | no | Учётная запись для входа | unique | FR-AUTH-01 |
-| password_hash | string | yes | no | Хэш пароля (не plaintext) | NFR-SEC-03 | FR-AUTH-01 |
+| password_hash | string | no | yes | Хэш пароля (не plaintext) для будущей authentication functionality | Используется только полной auth | FR-AUTH-01, NFR-SEC-03 — backlog |
 | full_name | string | yes | no | ФИО | — | FR-CAB-01 |
 | email | string | yes | no | Email | — | FR-CAB-01 |
 | position | string | no | yes | Должность (профиль) | Не ключ маршрутизации | Vision, FR-CAB-01 |
 | department | string | no | yes | Отдел (профиль) | Не орг-auto-routing (BR-12) | Vision, FR-CAB-01 |
 | is_active | boolean | yes | no | Признак активной УЗ | — | glossary |
+
+`password_hash` сохранён для будущей архитектуры полной authentication functionality. Baseline demo-auth его не использует; реализация login/password/JWT находится в [backlog](../../backlog.md).
 
 ### 2.2. Role
 

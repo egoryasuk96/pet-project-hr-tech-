@@ -140,7 +140,7 @@ flowchart TB
 | :--- | :--- | :--- |
 | BR-08 route snapshot при первом submit | Snapshot (+ Submit Orchestrator) | Create iff первый submit из `draft` |
 | BR-22 route не пересоздаётся на resubmit | Snapshot (+ Submit Orchestrator) | Skip create; читать существующий |
-| BR-26 schema/value на каждом успешном submit | Snapshot (+ Submit Orchestrator) | Upsert после валидации live schema |
+| BR-26 schema/value на каждом успешном submit | Snapshot (+ Submit Orchestrator) | Создать новую append-only версию после валидации live schema |
 | BR-09 конфиг не ретроактивен | Admin Config (Future) пишет live; runtime читает RouteInstance | Approval Engine / Submit не читают live assignments для in-flight |
 | BR-03 first-approve wins | Approval Engine | В одной TX с закрытием sibling tasks |
 | BR-21 self-approval | Authorization + Approval Engine | До мутаций → `ERR_FORBIDDEN_APPROVAL` |

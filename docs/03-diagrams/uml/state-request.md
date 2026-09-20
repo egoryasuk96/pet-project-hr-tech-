@@ -115,7 +115,7 @@ stateDiagram-v2
 | :--- | :--- |
 | **UC** | UC-04, UC-05, UC-08, UC-09, UC-10 |
 | **FR** | FR-REQ-01, FR-REQ-03, FR-REQ-07, FR-REQ-08, FR-REQ-09; FR-APP-04, FR-APP-05, FR-APP-06, FR-APP-07 |
-| **BR** | BR-04, BR-05, BR-06, BR-07, BR-08, BR-17, BR-18, BR-19, BR-20, BR-21, BR-22, BR-25, BR-26, BR-29 |
+| **BR** | BR-04, BR-05, BR-06, BR-07, BR-08, BR-17, BR-18, BR-19, BR-20, BR-21, BR-22, BR-25, BR-26; BR-29 — **Future / backlog** |
 | **AC** | AC-APP-01, AC-APP-02, AC-APP-05b, AC-APP-06, AC-APP-07, AC-APP-08, AC-REQ-07, AC-DRAFT-01, AC-DRAFT-02 |
 | **BPMN** | BPMN-01 (жизненный цикл), BPMN-02 (исходы этапа) |
 

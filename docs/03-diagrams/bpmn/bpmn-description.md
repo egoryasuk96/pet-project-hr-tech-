@@ -68,14 +68,14 @@
 | FR | FR-REQ-01, FR-REQ-02, FR-REQ-03, FR-REQ-07, FR-REQ-08, FR-REQ-09 | BPMN-01 |
 | FR | FR-APP-01…07 | BPMN-02 (итоги FR-APP-06/07 также в BPMN-01) |
 | FR | FR-NOTIF-01 (**Future / backlog**), FR-AUDIT-02 | BPMN-01, BPMN-02 |
-| FR | FR-ADMIN-01…05 (FR-ADMIN-06 кратко) | BPMN-03 |
+| FR | FR-ADMIN-01…05 (FR-ADMIN-06 кратко) — **Future / backlog** | BPMN-03 |
 | BR | BR-06, BR-07, BR-08, BR-18, BR-19, BR-20, BR-22, BR-24, BR-26; BR-23, BR-29 — **Future / backlog** | BPMN-01 |
 | BR | BR-02, BR-03, BR-04, BR-05, BR-14, BR-15, BR-17, BR-21, BR-25; BR-29 — **Future / backlog** | BPMN-02 |
-| BR | BR-02, BR-08, BR-09, BR-10, BR-12, BR-18, BR-26, BR-27 | BPMN-03 |
+| BR | BR-02, BR-08, BR-09, BR-10, BR-12, BR-18, BR-26; BR-27 — **Future / backlog** | BPMN-03 |
 | AC | AC-APP-01, AC-APP-02, AC-APP-02b, AC-APP-03, AC-APP-05, AC-APP-05b, AC-APP-08, AC-REQ-07, AC-DRAFT-01, AC-DRAFT-02; AC-NOTIF-01 — **Future / backlog** | BPMN-01 |
 | AC | AC-APP-04, AC-APP-04b, AC-APP-05, AC-APP-05b, AC-APP-06, AC-APP-06b, AC-APP-07, AC-APP-07b, AC-APP-09, AC-ACC-02, AC-ACC-03, AC-ACC-06 | BPMN-02 |
-| AC | AC-ADMIN-01, AC-APP-10, AC-APP-10b, AC-CAT-01, AC-CAT-01b, AC-DRAFT-01 | BPMN-03 |
-| RBAC/ACL | дорожки employee / approver / admin; ACL-02, ACL-03, ACL-04, ACL-07, ACL-09 | BPMN-01…03 |
+| AC | AC-ADMIN-01 — **Future / backlog**; AC-APP-10, AC-APP-10b, AC-CAT-01, AC-CAT-01b, AC-DRAFT-01 | BPMN-03 |
+| RBAC/ACL | дорожки employee / approver / admin; ACL-02, ACL-03, ACL-07; ACL-04, ACL-09 — **Future / backlog** | BPMN-01…03 |
 
 ---
 
