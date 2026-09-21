@@ -89,7 +89,8 @@ def test_nullable_and_omitted_fields_match_stage52_decisions() -> None:
     request_field_values = Base.metadata.tables["request_field_values"]
 
     assert approval_tasks.c.value_version_id.nullable is True
-    assert "created_at" not in approval_tasks.c
+    assert "created_at" in approval_tasks.c
+    assert approval_tasks.c.created_at.nullable is False
     assert "value_version_id" not in history_events.c
     assert history_events.c.action.type.python_type is str
     assert "field_definition_id" not in request_field_values.c

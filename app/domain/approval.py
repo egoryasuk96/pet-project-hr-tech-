@@ -117,8 +117,8 @@ class RouteInstanceAssignment(UUIDPrimaryKeyMixin, Base):
     user: Mapped[User | None] = relationship(back_populates="route_instance_assignments")
 
 
-class ApprovalTask(UUIDPrimaryKeyMixin, Base):
-    """Approver work item. No created_at (RR-TASK-02). value_version_id nullable (RR-FK-01)."""
+class ApprovalTask(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    """Approver work item. created_at immutable (OQ-04 / C-16). value_version_id nullable (RR-FK-01)."""
 
     __tablename__ = "approval_tasks"
     __table_args__ = (

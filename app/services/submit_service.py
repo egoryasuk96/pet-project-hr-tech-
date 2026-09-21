@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import select
@@ -135,6 +136,7 @@ def _create_stage_tasks(
     assignee_ids: list[UUID],
     value_version_id: UUID,
 ) -> None:
+    created_at = datetime.now(timezone.utc)
     for assignee_id in assignee_ids:
         session.add(
             ApprovalTask(
@@ -144,6 +146,7 @@ def _create_stage_tasks(
                 status=ApprovalTaskStatus.OPEN,
                 decision=None,
                 value_version_id=value_version_id,
+                created_at=created_at,
             )
         )
 
