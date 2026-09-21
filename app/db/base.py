@@ -1,7 +1,7 @@
-"""SQLAlchemy declarative base for future models (none in Stage 5.1)."""
+"""SQLAlchemy declarative base for domain models."""
 
 from sqlalchemy.orm import DeclarativeBase
 
 
 class Base(DeclarativeBase):
-    """Base class for ORM models. Models are intentionally not defined yet."""
+    """Base class for ORM models. Tables are registered via app.domain imports."""

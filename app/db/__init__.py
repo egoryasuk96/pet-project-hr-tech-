@@ -1,1 +1,1 @@
-"""Database infrastructure (engine/session). No domain models in Stage 5.1."""
+"""Database infrastructure (engine/session). Domain models live in app.domain."""

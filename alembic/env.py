@@ -1,6 +1,6 @@
 """Alembic migration environment.
 
-Uses DATABASE_URL from application settings. No revision files in Stage 5.1.
+Uses DATABASE_URL from application settings.
 Does not connect to PostgreSQL unless an Alembic command is run explicitly.
 """
 
@@ -11,6 +11,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import get_settings
 from app.db.base import Base
+import app.domain  # noqa: F401  — register models on Base.metadata
 
 config = context.config
 
@@ -33,6 +34,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        compare_type=True,
     )
 
     with context.begin_transaction():
@@ -50,7 +52,11 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
+        )
 
         with context.begin_transaction():
             context.run_migrations()

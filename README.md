@@ -42,3 +42,34 @@
 ## Стек
 
 FastAPI + PostgreSQL. Лёгкий веб-клиент: статические HTML-страницы с JavaScript, которые отдаёт тот же FastAPI.
+
+## Локальная БД (Stage 5.2)
+
+Секреты и URL БД задаются переменными окружения (`DATABASE_URL`), не файлами репозитория.
+
+Формат URL для SQLAlchemy/Alembic:
+
+```text
+postgresql+psycopg://USER:PASSWORD@HOST:5432/DBNAME
+```
+
+Применить схему:
+
+```text
+alembic upgrade head
+```
+
+Повторяемый demo-seed (роли, пользователи, 2 активных типа заявок с маршрутом; без заявок и задач):
+
+```text
+python -m app.db.seed
+```
+
+Проверка процесса API (без обращения к PostgreSQL):
+
+```text
+uvicorn app.main:app --reload
+```
+
+`GET /health` возвращает `{"status":"ok"}`.
+
