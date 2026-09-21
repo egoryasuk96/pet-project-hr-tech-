@@ -11,3 +11,4 @@ venv/
 .ruff_cache/
 .idea/
 .DS_Store
+.cursor/settings.json
