@@ -42,6 +42,8 @@ from app.services.submit_service import _assignees_for_assignment, _create_stage
 ApprovalAction = Literal["approve", "return", "reject"]
 AVAILABLE_ACTIONS: tuple[ApprovalAction, ...] = ("approve", "return", "reject")
 HISTORY_APPROVE = "approve"
+HISTORY_RETURN = "return"
+HISTORY_REJECT = "reject"
 
 
 def _task_list_options() -> tuple:
@@ -220,12 +222,11 @@ def _next_stage(request: Request, stage_number: int) -> RouteInstanceStage | Non
     raise invalid_state()
 
 
-def approve_task(
+def _load_decision_context(
     session: Session,
     user: User,
     task_id: UUID,
-    comment: str | None,
-) -> DecisionResult:
+) -> tuple[Request, ApprovalTask]:
     identity = session.execute(
         select(ApprovalTask.request_id, ApprovalTask.assignee_id).where(
             ApprovalTask.id == task_id
@@ -259,15 +260,15 @@ def approve_task(
         raise invalid_state()
     if task.value_version_id is None:
         raise RuntimeError("Approval task has no submitted value version")
+    return request, task
 
-    next_stage = _next_stage(request, task.stage_number)
-    next_assignee_ids: set[UUID] = set()
-    if next_stage is not None:
-        for assignment in next_stage.assignments:
-            next_assignee_ids.update(_assignees_for_assignment(session, assignment))
-        if not next_assignee_ids:
-            raise RuntimeError("Next approval stage has no active assignees")
 
+def _claim_task_decision(
+    session: Session,
+    user: User,
+    task: ApprovalTask,
+    decision: ApprovalDecision,
+) -> None:
     decided_at = datetime.now(timezone.utc)
     claimed = session.execute(
         update(ApprovalTask)
@@ -278,7 +279,7 @@ def approve_task(
         )
         .values(
             status=ApprovalTaskStatus.COMPLETED,
-            decision=ApprovalDecision.APPROVE,
+            decision=decision,
             decided_at=decided_at,
         )
         .execution_options(synchronize_session=False)
@@ -286,6 +287,12 @@ def approve_task(
     if claimed.rowcount != 1:
         raise task_done()
 
+
+def _cancel_sibling_tasks(
+    session: Session,
+    request: Request,
+    task: ApprovalTask,
+) -> None:
     session.execute(
         update(ApprovalTask)
         .where(
@@ -297,6 +304,134 @@ def approve_task(
         .values(status=ApprovalTaskStatus.CANCELLED)
         .execution_options(synchronize_session=False)
     )
+
+
+def _add_decision_comment(
+    session: Session,
+    user: User,
+    request: Request,
+    task: ApprovalTask,
+    comment: str,
+) -> None:
+    if not comment:
+        return
+    session.add(
+        Comment(
+            request_id=request.id,
+            author_id=user.id,
+            approval_task_id=task.id,
+            kind=CommentKind.DECISION,
+            text=comment,
+        )
+    )
+
+
+def _add_decision_history(
+    session: Session,
+    user: User,
+    request: Request,
+    *,
+    action: str,
+    comment: str,
+) -> None:
+    session.add(
+        HistoryEvent(
+            request_id=request.id,
+            actor_id=user.id,
+            action=action,
+            from_state=RequestStatus.IN_APPROVAL.value,
+            to_state=request.status.value,
+            comment=comment or None,
+        )
+    )
+
+
+def _decision_result(
+    request: Request,
+    task: ApprovalTask,
+    decision: ApprovalDecision,
+) -> DecisionResult:
+    if task.value_version_id is None:
+        raise RuntimeError("Approval task has no submitted value version")
+    current_stage = current_stage_out(request) or _stage_out(request, task.stage_number)
+    return DecisionResult(
+        task=DecisionTaskOut(
+            id=task.id,
+            status=ApprovalTaskStatus.COMPLETED,
+            decision=decision,
+            value_version_id=task.value_version_id,
+        ),
+        request=DecisionRequestOut(
+            id=request.id,
+            status=request.status,
+            current_stage=current_stage,
+        ),
+    )
+
+
+def _required_decision_comment(comment: object) -> str:
+    if not isinstance(comment, str):
+        raise validation({"comment": "required"})
+    normalized = comment.strip()
+    if not normalized:
+        raise validation({"comment": "required"})
+    return normalized
+
+
+def _terminal_decision(
+    session: Session,
+    user: User,
+    task_id: UUID,
+    comment: object,
+    *,
+    decision: ApprovalDecision,
+    request_status: RequestStatus,
+    history_action: str,
+) -> DecisionResult:
+    normalized_comment = _required_decision_comment(comment)
+    request, task = _load_decision_context(session, user, task_id)
+
+    _claim_task_decision(session, user, task, decision)
+    _cancel_sibling_tasks(session, request, task)
+    request.status = request_status
+
+    _add_decision_comment(
+        session,
+        user,
+        request,
+        task,
+        normalized_comment,
+    )
+    _add_decision_history(
+        session,
+        user,
+        request,
+        action=history_action,
+        comment=normalized_comment,
+    )
+    session.flush()
+
+    return _decision_result(request, task, decision)
+
+
+def approve_task(
+    session: Session,
+    user: User,
+    task_id: UUID,
+    comment: str | None,
+) -> DecisionResult:
+    request, task = _load_decision_context(session, user, task_id)
+
+    next_stage = _next_stage(request, task.stage_number)
+    next_assignee_ids: set[UUID] = set()
+    if next_stage is not None:
+        for assignment in next_stage.assignments:
+            next_assignee_ids.update(_assignees_for_assignment(session, assignment))
+        if not next_assignee_ids:
+            raise RuntimeError("Next approval stage has no active assignees")
+
+    _claim_task_decision(session, user, task, ApprovalDecision.APPROVE)
+    _cancel_sibling_tasks(session, request, task)
 
     if next_stage is None:
         request.status = RequestStatus.APPROVED
@@ -311,40 +446,54 @@ def approve_task(
         )
 
     normalized_comment = comment.strip() if comment is not None else ""
-    if normalized_comment:
-        session.add(
-            Comment(
-                request_id=request.id,
-                author_id=user.id,
-                approval_task_id=task.id,
-                kind=CommentKind.DECISION,
-                text=normalized_comment,
-            )
-        )
-
-    session.add(
-        HistoryEvent(
-            request_id=request.id,
-            actor_id=user.id,
-            action=HISTORY_APPROVE,
-            from_state=RequestStatus.IN_APPROVAL.value,
-            to_state=request.status.value,
-            comment=normalized_comment or None,
-        )
+    _add_decision_comment(
+        session,
+        user,
+        request,
+        task,
+        normalized_comment,
+    )
+    _add_decision_history(
+        session,
+        user,
+        request,
+        action=HISTORY_APPROVE,
+        comment=normalized_comment,
     )
     session.flush()
 
-    current_stage = current_stage_out(request) or _stage_out(request, task.stage_number)
-    return DecisionResult(
-        task=DecisionTaskOut(
-            id=task.id,
-            status=ApprovalTaskStatus.COMPLETED,
-            decision=ApprovalDecision.APPROVE,
-            value_version_id=task.value_version_id,
-        ),
-        request=DecisionRequestOut(
-            id=request.id,
-            status=request.status,
-            current_stage=current_stage,
-        ),
+    return _decision_result(request, task, ApprovalDecision.APPROVE)
+
+
+def return_task(
+    session: Session,
+    user: User,
+    task_id: UUID,
+    comment: str | None,
+) -> DecisionResult:
+    return _terminal_decision(
+        session,
+        user,
+        task_id,
+        comment,
+        decision=ApprovalDecision.RETURN,
+        request_status=RequestStatus.RETURNED,
+        history_action=HISTORY_RETURN,
+    )
+
+
+def reject_task(
+    session: Session,
+    user: User,
+    task_id: UUID,
+    comment: str | None,
+) -> DecisionResult:
+    return _terminal_decision(
+        session,
+        user,
+        task_id,
+        comment,
+        decision=ApprovalDecision.REJECT,
+        request_status=RequestStatus.REJECTED,
+        history_action=HISTORY_REJECT,
     )

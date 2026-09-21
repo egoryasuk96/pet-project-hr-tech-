@@ -115,3 +115,69 @@ def approve_task(
     user: User = Depends(_approver),
 ) -> DecisionResult:
     return approval_service.approve_task(session, user, task_id, body.comment)
+
+
+@router.post(
+    "/{task_id}/return",
+    response_model=DecisionResult,
+    status_code=status.HTTP_200_OK,
+    summary="Return request for revision",
+    description=(
+        "UC-09 / FR-APP-05 / BR-05 / BR-21 / BR-25. "
+        "Returns the request to the initiator for revision. "
+        "Only the assigned approver can return; a non-empty comment is required."
+    ),
+    responses={
+        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
+        403: {
+            "model": ErrorResponse,
+            "description": "ERR_FORBIDDEN / ERR_FORBIDDEN_APPROVAL",
+        },
+        409: {
+            "model": ErrorResponse,
+            "description": "ERR_TASK_DONE / ERR_INVALID_STATE",
+        },
+        422: {"model": ErrorResponse, "description": "ERR_VALIDATION"},
+        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+    },
+)
+def return_task(
+    task_id: UUID,
+    body: DecisionCommentInput,
+    session: Session = Depends(get_db),
+    user: User = Depends(_approver),
+) -> DecisionResult:
+    return approval_service.return_task(session, user, task_id, body.comment)
+
+
+@router.post(
+    "/{task_id}/reject",
+    response_model=DecisionResult,
+    status_code=status.HTTP_200_OK,
+    summary="Reject request",
+    description=(
+        "UC-08 / FR-APP-04 / BR-04 / BR-21 / BR-25. "
+        "Rejects the request and completes its approval route. "
+        "Only the assigned approver can reject; a non-empty comment is required."
+    ),
+    responses={
+        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
+        403: {
+            "model": ErrorResponse,
+            "description": "ERR_FORBIDDEN / ERR_FORBIDDEN_APPROVAL",
+        },
+        409: {
+            "model": ErrorResponse,
+            "description": "ERR_TASK_DONE / ERR_INVALID_STATE",
+        },
+        422: {"model": ErrorResponse, "description": "ERR_VALIDATION"},
+        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+    },
+)
+def reject_task(
+    task_id: UUID,
+    body: DecisionCommentInput,
+    session: Session = Depends(get_db),
+    user: User = Depends(_approver),
+) -> DecisionResult:
+    return approval_service.reject_task(session, user, task_id, body.comment)
