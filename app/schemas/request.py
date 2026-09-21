@@ -8,7 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.domain.enums import RequestStatus
+from app.domain.enums import CommentKind, RequestStatus
 from app.schemas.request_type import RequestTypeRef, RequestTypeSchemaOut
 
 
@@ -45,6 +45,15 @@ class RequestListItem(BaseModel):
 class UserRef(BaseModel):
     id: UUID
     full_name: str
+
+
+class CommentOut(BaseModel):
+    id: UUID
+    kind: CommentKind
+    text: str
+    author: UserRef
+    approval_task_id: UUID | None
+    created_at: datetime
 
 
 class FieldValue(BaseModel):
