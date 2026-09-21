@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     app_name: str = "Employee Service"
     app_env: str = "local"
     database_url: str = "postgresql+psycopg://user:password@localhost:5432/employee_service"
+    jwt_secret: str = "local-dev-only-change-me-jwt-secret"
+    jwt_ttl_hours: int = 8
+    demo_password: str | None = None
 
 
 @lru_cache

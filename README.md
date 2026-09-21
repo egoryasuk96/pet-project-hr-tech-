@@ -73,3 +73,59 @@ uvicorn app.main:app --reload
 
 `GET /health` возвращает `{"status":"ok"}`.
 
+## Core API (Stage 5.3)
+
+JWT access token, без refresh. Секреты только через переменные окружения: `DATABASE_URL`, `JWT_SECRET`, при необходимости `DEMO_PASSWORD` для demo-seed.
+
+Запуск API (после миграций):
+
+```text
+uvicorn app.main:app --reload
+```
+
+OpenAPI / Swagger: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs), схема: [http://127.0.0.1:8000/openapi.json](http://127.0.0.1:8000/openapi.json).
+
+Миграции те же, что в Stage 5.2 (`alembic upgrade head`). Схема БД не менялась.
+
+Login demo-пользователей (пароль не хранится в репозитории):
+
+```text
+set DEMO_PASSWORD=...
+python -m app.db.seed
+```
+
+Seed идемпотентен: повторный запуск не создаёт дубликаты. Если `DEMO_PASSWORD` задан, обновляется только `password_hash` существующих demo-пользователей.
+
+```http
+POST /auth/login
+{"login": "employee.demo", "password": "<DEMO_PASSWORD>"}
+```
+
+Дальше: `Authorization: Bearer <access_token>`.
+
+Реализованные endpoint'ы:
+
+- `POST /auth/login`
+- `GET /me`
+- `GET /request-types`
+- `GET /request-types/{type_id}`
+- `GET /request-types/{type_id}/schema`
+- `POST /requests`
+- `GET /requests`
+- `GET /requests/{request_id}`
+- `PATCH /requests/{request_id}`
+- `POST /requests/{request_id}/submit`
+
+Тесты без PostgreSQL (Stage 5.2) и API-тесты:
+
+```text
+python -m pytest tests
+```
+
+API-тесты Stage 5.3 требуют **отдельную** PostgreSQL (`TEST_DATABASE_URL`), не developer-базу из `.env`. Без этой переменной они пропускаются (`skip`), Stage 5.2 тесты продолжают выполняться.
+
+```text
+set TEST_DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:5432/employee_service_test
+python -m pytest tests
+```
+

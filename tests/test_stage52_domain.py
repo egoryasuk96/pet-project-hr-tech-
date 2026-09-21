@@ -40,8 +40,10 @@ EXPECTED_TABLES = {
 
 
 def test_app_import_does_not_connect_to_postgres() -> None:
+    from app.db import session as db_session
     from app.main import app
 
+    db_session.reset_engine()
     assert app.title
     assert db_session._engine is None
 

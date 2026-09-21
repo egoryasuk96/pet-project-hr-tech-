@@ -36,10 +36,23 @@ def get_session_factory() -> sessionmaker[Session]:
     return _SessionLocal
 
 
+def reset_engine() -> None:
+    """Dispose the shared engine. Used by tests to isolate DATABASE_URL."""
+    global _engine, _SessionLocal
+    if _engine is not None:
+        _engine.dispose()
+    _engine = None
+    _SessionLocal = None
+
+
 def get_db() -> Generator[Session, None, None]:
-    """FastAPI dependency: yield a DB session (for later stages)."""
+    """FastAPI dependency: yield a DB session and commit on success."""
     session = get_session_factory()()
     try:
         yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     finally:
         session.close()

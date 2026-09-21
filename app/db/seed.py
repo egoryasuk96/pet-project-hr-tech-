@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
+from app.core.security import hash_password
 from app.db.session import get_session_factory
 from app.domain import (
     ApprovalRoute,
@@ -84,11 +86,21 @@ def _get_or_create_role(session: Session, code: RoleCode) -> Role:
     return role
 
 
-def _get_or_create_user(session: Session, spec: DemoUser) -> User:
+def _demo_password_hash() -> str | None:
+    """Hash DEMO_PASSWORD from the environment. None if the variable is unset."""
+    password = get_settings().demo_password
+    if password is None or password == "":
+        return None
+    return hash_password(password)
+
+
+def _get_or_create_user(session: Session, spec: DemoUser, password_hash: str | None) -> User:
     user = session.scalar(select(User).where(User.login == spec.login))
     if user is None:
-        user = User(login=spec.login, password_hash=None)
+        user = User(login=spec.login, password_hash=password_hash)
         session.add(user)
+    elif password_hash is not None:
+        user.password_hash = password_hash
     user.full_name = spec.full_name
     user.email = spec.email
     user.position = spec.position
@@ -224,9 +236,10 @@ def seed(session: Session) -> None:
     """Upsert the minimal demo dataset. Safe to run repeatedly."""
     roles = {code: _get_or_create_role(session, code) for code in RoleCode}
 
+    password_hash = _demo_password_hash()
     users_by_login: dict[str, User] = {}
     for spec in DEMO_USERS:
-        user = _get_or_create_user(session, spec)
+        user = _get_or_create_user(session, spec, password_hash)
         _ensure_user_role(session, user, roles[spec.role])
         users_by_login[spec.login] = user
 
