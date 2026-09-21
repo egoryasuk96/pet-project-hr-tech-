@@ -1,22 +1,22 @@
-п»ї# ERD-DD вЂ” Data Dictionary
+# ERD-DD — Data Dictionary
 
-**РџСЂРѕРґСѓРєС‚:** Employee Service  
+**Продукт:** Employee Service  
 **ID:** ERD-DD  
-**Р’РµСЂСЃРёСЏ:** 1.0  
-**РЎС‚Р°С‚СѓСЃ:** Baseline v1.0  
-**РЎРІСЏР·Р°РЅРЅС‹Рµ РґРѕРєСѓРјРµРЅС‚С‹:** [README.md](./README.md), [Snapshot Model](./snapshot-model.md)
+**Версия:** 1.1  
+**Статус:** Baseline v1.0  
+**Связанные документы:** [README.md](./README.md), [Snapshot Model](./snapshot-model.md)
 
 ---
 
-## 1. РЎРѕРіР»Р°С€РµРЅРёСЏ
+## 1. Соглашения
 
-| РўРµРјР° | РџСЂР°РІРёР»Рѕ |
+| Тема | Правило |
 | :--- | :--- |
-| **Type** | Р›РѕРіРёС‡РµСЃРєРёР№ С‚РёРї Р°РЅР°Р»РёР·Р° (`UUID`, `string`, `boolean`, `int`, `datetime`, `enum`, `JSON`) |
-| **Physical** | РќРµ С„РёРєСЃРёСЂСѓРµС‚СЃСЏ (РЅРµ `varchar(n)`, РЅРµ `jsonb`) |
-| **Required** | РћР±СЏР·Р°С‚РµР»СЊРЅРѕСЃС‚СЊ РЅР° Р»РѕРіРёС‡РµСЃРєРѕРј СѓСЂРѕРІРЅРµ СЃСѓС‰РЅРѕСЃС‚Рё |
-| **Nullable** | Р”РѕРїСѓСЃС‚РёРјРѕСЃС‚СЊ РѕС‚СЃСѓС‚СЃС‚РІРёСЏ Р·РЅР°С‡РµРЅРёСЏ |
-| **РСЃС‚РѕС‡РЅРёРє** | FR / BR / UC / NFR / glossary / Architecture ADR, РіРґРµ СѓРјРµСЃС‚РЅРѕ |
+| **Type** | Логический тип анализа (`UUID`, `string`, `boolean`, `int`, `datetime`, `timestamptz`, `enum`, `JSON`) |
+| **Physical** | Не фиксируется (не `varchar(n)`, не `jsonb`) |
+| **Required** | Обязательность на логическом уровне сущности |
+| **Nullable** | Допустимость отсутствия значения |
+| **Источник** | FR / BR / UC / NFR / glossary / Architecture ADR, где уместно |
 
 ---
 
@@ -26,32 +26,32 @@
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ | PK | FR-AUTH-02 |
-| login | string | yes | no | РЈС‡С‘С‚РЅР°СЏ Р·Р°РїРёСЃСЊ РґР»СЏ РІС…РѕРґР° | unique | FR-AUTH-01 |
-| password_hash | string | no | yes | РҐСЌС€ РїР°СЂРѕР»СЏ (РЅРµ plaintext) РґР»СЏ Р±СѓРґСѓС‰РµР№ authentication functionality | РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ С‚РѕР»СЊРєРѕ РїРѕР»РЅРѕР№ auth | FR-AUTH-01, NFR-SEC-03 вЂ” backlog |
-| full_name | string | yes | no | Р¤РРћ | вЂ” | FR-CAB-01 |
-| email | string | yes | no | Email | вЂ” | FR-CAB-01 |
-| position | string | no | yes | Р”РѕР»Р¶РЅРѕСЃС‚СЊ (РїСЂРѕС„РёР»СЊ) | РќРµ РєР»СЋС‡ РјР°СЂС€СЂСѓС‚РёР·Р°С†РёРё | Vision, FR-CAB-01 |
-| department | string | no | yes | РћС‚РґРµР» (РїСЂРѕС„РёР»СЊ) | РќРµ РѕСЂРі-auto-routing (BR-12) | Vision, FR-CAB-01 |
-| is_active | boolean | yes | no | РџСЂРёР·РЅР°Рє Р°РєС‚РёРІРЅРѕР№ РЈР— | вЂ” | glossary |
+| id | UUID | yes | no | Идентификатор пользователя | PK | FR-AUTH-02 |
+| login | string | yes | no | Учётная запись для входа | unique | FR-AUTH-01 |
+| password_hash | string | no | yes | Хэш пароля (не plaintext) для будущей authentication functionality | Используется только полной auth | FR-AUTH-01, NFR-SEC-03 — backlog |
+| full_name | string | yes | no | ФИО | — | FR-CAB-01 |
+| email | string | yes | no | Email | — | FR-CAB-01 |
+| position | string | no | yes | Должность (профиль) | Не ключ маршрутизации | Vision, FR-CAB-01 |
+| department | string | no | yes | Отдел (профиль) | Не орг-auto-routing (BR-12) | Vision, FR-CAB-01 |
+| is_active | boolean | yes | no | Признак активной УЗ | — | glossary |
 
-`password_hash` СЃРѕС…СЂР°РЅС‘РЅ РґР»СЏ Р±СѓРґСѓС‰РµР№ Р°СЂС…РёС‚РµРєС‚СѓСЂС‹ РїРѕР»РЅРѕР№ authentication functionality. Baseline demo-auth РµРіРѕ РЅРµ РёСЃРїРѕР»СЊР·СѓРµС‚; СЂРµР°Р»РёР·Р°С†РёСЏ login/password/JWT РЅР°С…РѕРґРёС‚СЃСЏ РІ [backlog](../../backlog.md).
+`password_hash` сохранён для будущей архитектуры полной authentication functionality. Baseline demo-auth его не использует; реализация login/password/JWT находится в [backlog](../../backlog.md).
 
 ### 2.2. Role
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ СЂРѕР»Рё | PK | BR-16 |
+| id | UUID | yes | no | Идентификатор роли | PK | BR-16 |
 | code | enum | yes | no | `employee` \| `approver` \| `admin` | unique | glossary, RBAC |
 
 ### 2.3. UserRole
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| user_id | UUID | yes | no | РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ | FK в†’ User; PK composite | BR-16 |
-| role_id | UUID | yes | no | Р РѕР»СЊ | FK в†’ Role; PK composite | BR-16 |
+| user_id | UUID | yes | no | Пользователь | FK > User; PK composite | BR-16 |
+| role_id | UUID | yes | no | Роль | FK > Role; PK composite | BR-16 |
 
-**Constraints:** СЂРѕР»Рё РѕР±СЉРµРґРёРЅСЏСЋС‚СЃСЏ (union); role switcher РѕС‚СЃСѓС‚СЃС‚РІСѓРµС‚ (BR-16, AC-AUTH-01).
+**Constraints:** роли объединяются (union); role switcher отсутствует (BR-16, AC-AUTH-01).
 
 ---
 
@@ -61,99 +61,99 @@
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | РўРёРї Р·Р°СЏРІРєРё | PK | FR-ADMIN-01 |
-| name | string | yes | no | РќР°Р·РІР°РЅРёРµ | вЂ” | FR-ADMIN-01, FR-CAT-01 |
-| description | string | no | yes | РћРїРёСЃР°РЅРёРµ СѓСЃР»СѓРіРё | вЂ” | FR-CAT-02 |
-| is_active | boolean | yes | no | Р’РёРґРёРјРѕСЃС‚СЊ РІ РєР°С‚Р°Р»РѕРіРµ | activate С‚РѕР»СЊРєРѕ РїСЂРё РІР°Р»РёРґРЅРѕРј РјР°СЂС€СЂСѓС‚Рµ (BR-18) | BR-10, FR-ADMIN-01 |
+| id | UUID | yes | no | Тип заявки | PK | FR-ADMIN-01 |
+| name | string | yes | no | Название | — | FR-ADMIN-01, FR-CAT-01 |
+| description | string | no | yes | Описание услуги | — | FR-CAT-02 |
+| is_active | boolean | yes | no | Видимость в каталоге | activate только при валидном маршруте (BR-18) | BR-10, FR-ADMIN-01 |
 
 ### 3.2. RequestFieldDefinition
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | РџРѕР»Рµ СЃС…РµРјС‹ | PK | FR-ADMIN-02 |
-| request_type_id | UUID | yes | no | РўРёРї | FK в†’ RequestType | FR-CAT-03 |
-| code | string | yes | no | РљРѕРґ РїРѕР»СЏ | unique per type | FR-ADMIN-02 |
-| name | string | yes | no | РћС‚РѕР±СЂР°Р¶Р°РµРјРѕРµ РёРјСЏ | вЂ” | FR-ADMIN-02 |
-| data_type | enum | yes | no | `text` \| `date` \| `number` \| `catalog` | вЂ” | glossary |
-| required | boolean | yes | no | РћР±СЏР·Р°С‚РµР»СЊРЅРѕСЃС‚СЊ Р·РЅР°С‡РµРЅРёСЏ | вЂ” | FR-ADMIN-02 |
-| order_no | int | yes | no | РџРѕСЂСЏРґРѕРє РЅР° С„РѕСЂРјРµ | вЂ” | FR-ADMIN-02 |
-| dictionary_id | UUID | no | yes | РЎРїСЂР°РІРѕС‡РЅРёРє | FK в†’ Dictionary; РґР»СЏ catalog | FR-ADMIN-02, FR-ADMIN-06 |
+| id | UUID | yes | no | Поле схемы | PK | FR-ADMIN-02 |
+| request_type_id | UUID | yes | no | Тип | FK > RequestType | FR-CAT-03 |
+| code | string | yes | no | Код поля | unique per type | FR-ADMIN-02 |
+| name | string | yes | no | Отображаемое имя | — | FR-ADMIN-02 |
+| data_type | enum | yes | no | `text` \| `date` \| `number` \| `catalog` | — | glossary |
+| required | boolean | yes | no | Обязательность значения | — | FR-ADMIN-02 |
+| order_no | int | yes | no | Порядок на форме | — | FR-ADMIN-02 |
+| dictionary_id | UUID | no | yes | Справочник | FK > Dictionary; для catalog | FR-ADMIN-02, FR-ADMIN-06 |
 
 ### 3.3. Dictionary
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | РЎРїСЂР°РІРѕС‡РЅРёРє | PK | FR-ADMIN-06 |
-| name | string | yes | no | РРјСЏ СЃРїСЂР°РІРѕС‡РЅРёРєР° | вЂ” | FR-ADMIN-06 |
+| id | UUID | yes | no | Справочник | PK | FR-ADMIN-06 |
+| name | string | yes | no | Имя справочника | — | FR-ADMIN-06 |
 
 ### 3.4. DictionaryItem
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | Р­Р»РµРјРµРЅС‚ | PK | FR-ADMIN-06 |
-| dictionary_id | UUID | yes | no | РЎРїСЂР°РІРѕС‡РЅРёРє | FK в†’ Dictionary | FR-ADMIN-06 |
-| code | string | yes | no | РљРѕРґ | unique per dictionary | FR-ADMIN-06 |
-| name | string | yes | no | РќР°РёРјРµРЅРѕРІР°РЅРёРµ | вЂ” | FR-ADMIN-06 |
-| is_active | boolean | yes | no | РђРєС‚РёРІРЅРѕСЃС‚СЊ | вЂ” | FR-ADMIN-06 |
+| id | UUID | yes | no | Элемент | PK | FR-ADMIN-06 |
+| dictionary_id | UUID | yes | no | Справочник | FK > Dictionary | FR-ADMIN-06 |
+| code | string | yes | no | Код | unique per dictionary | FR-ADMIN-06 |
+| name | string | yes | no | Наименование | — | FR-ADMIN-06 |
+| is_active | boolean | yes | no | Активность | — | FR-ADMIN-06 |
 
 ### 3.5. ApprovalRoute
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | РњР°СЂС€СЂСѓС‚ (live) | PK | FR-ADMIN-03 |
-| request_type_id | UUID | yes | no | РўРёРї | FK в†’ RequestType; 1вЂ”0..1 | FR-ADMIN-03 |
+| id | UUID | yes | no | Маршрут (live) | PK | FR-ADMIN-03 |
+| request_type_id | UUID | yes | no | Тип | FK > RequestType; 1—0..1 | FR-ADMIN-03 |
 
 ### 3.6. ApprovalStage
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | Р­С‚Р°Рї (live) | PK | FR-ADMIN-04 |
-| route_id | UUID | yes | no | РњР°СЂС€СЂСѓС‚ | FK в†’ ApprovalRoute | FR-ADMIN-04 |
-| name | string | yes | no | РРјСЏ СЌС‚Р°РїР° | вЂ” | FR-ADMIN-04 |
-| sequence_no | int | yes | no | РџРѕСЂСЏРґРѕРє (РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅС‹Р№) | unique per route; BR-02 | BR-02, FR-ADMIN-04 |
+| id | UUID | yes | no | Этап (live) | PK | FR-ADMIN-04 |
+| route_id | UUID | yes | no | Маршрут | FK > ApprovalRoute | FR-ADMIN-04 |
+| name | string | yes | no | Имя этапа | — | FR-ADMIN-04 |
+| sequence_no | int | yes | no | Порядок (последовательный) | unique per route; BR-02 | BR-02, FR-ADMIN-04 |
 
 ### 3.7. StageAssignment
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | РќР°Р·РЅР°С‡РµРЅРёРµ | PK | FR-ADMIN-05 |
-| stage_id | UUID | yes | no | Р­С‚Р°Рї | FK в†’ ApprovalStage | FR-ADMIN-05 |
-| assignment_kind | enum | yes | no | `role` / `user` / `role_and_user` | вЂ” | BR-12 |
-| role_id | UUID | no | yes | Р РѕР»СЊ | FK в†’ Role; в‰Ґ1 РёР· role/user | BR-12 |
-| user_id | UUID | no | yes | РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ | FK в†’ User; в‰Ґ1 РёР· role/user | BR-12 |
+| id | UUID | yes | no | Назначение | PK | FR-ADMIN-05 |
+| stage_id | UUID | yes | no | Этап | FK > ApprovalStage | FR-ADMIN-05 |
+| assignment_kind | enum | yes | no | `role` / `user` / `role_and_user` | — | BR-12 |
+| role_id | UUID | no | yes | Роль | FK > Role; ?1 из role/user | BR-12 |
+| user_id | UUID | no | yes | Пользователь | FK > User; ?1 из role/user | BR-12 |
 
-**Constraints:** РЅРµС‚ auto-routing РїРѕ РѕСЂРіСЃС‚СЂСѓРєС‚СѓСЂРµ (BR-12). Live assignments **РЅРµ** РјРµРЅСЏСЋС‚ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ RouteInstance (BR-09).
+**Constraints:** нет auto-routing по оргструктуре (BR-12). Live assignments **не** меняют существующие RouteInstance (BR-09).
 
 ---
 
-## 4. Runtime вЂ” Request
+## 4. Runtime — Request
 
 ### 4.1. Request
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | Р—Р°СЏРІРєР° | PK | FR-REQ-01 |
-| initiator_id | UUID | yes | no | РРЅРёС†РёР°С‚РѕСЂ | FK в†’ User | BR-01, BR-19 |
-| request_type_id | UUID | yes | no | РўРёРї | FK в†’ RequestType | FR-REQ-01 |
-| status | enum | yes | no | Р–РёР·РЅРµРЅРЅС‹Р№ С†РёРєР» | СЃРј. glossary | UML-SM-01 |
-| current_stage_number | int | no | yes | РўРµРєСѓС‰РёР№ СЌС‚Р°Рї; РїРѕСЃР»Рµ return вЂ” СЌС‚Р°Рї РІРѕР·РІСЂР°С‚Р° (Р°СѓРґРёС‚); РїСЂРё resubmit в†’ 1 | РћР±СЏР·Р°С‚РµР»РµРЅ РІ in_approval; РїРѕСЃР»Рµ return РјРѕР¶РµС‚ С…СЂР°РЅРёС‚СЊ N РґРѕ resubmit | BR-05, BR-06 |
-| created_at | datetime | yes | no | РЎРѕР·РґР°РЅРёРµ | вЂ” | вЂ” |
-| updated_at | datetime | yes | no | РћР±РЅРѕРІР»РµРЅРёРµ | вЂ” | вЂ” |
+| id | UUID | yes | no | Заявка | PK | FR-REQ-01 |
+| initiator_id | UUID | yes | no | Инициатор | FK > User | BR-01, BR-19 |
+| request_type_id | UUID | yes | no | Тип | FK > RequestType | FR-REQ-01 |
+| status | enum | yes | no | Жизненный цикл | см. glossary | UML-SM-01 |
+| current_stage_number | int | no | yes | Текущий этап; после return — этап возврата (аудит); при resubmit > 1 | Обязателен в in_approval; после return может хранить N до resubmit | BR-05, BR-06 |
+| created_at | datetime | yes | no | Создание | — | — |
+| updated_at | datetime | yes | no | Обновление | — | — |
 
 **Relations:** 0..1 RouteInstance; 0..N FieldValueVersion; 0..N RequestFieldValue, ApprovalTask, Comment, HistoryEvent.
 
-**Constraints:** cancel С‚РѕР»СЊРєРѕ draft/returned (BR-07); admin РЅРµ СЃРѕР·РґР°С‘С‚ РѕС‚ РёРјРµРЅРё СЃРѕС‚СЂСѓРґРЅРёРєР° (BR-27).
+**Constraints:** cancel только draft/returned (BR-07); admin не создаёт от имени сотрудника (BR-27).
 
 ### 4.2. RequestFieldValue (working values)
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | Р—РЅР°С‡РµРЅРёРµ | PK | FR-REQ-02 |
-| request_id | UUID | yes | no | Р—Р°СЏРІРєР° | FK в†’ Request | FR-REQ-02 |
-| field_code | string | yes | no | РљРѕРґ РїРѕР»СЏ | РЎРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ СЃС…РµРјРµ (live РїСЂРё edit) | BR-26 |
-| value | string | no | yes | Р—РЅР°С‡РµРЅРёРµ (Р»РѕРіРёС‡РµСЃРєРёР№ РЅРѕСЃРёС‚РµР»СЊ) | Р’Р°Р»РёРґР°С†РёСЏ РїРѕ data_type / catalog | FR-REQ-02, BR-26 |
+| id | UUID | yes | no | Значение | PK | FR-REQ-02 |
+| request_id | UUID | yes | no | Заявка | FK > Request | FR-REQ-02 |
+| field_code | string | yes | no | Код поля | Соответствует схеме (live при edit) | BR-26 |
+| value | string | no | yes | Значение (логический носитель) | Валидация по data_type / catalog | FR-REQ-02, BR-26 |
 
-**Constraints:** РјСѓС‚Р°С†РёРё РІ `draft`/`returned` РїРѕ **live** СЃС…РµРјРµ; РЅРµ СЏРІР»СЏСЋС‚СЃСЏ FieldValueVersion.
+**Constraints:** мутации в `draft`/`returned` по **live** схеме; не являются FieldValueVersion.
 
 ---
 
@@ -163,45 +163,45 @@
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | Р­РєР·РµРјРїР»СЏСЂ РјР°СЂС€СЂСѓС‚Р° | PK | BR-08 |
-| request_id | UUID | yes | no | Р—Р°СЏРІРєР° | FK в†’ Request; **unique** (1вЂ”0..1) | BR-08 |
-| created_at | datetime | yes | no | РњРѕРјРµРЅС‚ first submit | write-once | BR-08 |
+| id | UUID | yes | no | Экземпляр маршрута | PK | BR-08 |
+| request_id | UUID | yes | no | Заявка | FK > Request; **unique** (1—0..1) | BR-08 |
+| created_at | datetime | yes | no | Момент first submit | write-once | BR-08 |
 
-**Constraints:** СЃРѕР·РґР°С‘С‚СЃСЏ С‚РѕР»СЊРєРѕ РїСЂРё РїРµСЂРІРѕРј successful submit; immutable; РЅРµ РїРµСЂРµСЃРѕР·РґР°С‘С‚СЃСЏ РїСЂРё resubmit (BR-22).
+**Constraints:** создаётся только при первом successful submit; immutable; не пересоздаётся при resubmit (BR-22).
 
 ### 5.2. RouteInstanceStage
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | Р­С‚Р°Рї СЌРєР·РµРјРїР»СЏСЂР° РјР°СЂС€СЂСѓС‚Р° | PK | BR-08 |
-| route_instance_id | UUID | yes | no | RouteInstance | FK в†’ RouteInstance | BR-08 |
-| name | string | yes | no | РРјСЏ РЅР° РјРѕРјРµРЅС‚ submit | вЂ” | BR-08 |
-| sequence_no | int | yes | no | РџРѕСЂСЏРґРѕРє | unique per RouteInstance | BR-02, BR-08 |
+| id | UUID | yes | no | Этап экземпляра маршрута | PK | BR-08 |
+| route_instance_id | UUID | yes | no | RouteInstance | FK > RouteInstance | BR-08 |
+| name | string | yes | no | Имя на момент submit | — | BR-08 |
+| sequence_no | int | yes | no | Порядок | unique per RouteInstance | BR-02, BR-08 |
 
 ### 5.3. RouteInstanceAssignment
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | РќР°Р·РЅР°С‡РµРЅРёРµ СЌС‚Р°РїР° СЌРєР·РµРјРїР»СЏСЂР° | PK | BR-08 |
-| instance_stage_id | UUID | yes | no | Р­С‚Р°Рї СЌРєР·РµРјРїР»СЏСЂР° | FK в†’ RouteInstanceStage | BR-08 |
-| assignment_kind | enum | yes | no | `role` / `user` / `role_and_user` | вЂ” | BR-12 |
-| role_id | UUID | no | yes | Р РѕР»СЊ РЅР° РјРѕРјРµРЅС‚ submit | FK в†’ Role | BR-08 |
-| user_id | UUID | no | yes | User РЅР° РјРѕРјРµРЅС‚ submit | FK в†’ User | BR-08 |
+| id | UUID | yes | no | Назначение этапа экземпляра | PK | BR-08 |
+| instance_stage_id | UUID | yes | no | Этап экземпляра | FK > RouteInstanceStage | BR-08 |
+| assignment_kind | enum | yes | no | `role` / `user` / `role_and_user` | — | BR-12 |
+| role_id | UUID | no | yes | Роль на момент submit | FK > Role | BR-08 |
+| user_id | UUID | no | yes | User на момент submit | FK > User | BR-08 |
 
-**Constraints:** ApprovalTask СЃС‚СЂРѕСЏС‚СЃСЏ РёР· СЌС‚РёС… РЅР°Р·РЅР°С‡РµРЅРёР№ (РЅРµ РёР· live StageAssignment РґР»СЏ in-flight).
+**Constraints:** ApprovalTask строятся из этих назначений (не из live StageAssignment для in-flight).
 
 ### 5.4. FieldValueVersion
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | Р’РµСЂСЃРёСЏ СЃС…РµРјС‹+Р·РЅР°С‡РµРЅРёР№ | PK | BR-26 |
-| request_id | UUID | yes | no | Р—Р°СЏРІРєР° | FK в†’ Request | BR-26, BR-22 |
-| submit_number | int | yes | no | РќРѕРјРµСЂ successful submit (1, 2, вЂ¦) | unique per request | BR-26 |
-| schema_document | JSON | yes | no | РљРѕРїРёСЏ СЃС…РµРјС‹ РїРѕР»РµР№ РЅР° РјРѕРјРµРЅС‚ submit | Р›РѕРіРёС‡РµСЃРєРёР№ РґРѕРєСѓРјРµРЅС‚ | BR-26 |
-| values_document | JSON | yes | no | РљРѕРїРёСЏ Р·РЅР°С‡РµРЅРёР№ РЅР° РјРѕРјРµРЅС‚ submit | Р›РѕРіРёС‡РµСЃРєРёР№ РґРѕРєСѓРјРµРЅС‚ | BR-26 |
-| created_at | datetime | yes | no | РњРѕРјРµРЅС‚ РґР°РЅРЅРѕРіРѕ successful submit | вЂ” | BR-26 |
+| id | UUID | yes | no | Версия схемы+значений | PK | BR-26 |
+| request_id | UUID | yes | no | Заявка | FK > Request | BR-26, BR-22 |
+| submit_number | int | yes | no | Номер successful submit (1, 2, …) | unique per request | BR-26 |
+| schema_document | JSON | yes | no | Копия схемы полей на момент submit | Логический документ | BR-26 |
+| values_document | JSON | yes | no | Копия значений на момент submit | Логический документ | BR-26 |
+| created_at | datetime | yes | no | Момент данного successful submit | — | BR-26 |
 
-**Constraints:** append-only РЅР° РєР°Р¶РґС‹Р№ successful submit; РїСЂРѕС€Р»С‹Рµ РІРµСЂСЃРёРё РЅРµ РїРµСЂРµРїРёСЃС‹РІР°СЋС‚СЃСЏ; СЂРµС€РµРЅРёРµ СЃРѕРіР»Р°СЃСѓСЋС‰РµРіРѕ РїСЂРёРІСЏР·Р°РЅРѕ Рє РІРµСЂСЃРёРё. РљР°РЅРѕРЅ: [snapshot-model.md](./snapshot-model.md).
+**Constraints:** append-only на каждый successful submit; прошлые версии не переписываются; решение согласующего привязано к версии. Канон: [snapshot-model.md](./snapshot-model.md).
 
 ---
 
@@ -211,83 +211,85 @@
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | Р—Р°РґР°С‡Р° | PK | FR-APP-01 |
-| request_id | UUID | yes | no | Р—Р°СЏРІРєР° | FK в†’ Request | FR-APP-02 |
-| stage_number | int | yes | no | РќРѕРјРµСЂ СЌС‚Р°РїР° snapshot | РЎРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ RouteInstanceStage.sequence_no | BR-02 |
-| assignee_id | UUID | yes | no | РСЃРїРѕР»РЅРёС‚РµР»СЊ | FK в†’ User | BR-15 |
-| status | enum | yes | no | `open` \| `completed` \| `cancelled` | First-approve в†’ siblings cancelled | BR-03 |
-| decision | enum | no | yes | `approve` \| `reject` \| `return` | РўРѕР»СЊРєРѕ РїРѕСЃР»Рµ СЂРµС€РµРЅРёСЏ | FR-APP-03вЂ¦05 |
-| value_version_id | UUID | no | yes | Р’РµСЂСЃРёСЏ Р·РЅР°С‡РµРЅРёР№, РЅР° РєРѕС‚РѕСЂРѕР№ РїСЂРёРЅСЏС‚Рѕ СЂРµС€РµРЅРёРµ | FK в†’ FieldValueVersion; РєР°СЂРґРёРЅР°Р»СЊРЅРѕСЃС‚СЊ vs ERD вЂ” [consistency-review.md](../../consistency-review.md) RR-FK-01 | BR-26 |
-| decided_at | datetime | no | yes | РњРѕРјРµРЅС‚ СЂРµС€РµРЅРёСЏ | Р—Р°РїРѕР»РЅСЏРµС‚СЃСЏ РїСЂРё decision | FR-APP-03вЂ¦05 |
+| id | UUID | yes | no | Задача | PK | FR-APP-01 |
+| request_id | UUID | yes | no | Заявка | FK > Request | FR-APP-02 |
+| stage_number | int | yes | no | Номер этапа snapshot | Соответствует RouteInstanceStage.sequence_no | BR-02 |
+| assignee_id | UUID | yes | no | Исполнитель | FK > User | BR-15 |
+| status | enum | yes | no | `open` \| `completed` \| `cancelled` | First-approve > siblings cancelled | BR-03 |
+| decision | enum | no | yes | `approve` \| `reject` \| `return` | Только после решения | FR-APP-03…05 |
+| value_version_id | UUID | no | yes | Версия значений, на которой принято решение | FK > FieldValueVersion; кардинальность vs ERD — [consistency-review.md](../../consistency-review.md) RR-FK-01 | BR-26 |
+| created_at | timestamptz | yes | no | Дата создания approval task | Устанавливается при создании task; после создания не изменяется; используется для сортировки очереди | FR-APP-01; OQ-04 |
+| decided_at | datetime | no | yes | Момент решения | Заполняется при decision | FR-APP-03…05 |
 
-**Constraints:** РґРµР№СЃС‚РІРёРµ С‚РѕР»СЊРєРѕ РїРѕ СЃРІРѕРµР№ open Р·Р°РґР°С‡Рµ (BR-15); assignee в‰  initiator (BR-21); РїРѕРІС‚РѕСЂ РїРѕ closed в†’ РѕС€РёР±РєР° (NFR-REL-02).
+**Constraints:** действие только по своей open задаче (BR-15); assignee ? initiator (BR-21); повтор по closed > ошибка (NFR-REL-02); `created_at` — `NOT NULL`, устанавливается один раз при создании и является immutable.
 
 ### 6.2. Comment
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | РљРѕРјРјРµРЅС‚Р°СЂРёР№ | PK | FR-REQ-06 |
-| request_id | UUID | yes | no | Р—Р°СЏРІРєР° | FK в†’ Request | FR-REQ-06 |
-| author_id | UUID | yes | no | РђРІС‚РѕСЂ | FK в†’ User | FR-REQ-06 |
-| approval_task_id | UUID | no | yes | Р—Р°РґР°С‡Р° (РґР»СЏ decision) | FK в†’ ApprovalTask | FR-APP-03вЂ¦05 |
-| kind | enum | yes | no | `free` \| `decision` | вЂ” | BR-25, BR-28 |
-| text | string | yes | no | РўРµРєСЃС‚ | Р”Р»СЏ reject/return decision вЂ” РЅРµРїСѓСЃС‚РѕР№ | BR-25 |
-| created_at | datetime | yes | no | Р’СЂРµРјСЏ | вЂ” | вЂ” |
+| id | UUID | yes | no | Комментарий | PK | FR-REQ-06 |
+| request_id | UUID | yes | no | Заявка | FK > Request | FR-REQ-06 |
+| author_id | UUID | yes | no | Автор | FK > User | FR-REQ-06 |
+| approval_task_id | UUID | no | yes | Задача (для decision) | FK > ApprovalTask | FR-APP-03…05 |
+| kind | enum | yes | no | `free` \| `decision` | — | BR-25, BR-28 |
+| text | string | yes | no | Текст | Для reject/return decision — непустой | BR-25 |
+| created_at | datetime | yes | no | Время | — | — |
 
-**Constraints:** free comments РёРЅРёС†РёР°С‚РѕСЂР° РІ `in_approval` (BR-28); approve-РєРѕРјРјРµРЅС‚Р°СЂРёР№ РЅРµРѕР±СЏР·Р°С‚РµР»РµРЅ (BR-25).
+**Constraints:** free comments инициатора в `in_approval` (BR-28); approve-комментарий необязателен (BR-25).
 
 ---
 
 ## 7. Audit / Notifications
 
-HistoryEvent вЂ” Baseline. **Notification** вЂ” **Future / backlog** (СЃСѓС‰РЅРѕСЃС‚СЊ СЃРѕС…СЂР°РЅРµРЅР°; СЃРј. В§7.2).
+HistoryEvent — Baseline. **Notification** — **Future / backlog** (сущность сохранена; см. §7.2).
 
 ### 7.1. HistoryEvent
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | РЎРѕР±С‹С‚РёРµ РёСЃС‚РѕСЂРёРё | PK | FR-AUDIT-02 |
-| request_id | UUID | yes | no | Р—Р°СЏРІРєР° | FK в†’ Request | FR-AUDIT-01 |
-| actor_id | UUID | no | yes | РђРєС‚РѕСЂ | FK в†’ User; system events РјРѕРіСѓС‚ Р±С‹С‚СЊ Р±РµР· user | BR-24 |
-| action | string | yes | no | РўРёРї РґРµР№СЃС‚РІРёСЏ | РњРёРЅРёРјСѓРј РЅР°Р±РѕСЂ BR-24 | BR-24, NFR-LOG-02 |
-| from_state | string | no | yes | РСЃС…РѕРґРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ | вЂ” | BR-24 |
-| to_state | string | no | yes | РќРѕРІРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ | вЂ” | BR-24 |
-| comment | string | no | yes | РљРѕРјРјРµРЅС‚Р°СЂРёР№ СЃРѕР±С‹С‚РёСЏ | РќРµ РїРѕР»РЅС‹Р№ snapshot payload | BR-24 |
-| at | datetime | yes | no | Р’СЂРµРјСЏ | вЂ” | BR-24 |
+| id | UUID | yes | no | Событие истории | PK | FR-AUDIT-02 |
+| request_id | UUID | yes | no | Заявка | FK > Request | FR-AUDIT-01 |
+| actor_id | UUID | no | yes | Актор | FK > User; system events могут быть без user | BR-24 |
+| action | string | yes | no | Тип действия | Минимум набор BR-24 | BR-24, NFR-LOG-02 |
+| from_state | string | no | yes | Исходное состояние | — | BR-24 |
+| to_state | string | no | yes | Новое состояние | — | BR-24 |
+| comment | string | no | yes | Комментарий события | Не полный snapshot payload | BR-24 |
+| at | datetime | yes | no | Время | — | BR-24 |
 
-**Retention:** РїСЂРёРєР»Р°РґРЅР°СЏ РёСЃС‚РѕСЂРёСЏ Р·Р°СЏРІРѕРє вЂ” **60 РґРЅРµР№** (NFR-LOG-03 Рї.2).  
-**РќРµ РїСѓС‚Р°С‚СЊ** СЃ technical API logs (NFR-LOG-01, retention **14 РґРЅРµР№**, NFR-LOG-03 Рї.1) вЂ” РІРЅРµ ERD.
+**Retention:** прикладная история заявок — **60 дней** (NFR-LOG-03 п.2).  
+**Не путать** с technical API logs (NFR-LOG-01, retention **14 дней**, NFR-LOG-03 п.1) — вне ERD.
 
 ### 7.2. Notification (**Future / backlog**)
 
-РЎСѓС‰РЅРѕСЃС‚СЊ СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ РІ РјРѕРґРµР»Рё; in-app СѓРІРµРґРѕРјР»РµРЅРёСЏ (FR-NOTIF-*, BR-11/23/29) вЂ” РЅРµ MVP Baseline, СЃРј. [docs/backlog.md](../../backlog.md).
+Сущность сохраняется в модели; in-app уведомления (FR-NOTIF-*, BR-11/23/29) — не MVP Baseline, см. [docs/backlog.md](../../backlog.md).
 
 | Field | Type | Required | Nullable | Description | Relations / Constraints | Source |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| id | UUID | yes | no | РЈРІРµРґРѕРјР»РµРЅРёРµ | PK | FR-NOTIF-01 |
-| recipient_id | UUID | yes | no | РџРѕР»СѓС‡Р°С‚РµР»СЊ | FK в†’ User | FR-NOTIF-02 |
-| request_id | UUID | no | yes | РЎРІСЏР·Р°РЅРЅР°СЏ Р·Р°СЏРІРєР° | FK в†’ Request | BR-23 |
-| approval_task_id | UUID | no | yes | РЎРІСЏР·Р°РЅРЅР°СЏ Р·Р°РґР°С‡Р° | FK в†’ ApprovalTask | BR-23 |
-| event_type | enum | yes | no | РўРёРї СЃРѕР±С‹С‚РёСЏ | РњРёРЅРёРјСѓРј BR-23 | BR-23 |
-| text | string | yes | no | РўРµРєСЃС‚ | In-app only | BR-11 |
-| read | boolean | yes | no | РџСЂРѕС‡РёС‚Р°РЅРѕ | default false; mark read idempotent | FR-NOTIF-03 |
-| created_at | datetime | yes | no | Р’СЂРµРјСЏ СЃРѕР·РґР°РЅРёСЏ | РўР° Р¶Рµ TX, С‡С‚Рѕ Р±РёР·РЅРµСЃ-СЃРѕР±С‹С‚РёРµ | BR-29 |
+| id | UUID | yes | no | Уведомление | PK | FR-NOTIF-01 |
+| recipient_id | UUID | yes | no | Получатель | FK > User | FR-NOTIF-02 |
+| request_id | UUID | no | yes | Связанная заявка | FK > Request | BR-23 |
+| approval_task_id | UUID | no | yes | Связанная задача | FK > ApprovalTask | BR-23 |
+| event_type | enum | yes | no | Тип события | Минимум BR-23 | BR-23 |
+| text | string | yes | no | Текст | In-app only | BR-11 |
+| read | boolean | yes | no | Прочитано | default false; mark read idempotent | FR-NOTIF-03 |
+| created_at | datetime | yes | no | Время создания | Та же TX, что бизнес-событие | BR-29 |
 
 ---
 
-## 8. Р’РЅРµ СЃР»РѕРІР°СЂСЏ РїСЂРµРґРјРµС‚РЅРѕР№ ERD
+## 8. Вне словаря предметной ERD
 
-| РўРµРјР° | РџРѕС‡РµРјСѓ РІРЅРµ DD |
+| Тема | Почему вне DD |
 | :--- | :--- |
-| Technical API logs | NFR-LOG-01 / NFR-LOG-03 Рї.1; infra |
+| Technical API logs | NFR-LOG-01 / NFR-LOG-03 п.1; infra |
 | JWT / client session storage | Stateless API |
-| РћС‚РґРµР»СЊРЅР°СЏ СЃСѓС‰РЅРѕСЃС‚СЊ SubmitVersion / RequestVersion | РќРµ РІРІРѕРґРёС‚СЃСЏ РєР°Рє ID С‚СЂРµР±РѕРІР°РЅРёСЏ; РІРµСЂСЃРёРѕРЅРёСЂРѕРІР°РЅРёРµ вЂ” **FieldValueVersion** ([snapshot-model.md](./snapshot-model.md)) |
+| Отдельная сущность SubmitVersion / RequestVersion | Не вводится как ID требования; версионирование — **FieldValueVersion** ([snapshot-model.md](./snapshot-model.md)) |
 | Org units / manager links | BR-12 out of scope |
 
 ---
 
-## РСЃС‚РѕСЂРёСЏ РёР·РјРµРЅРµРЅРёР№
+## История изменений
 
-| Р’РµСЂСЃРёСЏ | Р”Р°С‚Р° | РћРїРёСЃР°РЅРёРµ |
+| Версия | Дата | Описание |
 | :--- | :--- | :--- |
-| 1.0 | 2026-09-19 | РџРµСЂРІР°СЏ РІРµСЂСЃРёСЏ Data Dictionary |
+| 1.1 | 2026-09-21 | Добавлен immutable `ApprovalTask.created_at` (`timestamptz NOT NULL`) по решению OQ-04 |
+| 1.0 | 2026-09-19 | Первая версия Data Dictionary |

@@ -2,7 +2,7 @@
 
 **Продукт:** Employee Service  
 **ID:** ERD-DM  
-**Версия:** 1.0  
+**Версия:** 1.1  
 **Статус:** Baseline v1.0  
 **Связанные документы:** [README.md](./README.md), [Snapshot Model](./snapshot-model.md)
 
@@ -182,6 +182,7 @@ erDiagram
     uuid value_version_id FK
     enum status
     enum decision
+    timestamptz created_at
     datetime decided_at
   }
 
@@ -284,6 +285,7 @@ erDiagram
 | C-13 | StageAssignment: хотя бы одно из role_id / user_id задано | BR-12 |
 | C-14 | HistoryEvent не хранит полный snapshot payload как обязательное поле | ERD decision / BR-24 |
 | C-15 | Notification создаётся в той же логической транзакции, что и бизнес-событие (**Future / backlog**) | BR-29 |
+| C-16 | `ApprovalTask.created_at` обязателен, устанавливается при создании task и после создания не изменяется | FR-APP-01; OQ-04 |
 
 Optimistic locking / version columns — **не** моделируются (вне MVP).
 
@@ -318,4 +320,5 @@ Optimistic locking / version columns — **не** моделируются (вн
 
 | Версия | Дата | Описание |
 | :--- | :--- | :--- |
+| 1.1 | 2026-09-21 | Добавлен immutable `ApprovalTask.created_at` (`timestamptz NOT NULL`) по решению OQ-04 |
 | 1.0 | 2026-09-19 | Первая версия logical ERD |
