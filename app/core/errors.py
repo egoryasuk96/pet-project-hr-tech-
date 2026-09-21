@@ -46,6 +46,14 @@ def forbidden() -> AppError:
     )
 
 
+def forbidden_approval() -> AppError:
+    return AppError(
+        "ERR_FORBIDDEN_APPROVAL",
+        "Нет полномочий на заявку",
+        403,
+    )
+
+
 def not_found() -> AppError:
     return AppError(
         "ERR_NOT_FOUND",
@@ -75,6 +83,14 @@ def invalid_state() -> AppError:
     return AppError(
         "ERR_INVALID_STATE",
         "Действие недоступно для текущего статуса",
+        409,
+    )
+
+
+def task_done() -> AppError:
+    return AppError(
+        "ERR_TASK_DONE",
+        "Задача уже обработана",
         409,
     )
 
