@@ -14,9 +14,11 @@ Employee Service — сервис заявок сотрудников (отпу�
 
 **Проблема (кратко):** кадровые вопросы решаются устно или по почте без единой системы статусов — руководитель забывает или тянет, кадры требуют отдельное подтверждение, сотрудники лишний раз спрашивают статус.
 
-**Стек реализации (зафиксировано):** FastAPI + PostgreSQL; лёгкий веб-клиент — статические HTML-страницы с JavaScript, которые отдаёт тот же FastAPI. Без настоящей авторизации: роль передаётся в заголовке.
+**Стек реализации (зафиксировано):** FastAPI + PostgreSQL; лёгкий веб-клиент — статические HTML-страницы с JavaScript, которые отдаёт тот же FastAPI.
 
-**Экраны MVP (5):** выбор роли, мои заявки, создание заявки, карточка заявки, очередь согласующего.
+**Auth runtime:** JWT access token (`POST /auth/login`, `Authorization: Bearer`); см. [ADR-AUTH-JWT-01](./03-diagrams/architecture/adr-jwt-core-api.md). Demo-header из раннего Baseline (ADR-AUTH-DEMO-01) в runtime **не** используется.
+
+**Экраны MVP (5):** login (JWT) / мои заявки / создание заявки / карточка заявки / очередь согласующего. Frontend — следующий этап реализации; Notifications и Admin — [backlog.md](./backlog.md).
 
 Требования вне Baseline — [backlog.md](./backlog.md).
 
@@ -44,7 +46,8 @@ Employee Service — сервис заявок сотрудников (отпу�
 | [03-diagrams/architecture/](./03-diagrams/architecture/) | C4-подобные схемы, ADR, трассировка |
 | [03-diagrams/erd/](./03-diagrams/erd/) | ERD, snapshot, data dictionary |
 | [04-api/api-contract-analysis.md](./04-api/api-contract-analysis.md) | Stage 4.1 — анализ API-контракта (зафиксирован) |
-| [04-api/openapi.yaml](./04-api/openapi.yaml) | OpenAPI (Stage 4.2 — отдельно; сейчас stub) |
+| [04-api/openapi.yaml](./04-api/openapi.yaml) | OpenAPI Baseline-контракт |
+| [04-api/approval-api-contract.md](./04-api/approval-api-contract.md) | Контракт Approval API (реализован) |
 | [consistency-review.md](./consistency-review.md) | Реестр safe-fixes и OPEN / REQUIRES REVIEW |
 | [backlog.md](./backlog.md) | Требования вне MVP Baseline |
 

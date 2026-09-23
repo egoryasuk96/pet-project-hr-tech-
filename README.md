@@ -34,14 +34,17 @@
 
 | Этап | Состояние |
 |------|-----------|
-| Аналитическая документация | В работе |
-| API-контракт (OpenAPI) | Запланировано |
-| Реализация | Запланировано |
-| Деплой | Запланировано |
+| Аналитическая документация | Baseline готов |
+| API-контракт (OpenAPI) | Baseline готов (`docs/04-api/`) |
+| Core API + Approval E2E | Готово (Stage 5.3 + Approval) |
+| Backend polish (history / cancel / comments) | Stage 6.1 |
+| Frontend (static HTML/JS) | Следующий этап (Stage 6.2+) |
+| In-app Notifications | Backlog (не в текущем scope) |
+| Деплой (Render + Neon) | Запланировано |
 
 ## Стек
 
-FastAPI + PostgreSQL. Лёгкий веб-клиент: статические HTML-страницы с JavaScript, которые отдаёт тот же FastAPI.
+FastAPI + PostgreSQL. Auth runtime: JWT (`POST /auth/login`, Bearer). Лёгкий веб-клиент (static HTML/JS от того же FastAPI) — следующий этап; пока UI не реализован.
 
 ## Локальная БД (Stage 5.2)
 
@@ -115,6 +118,14 @@ POST /auth/login
 - `GET /requests/{request_id}`
 - `PATCH /requests/{request_id}`
 - `POST /requests/{request_id}/submit`
+- `POST /requests/{request_id}/cancel`
+- `POST /requests/{request_id}/comments`
+- `GET /requests/{request_id}/history`
+- `GET /approval-tasks`
+- `GET /approval-tasks/{task_id}`
+- `POST /approval-tasks/{task_id}/approve`
+- `POST /approval-tasks/{task_id}/return`
+- `POST /approval-tasks/{task_id}/reject`
 
 Тесты без PostgreSQL (Stage 5.2) и API-тесты:
 

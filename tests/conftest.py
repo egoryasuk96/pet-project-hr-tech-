@@ -57,6 +57,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     reset_engine()
 
     engine = get_engine()
+    Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
 
     from app.main import app

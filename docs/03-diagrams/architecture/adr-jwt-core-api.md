@@ -2,8 +2,8 @@
 
 **Продукт:** Employee Service  
 **ID:** ADR-AUTH-JWT-01  
-**Версия:** 1.0  
-**Статус:** Accepted (Stage 5.3)  
+**Версия:** 1.1
+**Статус:** Accepted (Stage 5.3; UI note Stage 6.0)
 **Связанные документы:** [ADR-AUTH-DEMO-01](./adr-demo-role-header.md), [security-and-crosscutting.md](./security-and-crosscutting.md), [Backlog](../../backlog.md) (UC-01, FR-AUTH-*, NFR-SEC-01/03/04)
 
 ---
@@ -31,6 +31,7 @@ Stage 5.3 реализует вертикальный сценарий сотр�
 - Защищённые endpoint'ы требуют валидный JWT; иначе `401 ERR_UNAUTHORIZED`.
 - Неверные учётные данные → `401 ERR_INVALID_CREDENTIALS`.
 - Авторизация (RBAC + ownership) по-прежнему на backend (BR-01, BR-16, ACL-01).
+- Будущий static HTML/JS клиент (ADR-UI-01) использует этот же JWT login, а не Role Select / demo-header.
 
 ---
 
@@ -39,3 +40,4 @@ Stage 5.3 реализует вертикальный сценарий сотр�
 | Версия | Дата | Описание |
 | :--- | :--- | :--- |
 | 1.0 | 2026-09-21 | JWT Core API для Stage 5.3 |
+| 1.1 | 2026-09-23 | Уточнение: UI опирается на JWT (Stage 6.0 docs sync) |

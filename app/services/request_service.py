@@ -1,4 +1,4 @@
-"""Create, list, read, and edit employee requests (draft/returned)."""
+"""Create, list, read, edit, cancel, comment, and history for employee requests."""
 
 from __future__ import annotations
 
@@ -8,18 +8,24 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.errors import inactive_type, invalid_state, not_found, validation
-from app.domain.approval import RouteInstance, RouteInstanceStage
-from app.domain.audit import HistoryEvent
+from app.domain.approval import ApprovalTask, RouteInstance, RouteInstanceStage
+from app.domain.audit import Comment, HistoryEvent
 from app.domain.catalog import Dictionary, RequestFieldDefinition, RequestType
-from app.domain.enums import RequestStatus
+from app.domain.enums import CommentKind, RequestStatus, RoleCode
 from app.domain.identity import User
 from app.domain.request import FieldValueVersion, Request, RequestFieldValue
 from app.schemas.request import (
+    CancelRequestResult,
+    CreatedComment,
     CreatedRequest,
     CurrentStageOut,
     FieldValue,
+    FieldValueVersionOut,
+    HistoryEventOut,
     RequestCard,
+    RequestHistory,
     RequestListItem,
+    CommentOut,
     UpdatedRequestValues,
     UserRef,
 )
@@ -28,8 +34,11 @@ from app.services.field_validation import definitions_by_code, validate_field_va
 from app.services.schema_mapping import to_type_schema
 
 HISTORY_CREATED = "created"
+HISTORY_CANCEL = "cancel"
 
 EDITABLE_STATUSES = {RequestStatus.DRAFT, RequestStatus.RETURNED}
+CANCELABLE_STATUSES = {RequestStatus.DRAFT, RequestStatus.RETURNED}
+FREE_COMMENT_STATUSES = {RequestStatus.IN_APPROVAL}
 SNAPSHOT_STATUSES = {
     RequestStatus.IN_APPROVAL,
     RequestStatus.APPROVED,
@@ -52,6 +61,7 @@ def _request_card_options() -> tuple:
         selectinload(Request.initiator),
         selectinload(Request.field_values),
         selectinload(Request.field_value_versions),
+        selectinload(Request.comments).selectinload(Comment.author),
         selectinload(Request.route_instance)
         .selectinload(RouteInstance.stages)
         .selectinload(RouteInstanceStage.assignments),
@@ -62,6 +72,14 @@ def _request_list_options() -> tuple:
     return (
         selectinload(Request.request_type),
         selectinload(Request.route_instance).selectinload(RouteInstance.stages),
+    )
+
+
+def _history_options() -> tuple:
+    return (
+        selectinload(Request.history_events).selectinload(HistoryEvent.actor),
+        selectinload(Request.field_value_versions),
+        selectinload(Request.approval_tasks),
     )
 
 
@@ -83,6 +101,24 @@ def load_owned_request(session: Session, request_id: UUID, user: User) -> Reques
     if request is None or request.initiator_id != user.id:
         raise not_found()
     return request
+
+
+def _comments_out(comments: list[Comment]) -> list[CommentOut]:
+    ordered = sorted(comments, key=lambda item: item.created_at)
+    return [
+        CommentOut(
+            id=comment.id,
+            kind=comment.kind,
+            text=comment.text,
+            author=UserRef(
+                id=comment.author.id,
+                full_name=comment.author.full_name,
+            ),
+            approval_task_id=comment.approval_task_id,
+            created_at=comment.created_at,
+        )
+        for comment in ordered
+    ]
 
 
 def create_draft(session: Session, user: User, request_type_id: UUID) -> CreatedRequest:
@@ -207,7 +243,7 @@ def get_own_request(session: Session, user: User, request_id: UUID) -> RequestCa
         values=values,
         value_source=value_source,  # type: ignore[arg-type]
         submit_number=submit_number,
-        comments=[],
+        comments=_comments_out(list(request.comments)),
     )
 
 
@@ -245,4 +281,116 @@ def update_working_values(
         form_schema=to_type_schema(request.request_type),
         values=_working_values(request),
         updated_at=request.updated_at,
+    )
+
+
+def cancel_request(session: Session, user: User, request_id: UUID) -> CancelRequestResult:
+    request = load_owned_request(session, request_id, user)
+    if request.status not in CANCELABLE_STATUSES:
+        raise invalid_state()
+
+    from_state = request.status.value
+    request.status = RequestStatus.CANCELLED
+    request.current_stage_number = None
+    session.add(
+        HistoryEvent(
+            request_id=request.id,
+            actor_id=user.id,
+            action=HISTORY_CANCEL,
+            from_state=from_state,
+            to_state=RequestStatus.CANCELLED.value,
+        )
+    )
+    session.flush()
+    session.refresh(request)
+    return CancelRequestResult(
+        id=request.id,
+        status=RequestStatus.CANCELLED,
+        updated_at=request.updated_at,
+    )
+
+
+def add_free_comment(
+    session: Session,
+    user: User,
+    request_id: UUID,
+    text: str,
+) -> CreatedComment:
+    normalized = text.strip() if isinstance(text, str) else ""
+    if not normalized:
+        raise validation({"text": "required"})
+
+    request = load_owned_request(session, request_id, user)
+    if request.status not in FREE_COMMENT_STATUSES:
+        raise invalid_state()
+
+    comment = Comment(
+        request_id=request.id,
+        author_id=user.id,
+        approval_task_id=None,
+        kind=CommentKind.FREE,
+        text=normalized,
+    )
+    session.add(comment)
+    session.flush()
+    session.refresh(comment)
+    return CreatedComment(
+        id=comment.id,
+        request_id=comment.request_id,
+        author_id=comment.author_id,
+        kind=CommentKind.FREE,
+        text=comment.text,
+        created_at=comment.created_at,
+    )
+
+
+def _user_role_codes(user: User) -> set[RoleCode]:
+    return {item.role.code for item in user.user_roles}
+
+
+def _can_view_history(request: Request, user: User) -> bool:
+    if request.initiator_id == user.id and RoleCode.EMPLOYEE in _user_role_codes(user):
+        return True
+    if RoleCode.APPROVER in _user_role_codes(user):
+        return any(task.assignee_id == user.id for task in request.approval_tasks)
+    return False
+
+
+def get_request_history(session: Session, user: User, request_id: UUID) -> RequestHistory:
+    request = session.scalar(
+        select(Request).options(*_history_options()).where(Request.id == request_id)
+    )
+    if request is None or not _can_view_history(request, user):
+        raise not_found()
+
+    events = sorted(request.history_events, key=lambda item: item.at)
+    versions = sorted(request.field_value_versions, key=lambda item: item.submit_number)
+
+    return RequestHistory(
+        events=[
+            HistoryEventOut(
+                id=event.id,
+                actor=(
+                    UserRef(id=event.actor.id, full_name=event.actor.full_name)
+                    if event.actor is not None
+                    else None
+                ),
+                action=event.action,
+                from_state=event.from_state,
+                to_state=event.to_state,
+                comment=event.comment,
+                at=event.at,
+            )
+            for event in events
+        ],
+        field_value_versions=[
+            FieldValueVersionOut(
+                id=version.id,
+                submit_number=version.submit_number,
+                schema_document=version.schema_document,
+                values_document=version.values_document,
+                created_at=version.created_at,
+            )
+            for version in versions
+        ],
     )

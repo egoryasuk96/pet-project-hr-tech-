@@ -2,15 +2,15 @@
 
 **Продукт:** Employee Service  
 **Документ:** Approval API Contract  
-**Версия:** 1.1  
-**Статус:** Proposed  
+**Версия:** 1.2
+**Статус:** Implemented
 **Основание:** Baseline v1.0 требований, Stage 4.1 API Contract Analysis, Stage 5.3 Core API
 
 ---
 
 ## 1. Назначение и scope
 
-Документ определяет контракт отсутствующего Approval API: очередь задач согласующего, полную карточку заявки, approve, return и reject. Контракт предназначен для последующей реализации без изменения существующей бизнес-модели.
+Документ фиксирует контракт Approval API: очередь задач согласующего, полную карточку заявки, approve, return и reject. Endpoints реализованы в backend; бизнес-модель Baseline не расширялась.
 
 В документе:
 
@@ -33,16 +33,14 @@
 
 ### 1.2. Вне scope
 
-- реализация endpoint'ов и изменение Python-кода;
-- изменение существующих API;
 - изменение ERD;
 - Admin API;
-- Notification API;
+- Notification API (таблица может существовать; поведение и endpoints — backlog);
 - изменение RouteInstance или прошлых FieldValueVersion через API;
 - отдельный CRUD для ApprovalTask или Comment;
 - optimistic locking и `ERR_CONFLICT_VERSION`.
 
-BR-29 и связанные in-app notifications остаются backlog. Если notifications будут включены в scope будущей реализации, они должны фиксироваться в одной транзакции с бизнес-событием по BR-29. В текущем Baseline решение, задачи, состояние заявки и HistoryEvent уже должны изменяться атомарно по NFR-REL-01.
+BR-29 и связанные in-app notifications остаются backlog. Если notifications будут включены в scope будущей реализации, они должны фиксироваться в одной транзакции с бизнес-событием по BR-29. В текущем Baseline решение, задачи, состояние заявки и HistoryEvent изменяются атомарно по NFR-REL-01.
 
 ---
 
@@ -891,7 +889,7 @@ Body:
 }
 ```
 
-Этот endpoint уже предусмотрен Stage 4.1, но отсутствует в текущем backend. Требования явно разрешают free comment в `in_approval`; полный список других допустимых статусов остаётся RR-COMMENT-01.
+Endpoint предусмотрен Stage 4.1 и реализован в Stage 6.1 (`POST /requests/{request_id}/comments`). Требования явно разрешают free comment в `in_approval`; полный список других допустимых статусов остаётся RR-COMMENT-01.
 
 ---
 
@@ -944,14 +942,14 @@ Body:
 
 ## 13. Gaps и противоречия
 
-Следующие расхождения зафиксированы без изменения требований, модели или кода:
+Следующие расхождения зафиксированы без изменения требований:
 
-1. **Approval API отсутствует в backend.** Submit уже создаёт open ApprovalTask, но routes/services для queue/detail/decision отсутствуют.
+1. ~~**Approval API отсутствует в backend.**~~ **Closed.** Queue/detail/decision реализованы.
 2. **Auth contract устарел в Stage 4.1.** `api-contract-analysis.md` описывает demo-header, а текущий runtime и ADR-AUTH-JWT-01 используют JWT.
-3. **Comments не подключены.** Domain model Comment существует, но `RequestCard.comments` имеет тип `list[dict]` и всегда возвращается пустым массивом.
+3. ~~**Comments не подключены.**~~ **Closed (Stage 6.1).** Free comments и отдача в карточке реализованы; decision comments — через Approval API.
 4. **Approver не может открыть Request API card.** `GET /requests/{request_id}` защищён ролью `employee` и ownership инициатора. Stage 4.1 предлагает aggregate card через task, но RR-API-03 не закрыт.
-5. **Смежные API отсутствуют.** `POST .../comments`, `POST .../cancel` и `GET .../history`, предусмотренные Stage 4.1, не реализованы.
-6. **Дата задачи отсутствует в backend model.** ERD определяет обязательный `ApprovalTask.created_at`, но текущая Python-модель его ещё не содержит; backend в рамках фиксации решения не изменяется.
+5. ~~**Смежные API отсутствуют.**~~ **Closed (Stage 6.1).** `POST .../comments`, `POST .../cancel` и `GET .../history` реализованы.
+6. ~~**Дата задачи отсутствует в backend model.**~~ **Closed.** `ApprovalTask.created_at` есть в модели и миграции.
 7. **Error envelope.** Stage 4.1 помечает envelope как recommended/open, но текущий backend уже использует обязательный `{error_code, message, details}`.
 8. **Notifications.** BR-29 находится в backlog; Notification API и транзакционная запись notification в текущий Approval contract не входят.
 9. **OpenAPI расходится с требуемым стилем.** Существующие Approval descriptions в `openapi.yaml` длиннее нового правила 1–3 коротких предложений; этот документ задаёт краткие Swagger descriptions, не изменяя YAML.
@@ -1017,14 +1015,14 @@ FR-APP-02 упоминает историю «в рамках прав», а Sta
 
 ## 15. Итоговые ограничения реализации
 
-Будущая реализация Approval API должна:
+Реализация Approval API:
 
-- использовать только существующие статусы и decision enum;
-- читать RouteInstance и FieldValueVersion, не изменяя их;
-- проверять role, assignee, open status, current stage и BR-21 на backend;
-- привязывать каждое решение к FieldValueVersion задачи;
-- обеспечивать first-approve-wins на persistence level;
-- выполнять decision, task updates, request transition и HistoryEvent атомарно;
-- не создавать новые error codes;
-- не предоставлять admin право approve без роли `approver` и собственной задачи;
-- не расширять scope notifications до отдельного решения по backlog BR-29.
+- использует только существующие статусы и decision enum;
+- читает RouteInstance и FieldValueVersion, не изменяя их;
+- проверяет role, assignee, open status, current stage и BR-21 на backend;
+- привязывает каждое решение к FieldValueVersion задачи;
+- обеспечивает first-approve-wins на persistence level;
+- выполняет decision, task updates, request transition и HistoryEvent атомарно;
+- не создаёт новые error codes;
+- не предоставляет admin право approve без роли `approver` и собственной задачи;
+- не расширяет scope notifications до отдельного решения по backlog BR-29.

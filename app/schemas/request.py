@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -93,7 +93,7 @@ class RequestCard(BaseModel):
     values: list[FieldValue]
     value_source: Literal["working", "submitted_version"]
     submit_number: int | None = None
-    comments: list[dict] = Field(default_factory=list)
+    comments: list[CommentOut] = Field(default_factory=list)
 
 
 class SubmitRequestResult(BaseModel):
@@ -102,3 +102,47 @@ class SubmitRequestResult(BaseModel):
     current_stage: CurrentStageOut
     submit_number: int
     updated_at: datetime
+
+
+class CancelRequestResult(BaseModel):
+    id: UUID
+    status: Literal[RequestStatus.CANCELLED]
+    updated_at: datetime
+
+
+class CreateCommentInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str
+
+
+class CreatedComment(BaseModel):
+    id: UUID
+    request_id: UUID
+    author_id: UUID
+    kind: Literal[CommentKind.FREE]
+    text: str
+    created_at: datetime
+
+
+class HistoryEventOut(BaseModel):
+    id: UUID
+    actor: UserRef | None
+    action: str
+    from_state: str | None
+    to_state: str | None
+    comment: str | None
+    at: datetime
+
+
+class FieldValueVersionOut(BaseModel):
+    id: UUID
+    submit_number: int
+    schema_document: Any
+    values_document: Any
+    created_at: datetime
+
+
+class RequestHistory(BaseModel):
+    events: list[HistoryEventOut]
+    field_value_versions: list[FieldValueVersionOut]
