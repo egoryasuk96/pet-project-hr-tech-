@@ -268,10 +268,11 @@ And состояние заявки не меняется
 ---
 
 ### AC-ACC-03 — Запрет самосогласования
-**Related:** BR-21, ACL-03
+**Related:** BR-21, ACL-03, BR-16
 
-Given инициатор заявки также имеет роль `approver` и попал в назначение этапа  
-When он пытается approve/reject/return по своей заявке  
+Given заявка создана пользователем I (инициатор; у User одна `role_id`)
+And I назначен assignee открытой задачи по этой заявке (например StageAssignment по `user_id`)
+When I пытается approve/reject/return по своей заявке
 Then ERR_FORBIDDEN_APPROVAL  
 And статус заявки не меняется
 

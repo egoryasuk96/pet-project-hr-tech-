@@ -25,7 +25,7 @@
 | **Login UI** | Форма входа; JWT в `sessionStorage`; Bearer на запросах ([ADR-AUTH-JWT-01](./adr-jwt-core-api.md)) | все |
 | **My Requests UI** | Список своих заявок | `employee` |
 | **Request Detail UI** | Карточка: поля, статус, комментарии, история; discovery `available-actions` + execute actions | `employee` / `approver` (по visibility) |
-| **Notifications UI** | Список in-app; mark as read | авторизованный пользователь |
+| **Notifications UI** | Список in-app (mark-as-read — **Future / backlog**, FR-NOTIF-03) | авторизованный пользователь |
 
 **Граница ответственности FE:** отображение и ввод; навигация по ролям как UX.  
 **Authoritative AuthZ и бизнес-правила** — только на backend.  
@@ -38,6 +38,7 @@
 | **Create Request UI** | Каталог активных типов + форма создания / draft / submit | Future / следующий FE-срез |
 | **Approver Queue UI** | Отдельная очередь задач (list `/approval-tasks`) | Future; текущий approver flow — через Request Detail + available-actions |
 | **Cabinet UI** (профиль) | Профиль; вход в списки | Future / [backlog](../../backlog.md) |
+| **Notifications mark-as-read** | Отметка уведомления прочитанным (FR-NOTIF-03) | Future / [backlog](../../backlog.md) |
 | **Admin UI** | Типы, поля, маршрут, этапы, назначения, справочники, реестр | Future / [backlog](../../backlog.md) |
 
 ### 2.3. Historical (не CURRENT)

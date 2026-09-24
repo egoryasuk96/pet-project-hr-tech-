@@ -1,4 +1,9 @@
-"""Notification table only (Future / backlog). No notification module or API."""
+"""In-app Notification domain model (Target create + list).
+
+Persisted on workflow Action Engine success (submit / approve / reject /
+return / cancel) in the same DB transaction. List API: GET /notifications.
+Mark-as-read is not implemented (Future / backlog, FR-NOTIF-03).
+"""
 
 from __future__ import annotations
 
@@ -20,7 +25,7 @@ if TYPE_CHECKING:
 
 
 class Notification(IntegerPrimaryKeyMixin, CreatedAtMixin, Base):
-    """In-app notification entity preserved in ERD; delivery remains backlog."""
+    """In-app notification row; create+list are Target; mark-as-read is backlog."""
 
     __tablename__ = "notifications"
 
