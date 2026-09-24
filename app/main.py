@@ -12,6 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 from app.api.router import api_router
@@ -62,6 +63,9 @@ def _wants_html(request: Request) -> bool:
     if fetch_mode == "navigate" or fetch_dest == "document":
         return True
     accept = (request.headers.get("accept") or "").lower()
+    # apiFetch sets Accept: application/json only — always JSON API.
+    if accept.startswith("application/json"):
+        return False
     if "text/html" not in accept:
         return False
     json_pos = accept.find("application/json")
@@ -76,16 +80,26 @@ def _normalize_page_path(path: str) -> str:
     return path
 
 
-def _html_page_for_path(path: str, *, accept_negotiated: bool) -> str | None:
+def _html_page_for_path(path: str) -> str | None:
     path = _normalize_page_path(path)
     if path in _HTML_EXACT:
         return _HTML_EXACT[path]
-    if accept_negotiated:
-        if path in _HTML_ACCEPT_EXACT:
-            return _HTML_ACCEPT_EXACT[path]
-        if _DETAIL_RE.match(path):
-            return "request-detail.html"
+    if path in _HTML_ACCEPT_EXACT:
+        return _HTML_ACCEPT_EXACT[path]
+    if _DETAIL_RE.match(path):
+        return "request-detail.html"
     return None
+
+
+class HtmlPageGateMiddleware(BaseHTTPMiddleware):
+    """Serve static HTML for browser document navigations on shared API paths."""
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        if request.method == "GET" and _wants_html(request):
+            page = _html_page_for_path(request.url.path)
+            if page is not None:
+                return FileResponse(_WEB_DIR / page)
+        return await call_next(request)
 
 
 def create_app() -> FastAPI:
@@ -109,15 +123,6 @@ def create_app() -> FastAPI:
 
     application.include_router(api_router)
     application.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
-
-    @application.middleware("http")
-    async def serve_html_when_accepted(request: Request, call_next) -> Response:
-        """Intercept document navigation to page paths before JSON API handlers."""
-        if request.method == "GET" and _wants_html(request):
-            page = _html_page_for_path(request.url.path, accept_negotiated=True)
-            if page is not None:
-                return FileResponse(_WEB_DIR / page)
-        return await call_next(request)
 
     @application.get("/", include_in_schema=False)
     def root() -> RedirectResponse:
@@ -165,6 +170,9 @@ def create_app() -> FastAPI:
                 "Произошла внутренняя ошибка. Попробуйте позже",
             ),
         )
+
+    # Outermost: intercept document navigations before JSON API handlers.
+    application.add_middleware(HtmlPageGateMiddleware)
 
     return application
 
