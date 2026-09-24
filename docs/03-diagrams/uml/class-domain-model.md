@@ -68,7 +68,7 @@
 | :--- | :--- | :--- |
 | **ApprovalTask** | status, stageId, comment, createdAt, completedAt | Задача на live `stageId`; assignee = User |
 | **Comment** | text, kind (free / decision) | Свободный или decision-комментарий |
-| **Notification** | text, read, eventType | In-app — **Future / backlog** |
+| **Notification** | text, read, eventType | In-app create+list — **Target**; mark-as-read — **Future / backlog** |
 | **HistoryEvent** | action, fromState, toState, at, comment | Событие истории (BR-24) |
 
 **Удалено из модели:** RouteInstance, FieldValueVersion — [ADR-LIVE-CFG-01](../architecture/adr-live-config.md).

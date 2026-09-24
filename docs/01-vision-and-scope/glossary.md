@@ -28,7 +28,7 @@
 Текущие редактируемые значения полей заявки в статусах `draft` / `returned` (сущность **RequestFieldValue**). Единственный носитель значений полей в runtime; snapshot-версий нет.
 
 ### JWT
-JSON Web Token — целевой способ аутентификации в полной версии ([ADR-AUTH-JWT-01](../03-diagrams/architecture/adr-jwt-core-api.md)). В раннем Baseline demo использовался роль в HTTP-заголовке ([ADR-AUTH-DEMO-01](../03-diagrams/architecture/adr-demo-role-header.md)).
+JSON Web Token — Target AuthN ([ADR-AUTH-JWT-01](../03-diagrams/architecture/adr-jwt-core-api.md)): `POST /auth/login`, Bearer. Demo-header ([ADR-AUTH-DEMO-01](../03-diagrams/architecture/adr-demo-role-header.md)) — superseded / historical.
 
 ---
 
@@ -166,7 +166,7 @@ JSON Web Token — целевой способ аутентификации в �
 ## Уведомления, история, администрирование
 
 ### Уведомление (in-app)
-Сообщение внутри системы (в MVP Baseline — backlog).
+In-app сообщение: создание на событиях BR-23 и список (`GET /notifications`, UC-13) — **Target-active**. Mark-as-read (FR-NOTIF-03) и email/push — **Future / backlog**.
 
 ### История действий (HistoryEvent / история изменений)
 Журнал значимых событий по заявке (UC-14, BR-24). Аудит без обязательного полного payload значений.
@@ -178,7 +178,7 @@ JSON Web Token — целевой способ аутентификации в �
 Настройка типов, маршрутов, справочников — Future / [backlog](../backlog.md). Правки live-конфига **могут затронуть** in-flight заявки ([ADR-LIVE-CFG-01](../03-diagrams/architecture/adr-live-config.md)).
 
 ### Личный кабинет
-Часть системы для сотрудника: каталог, свои заявки (профиль/уведомления — backlog).
+Каталог и свои заявки — Target UI-срез. Профиль (UC-02 / FR-CAB-01) — backlog. Список уведомлений — Target; вход из «кабинета» (FR-CAB-03) — backlog.
 
 ---
 

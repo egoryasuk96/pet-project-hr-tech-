@@ -45,7 +45,7 @@
 5. RouteReader: определить next live **ApprovalStage** по `sequence_no`.
 6. Есть следующий этап → TaskFactory создаёт задачи из live StageAssignment; `current_stage_id` обновляется; статус остаётся `in_approval`.
 7. Нет следующего → статус `approved` (BR-17).
-8. Audit + Notification (**Future / backlog**, BR-29).
+8. Audit + Notification (in-app, **Target**, BR-29).
 
 ### 3.2. Reject
 
@@ -94,12 +94,12 @@ sequenceDiagram
     Sys->>Sys: RouteReader: next live ApprovalStage по sequence_no
     alt Есть следующий этап
       Sys->>Sys: current_stage_id = next; TaskFactory: задачи из live assignments
-      Sys->>Sys: Audit + Notification (**Future / backlog**)
+      Sys->>Sys: Audit + Notification (**Target**, in-app)
       Sys-->>A: этап пройден; заявка in_approval
     else Последний этап
       Sys->>Sys: status = approved
-      Sys->>Sys: Audit + Notification инициатору (**Future / backlog**)
-      Sys-->>Init: уведомление approved (**Future / backlog**)
+      Sys->>Sys: Audit + Notification инициатору (**Target**, in-app)
+      Sys-->>Init: уведомление approved (**Target**, in-app)
       Sys-->>A: маршрут завершён
     end
   end
@@ -126,8 +126,8 @@ sequenceDiagram
       Sys-->>Appr: ERR_VALIDATION
     else OK
       Sys->>Sys: status = rejected; закрыть задачи этапа
-      Sys->>Sys: Audit + Notification инициатору (**Future / backlog**)
-      Sys-->>Init: уведомление rejected (**Future / backlog**)
+      Sys->>Sys: Audit + Notification инициатору (**Target**, in-app)
+      Sys-->>Init: уведомление rejected (**Target**, in-app)
       Sys-->>Appr: заявка rejected
     end
   else Return
@@ -137,8 +137,8 @@ sequenceDiagram
       Sys-->>Appr: ERR_VALIDATION
     else OK
       Sys->>Sys: status = returned; current_stage_id сохранён; закрыть задачи
-      Sys->>Sys: Audit + Notification инициатору (**Future / backlog**)
-      Sys-->>Init: уведомление returned (**Future / backlog**)
+      Sys->>Sys: Audit + Notification инициатору (**Target**, in-app)
+      Sys-->>Init: уведомление returned (**Target**, in-app)
       Sys-->>Appr: заявка returned
     end
   else Самосогласование
@@ -155,8 +155,8 @@ sequenceDiagram
 | Тип | ID |
 | :--- | :--- |
 | **UC** | UC-07, UC-08, UC-09 |
-| **FR** | FR-APP-01…07; FR-REQ-08; FR-AUDIT-02; FR-NOTIF-01 — **Future / backlog** |
-| **BR** | BR-02, BR-03, BR-04, BR-05, BR-14, BR-15, BR-17, BR-21, BR-25; BR-29 — **Future / backlog** |
+| **FR** | FR-APP-01…07; FR-REQ-08; FR-AUDIT-02; FR-NOTIF-01 — **Target**; FR-NOTIF-03 — **Future / backlog** |
+| **BR** | BR-02, BR-03, BR-04, BR-05, BR-14, BR-15, BR-17, BR-21, BR-25; BR-23, BR-29 — **Target** |
 | **AC** | AC-APP-04, AC-APP-04b, AC-APP-05, AC-APP-05b, AC-APP-06, AC-APP-06b, AC-APP-07, AC-APP-07b, AC-APP-09, AC-ACC-02, AC-ACC-03, AC-ACC-06 |
 | **RBAC/ACL** | ACL-02, ACL-03, ACL-07 |
 | **BPMN** | BPMN-02 |

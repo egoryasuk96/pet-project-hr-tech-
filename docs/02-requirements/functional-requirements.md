@@ -99,10 +99,10 @@ AUTH, NOTIF, ADMIN и часть CAB — [docs/backlog.md](../backlog.md).
 | **Описание** | Инициатор отправляет заявку из `draft` (первый submit) или `returned` (повторный). Система читает **live** ApprovalRoute/Stage/Assignment (BR-08). Статус → `in_approval`; `current_stage_id` → первый live-этап. Создаются ApprovalTask из live StageAssignment (BR-08). При resubmit — снова этап 1 (BR-06). Валидация полей по live-схеме (BR-26) и маршрута (BR-18). Канон: [ADR-LIVE-CFG-01](../03-diagrams/architecture/adr-live-config.md) |
 | **Actor** | employee (инициатор) |
 | **Preconditions** | Статус `draft` или `returned`; обязательные поля валидны по актуальной схеме; маршрут валиден (BR-18); тип активен |
-| **Основной сценарий** | 1) Submit 2) Валидация полей по live-схеме 3) Проверка live-маршрута 4) status_id → in_approval; current_stage_id → stage 1 5) ApprovalTask из live assignments 6) История (in-app — [backlog](../backlog.md)) |
+| **Основной сценарий** | 1) Submit 2) Валидация полей по live-схеме 3) Проверка live-маршрута 4) status_id → in_approval; current_stage_id → stage 1 5) ApprovalTask из live assignments 6) История + in-app уведомления согласующим (FR-NOTIF-01, BR-23/29 — Target) |
 | **Альтернативы / исключения** | ERR_VALIDATION; ERR_ROUTE_CONFIG; ERR_INVALID_STATE; ERR_INACTIVE_TYPE |
 | **Postconditions** | BR-20; задачи созданы; working values сохранены (BR-26) |
-| **Связи** | BR-08, BR-18, BR-20, BR-22, BR-26; UC-05; AC-APP-02, AC-APP-02b, AC-APP-03, AC-APP-08, AC-APP-10, AC-DRAFT-01, AC-DRAFT-02; уведомления — [docs/backlog.md](../backlog.md) |
+| **Связи** | BR-08, BR-18, BR-20, BR-22, BR-26; UC-05; AC-APP-02, AC-APP-02b, AC-APP-03, AC-APP-08, AC-APP-10, AC-DRAFT-01, AC-DRAFT-02; FR-NOTIF-01, BR-23, BR-29, AC-NOTIF-01 (Target); FR-NOTIF-03 — [docs/backlog.md](../backlog.md) |
 
 ### FR-REQ-04 — Просмотр заявки
 | Поле | Содержание |

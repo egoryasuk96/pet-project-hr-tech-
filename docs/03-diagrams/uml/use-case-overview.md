@@ -23,7 +23,7 @@
 | **Сотрудник (Инициатор)** | `employee` | Создаёт и ведёт свои заявки; каталог; профиль — Future / backlog |
 | **Согласующий** | `approver` | Очередь задач; approve / reject / return |
 | **Администратор** | `admin` | Типы, поля, маршрут, назначения, справочники; реестр — Future / backlog |
-| **Аутентифицированный пользователь** | — | Обобщение для входа и уведомлений (Future / backlog); конкретные роли — specialization |
+| **Аутентифицированный пользователь** | — | Обобщение для входа (UC-01) и списка уведомлений (UC-13 list) — **Target**; mark-as-read / профиль — Future / backlog |
 
 Один пользователь имеет **одну** системную роль (BR-16, ADR-ORG-01). Выбор «активной роли» не требуется.
 
@@ -33,7 +33,7 @@
 
 | Пакет | UC | Кратко |
 | :--- | :--- | :--- |
-| Auth & кабинет | UC-01, UC-02, UC-13 | Login, профиль, in-app уведомления — Future / backlog |
+| Auth & кабинет | UC-01, UC-02, UC-13 | Login + list notifications — **Target**; профиль / mark-as-read — Future / backlog |
 | Каталог и заявки | UC-03, UC-04, UC-05, UC-06, UC-10 | Каталог, draft, submit, просмотр, отмена |
 | Согласование | UC-07, UC-08, UC-09 | Approve / reject / return |
 | Администрирование | UC-11, UC-12, UC-15 | Тип/поля/маршрут; реестр — Future / backlog |
@@ -45,7 +45,7 @@
 
 | UC | Название | Employee | Approver | Admin | Auth user |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| UC-01 | Login | — | — | — | Primary (**Future / backlog**) |
+| UC-01 | Login | — | — | — | Primary (**Target**) |
 | UC-02 | View Profile | **Future / backlog** | — | — | (свои данные) |
 | UC-03 | Browse Service Catalog | Primary | — | — | — |
 | UC-04 | Create Request | Primary | — | — | — |
@@ -57,7 +57,7 @@
 | UC-10 | Cancel Request | Primary | — | — | — |
 | UC-11 | Configure Request Type | — | — | Primary (**Future / backlog**) | — |
 | UC-12 | Configure Approval Route | — | — | Primary (**Future / backlog**) | — |
-| UC-13 | View Notifications | — | — | — | Primary (**Future / backlog**) |
+| UC-13 | View Notifications | — | — | — | Primary (**Target**, list); mark-as-read — Future |
 | UC-14 | View Request History | Primary* | Primary* | **Future / backlog** | — |
 | UC-15 | Admin View Requests | — | — | Primary (**Future / backlog**) | — |
 
@@ -92,8 +92,8 @@ flowchart LR
   Approver[Согласующий approver]
   Admin[Администратор admin]
 
-  AuthUser -.->|Future / backlog| UC_01
-  AuthUser -.->|Future / backlog| UC_13
+  AuthUser --> UC_01
+  AuthUser --> UC_13
   Employee -.->|Future / backlog| UC_02
   Employee --> UC_03
   Employee --> UC_04

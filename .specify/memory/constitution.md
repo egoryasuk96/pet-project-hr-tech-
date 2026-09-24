@@ -1,12 +1,14 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.0.1
-- Modified principles: II. Fixed Technology Stack (frontend wording only)
-- Added sections: none
+- Version change: 1.0.1 → 1.1.0
+- Modified principles: Spec Kit & Change Discipline (Source of Truth
+  hierarchy + conflict rule; closes Finding F-02)
+- Added sections: none (material expansion of existing Change Discipline)
 - Removed sections: none
-- Follow-up TODOs: resolve Finding F-02 (source-of-truth: code/runtime vs
-  docs-first rule)
-- Notes: F-01 closed — frontend is static HTML/JS, not Web SPA / React / Vue
+- Follow-up TODOs: none
+- Notes: F-01 closed — frontend is static HTML/JS, not Web SPA / React / Vue.
+  F-02 closed — layered SoT; no automatic priority of code over approved
+  Target docs (or vice versa) on conflict.
 -->
 
 # Employee Service Constitution
@@ -150,10 +152,27 @@ Canonical models: `docs/03-diagrams/erd/`, domain packages under `app/domain/`.
 1. Spec Kit features MUST align with this constitution and existing `docs/`.
 2. Do not regenerate the product from scratch; extend only what Target docs
    and Frozen API already define.
-3. When **already-implemented** behavior conflicts across artifacts, treat
-   **current code and runtime behavior** as the factual baseline for Spec Kit
-   analysis, then reconcile documentation via explicit ADR / doc update —
-   do not silently invent a third interpretation.
+3. Source of Truth hierarchy (Finding F-02 closed):
+   a. **Approved requirements / Frozen Target** define WHAT the system
+      MUST do (Target-active scope in `docs/`, including Frozen Target
+      markers in `docs/backlog.md`).
+   b. **ADR** define approved architectural decisions and constraints.
+   c. **Frozen OpenAPI** (`docs/04-api/openapi.yaml`) is the public API
+      contract.
+   d. **Code + runtime** are the factual source for HOW the system
+      currently behaves.
+   e. **BPMN / UML / C4 / ERD / glossary** document the agreed model and
+      MUST stay aligned with (a)–(d).
+   f. **Backlog / Future / Legacy** markings MUST NOT be treated as
+      Target-active without an explicit promotion decision.
+
+   Conflict rule: if (a)/(b)/(c) disagree with (d), **no source
+   automatically wins**. Record the discrepancy and decide whether
+   runtime is a defect or documentation is stale; fix via a separate
+   deliberate change. If runtime already implements Target-active
+   behavior but BPMN/UML/glossary/other docs do not reflect it, that is
+   **documentation drift** to be synchronized — not a silent third
+   interpretation, and not an automatic “code overrides docs” rule.
 4. Ambiguous or undocumented requirements MUST be surfaced (clarify / ADR),
    not assumed from industry defaults.
 5. Constitution changes follow Governance below; application/runtime changes
@@ -174,4 +193,4 @@ Canonical models: `docs/03-diagrams/erd/`, domain packages under `app/domain/`.
 - Related guidance: project Cursor rules (`.cursor/rules/`), Vision & Scope,
   Architecture index, OpenAPI Frozen Target.
 
-**Version**: 1.0.1 | **Ratified**: 2026-09-24 | **Last Amended**: 2026-09-24
+**Version**: 1.1.0 | **Ratified**: 2026-09-24 | **Last Amended**: 2026-09-24

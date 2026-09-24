@@ -18,7 +18,7 @@
 
 | Entity | FR | BR | UC (основные) |
 | :--- | :--- | :--- | :--- |
-| User, Role | FR-AUTH-01…03, FR-CAB-01 — **Future / backlog** | BR-16; BR-27 — backlog | UC-01, UC-02 — backlog |
+| User, Role | FR-AUTH-01…03 — **Target**; FR-CAB-01 — **Future / backlog** | BR-16; BR-27 — backlog | UC-01 — **Target**; UC-02 — backlog |
 | Company, Department, Employee | — (org data) | BR-12 (no auto-routing) | — |
 | Process, Status, Action, ProcessTransition | — (Action Engine) | BR-20, BR-07 | UC-05, UC-07…09 |
 | RequestType, RequestFieldDefinition | FR-CAT-01…03; FR-ADMIN-01…02 — **Future / backlog** | BR-10, BR-18, BR-26 | UC-03, UC-04; UC-11 — backlog |
@@ -29,7 +29,7 @@
 | ApprovalTask | FR-APP-01…07 | BR-03…06, BR-15, BR-17, BR-21 | UC-07…09 |
 | Comment | FR-REQ-06, FR-APP-03…05 | BR-25, BR-28 | UC-05, UC-07…09 |
 | HistoryEvent | FR-AUDIT-01…02; FR-ADMIN-08 — **Future / backlog** | BR-24; retention NFR-LOG-02, NFR-LOG-03 п.2 | UC-14 (employee/approver Baseline; admin — backlog) |
-| Notification (**Future / backlog**) | FR-NOTIF-01…03, FR-CAB-03 | BR-11, BR-23, BR-29 | UC-13 |
+| Notification (**Target** create+list) | FR-NOTIF-01…02 — **Target**; FR-NOTIF-03, FR-CAB-03 — backlog | BR-11, BR-23, BR-29 — **Target** | UC-13 list — **Target** |
 
 **Удалено из модели:** RouteInstance*, FieldValueVersion — см. [ADR-LIVE-CFG-01](../architecture/adr-live-config.md).
 
@@ -48,7 +48,7 @@
 | BR-08 | Submit читает live ApprovalRoute/Stage/Assignment; создаёт ApprovalTask |
 | BR-09 | Live config **может** влиять на in-flight; admin-ограничения (не удалять stage с open tasks) |
 | BR-10 | RequestType.active |
-| BR-11 / BR-23 / BR-29 | Notification entity (**Future / backlog**) |
+| BR-11 / BR-23 / BR-29 | Notification entity (**Target**; mark-as-read — backlog) |
 | BR-12 | StageAssignment role/user; нет org auto-routing |
 | BR-13 (**backlog**) / BR-14 | данные + AuthZ; Approver через ApprovalTask |
 | BR-15 | ApprovalTask.assignee_user_id |
@@ -77,8 +77,8 @@
 
 | BPMN | Сущности |
 | :--- | :--- |
-| BPMN-01 Request lifecycle | Request, RequestFieldValue, ApprovalTask, HistoryEvent, Comment; live ApprovalRoute/Stage; Notification — **Future / backlog** |
-| BPMN-02 Approval stage | ApprovalTask, Request (current_stage_id), live ApprovalStage, Comment, HistoryEvent; Notification — **Future / backlog** |
+| BPMN-01 Request lifecycle | Request, RequestFieldValue, ApprovalTask, HistoryEvent, Comment; live ApprovalRoute/Stage; Notification — **Target** (create; mark-as-read — backlog) |
+| BPMN-02 Approval stage | ApprovalTask, Request (current_stage_id), live ApprovalStage, Comment, HistoryEvent; Notification — **Target** (create; mark-as-read — backlog) |
 | BPMN-03 Admin configure | RequestType, FieldDefinition, ApprovalRoute/Stage/Assignment, ProcessTransition, Dictionary*; live config **может** затронуть in-flight ([ADR-LIVE-CFG-01](../architecture/adr-live-config.md)) |
 
 ---
@@ -101,15 +101,15 @@
 | Module | Owns / reads |
 | :--- | :--- |
 | Auth / Authorization | User, Role |
-| Cabinet | User profile; Notification (**Future / backlog**) |
+| Cabinet | User profile — backlog; Notification list — **Target** (FR-CAB-03 entry — backlog) |
 | Catalog | RequestType, RequestFieldDefinition (active) |
 | Request | Request, RequestFieldValue, Comment |
-| Submit Orchestrator | оркестрация → ApprovalTask + Audit (+ Notification **Future / backlog**) |
+| Submit Orchestrator | оркестрация → ApprovalTask + Audit (+ Notification **Target**) |
 | Action Engine | ProcessTransition; available_actions; approve_advance |
 | Approval Engine | ApprovalTask; reads live ApprovalStage / StageAssignment |
 | Admin Config | live config entities | Future / backlog |
 | Audit | HistoryEvent |
-| Notification | Notification (**Future / backlog**) |
+| Notification | Notification (**Target** create+list) |
 | Persistence | все выше в одной PostgreSQL |
 
 **Удалено:** Snapshot Module.

@@ -22,7 +22,7 @@ TO-BE обработка текущего этапа согласования п
 | :--- | :--- | :--- |
 | **Pool** | Employee Service — этап согласования | Подпроцесс обработки этапа |
 | **Lane** | Согласующий | Роль `approver`, assignee открытой задачи |
-| **Lane** | Система | Закрытие задач, смена статуса, создание задач следующего этапа, история; уведомления — **Future / backlog** |
+| **Lane** | Система | Закрытие задач, смена статуса, создание задач следующего этапа, история; создание in-app уведомлений — **Target**; email/push — out of scope |
 
 Охраняющие условия (без новых правил): BR-15 (только своя открытая задача), BR-21 (запрет самосогласования), ACL-02, ACL-03, ACL-07.
 
@@ -64,7 +64,7 @@ TO-BE обработка текущего этапа согласования п
 | ST-08 | Система | Установить статус rejected | Закрыть открытые задачи текущего этапа (BR-04) |
 | ST-09 | Система | Установить статус returned | Сохранить номер текущего этапа; закрыть открытые задачи этапа (BR-05) |
 | ST-10 | Система | Записать событие в историю | Approve / reject / return / переход этапа (BR-24) |
-| ST-11 | Система | Создать in-app уведомления | **Future / backlog** (BR-23, BR-29); в одной транзакции с событием, когда модуль в scope |
+| ST-11 | Система | Создать in-app уведомления | **Target** (BR-23, BR-29); в одной транзакции с событием |
 
 ### 3.4. Exclusive Gateways
 
@@ -123,10 +123,10 @@ TO-BE обработка текущего этапа согласования п
 
 | ID | From → To | Сообщение | Правило |
 | :--- | :--- | :--- | :--- |
-| MF-01 | Система → Согласующий(ие) | Уведомление о задачах следующего этапа | **Future / backlog**; после ST-06 / ST-11; BR-23, BR-29 |
-| MF-02 | Система → Инициатор | Уведомление о approve этапа / approved / rejected / returned | **Future / backlog**; BR-23, BR-29 |
+| MF-01 | Система → Согласующий(ие) | Уведомление о задачах следующего этапа | **Target** (in-app); после ST-06 / ST-11; BR-23, BR-29 |
+| MF-02 | Система → Инициатор | Уведомление о approve этапа / approved / rejected / returned | **Target** (in-app); BR-23, BR-29 |
 
-Только in-app (BR-11) — **Future / backlog**.
+Канал — только in-app (BR-11, **Target**). Email/push — out of scope. Mark-as-read — **Future / backlog**.
 
 ---
 
@@ -171,9 +171,9 @@ stateDiagram-v2
 | Тип | ID |
 | :--- | :--- |
 | **UC** | UC-07, UC-08, UC-09 |
-| **FR** | FR-APP-01, FR-APP-02, FR-APP-03, FR-APP-04, FR-APP-05, FR-APP-06, FR-APP-07; FR-REQ-08; FR-AUDIT-02; FR-NOTIF-01 — **Future / backlog** |
-| **BR** | BR-02, BR-03, BR-04, BR-05, BR-14, BR-15, BR-17, BR-21, BR-25; BR-29 — **Future / backlog** |
-| **AC** | AC-APP-04, AC-APP-04b, AC-APP-05, AC-APP-05b, AC-APP-06, AC-APP-06b, AC-APP-07, AC-APP-07b, AC-APP-09, AC-ACC-02, AC-ACC-03, AC-ACC-06 |
+| **FR** | FR-APP-01, FR-APP-02, FR-APP-03, FR-APP-04, FR-APP-05, FR-APP-06, FR-APP-07; FR-REQ-08; FR-AUDIT-02; FR-NOTIF-01 — **Target**; FR-NOTIF-03 — **Future / backlog** |
+| **BR** | BR-02, BR-03, BR-04, BR-05, BR-14, BR-15, BR-17, BR-21, BR-25; BR-23, BR-29 — **Target** |
+| **AC** | AC-APP-04, AC-APP-04b, AC-APP-05, AC-APP-05b, AC-APP-06, AC-APP-06b, AC-APP-07, AC-APP-07b, AC-APP-09, AC-ACC-02, AC-ACC-03, AC-ACC-06; AC-NOTIF-01 — **Target** |
 | **RBAC/ACL** | ACL-02, ACL-03, ACL-07 |
 
 ---

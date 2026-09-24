@@ -42,14 +42,14 @@
 1. Validation: поля по live-схеме; маршрут валиден (BR-18); тип активен.
 2. Статус → `in_approval`; `current_stage_id` → первый live **ApprovalStage** (BR-20).
 3. TaskFactory: задачи первого этапа из **live** StageAssignment (BR-08).
-4. Audit (+ Notification **Future / backlog**, если в scope) в одной транзакции.
+4. Audit + Notification (in-app, **Target**) в одной транзакции (BR-29).
 
 ### 3.3. Resubmit из `returned`
 
 1. Validation: как при submit.
 2. `current_stage_id` → первый live-этап; новые ApprovalTask этапа 1 (BR-06, BR-22).
 3. Статус → `in_approval`.
-4. Audit + Notification (**Future / backlog**, BR-29).
+4. Audit + Notification (in-app, **Target**, BR-29).
 
 ### 3.4. Cancel
 
@@ -89,7 +89,7 @@ sequenceDiagram
     Sys->>Sys: status = in_approval; current_stage_id = stage 1
     Sys->>Sys: TaskFactory: задачи этапа 1 из live StageAssignment (BR-08)
     Sys->>Sys: Audit: событие submit
-    Sys->>Sys: Notification: in-app согласующим (**Future / backlog**; та же TX, BR-29)
+    Sys->>Sys: Notification: in-app согласующим (**Target**; та же TX, BR-29)
     Sys-->>Init: заявка на согласовании
   end
 ```
@@ -139,9 +139,9 @@ sequenceDiagram
 | Тип | ID |
 | :--- | :--- |
 | **UC** | UC-04, UC-05, UC-10 |
-| **FR** | FR-REQ-01, FR-REQ-02, FR-REQ-03, FR-REQ-07, FR-REQ-09; FR-AUDIT-02; FR-NOTIF-01 — **Future / backlog** |
-| **BR** | BR-06, BR-07, BR-08, BR-18, BR-19, BR-20, BR-22, BR-24, BR-26; BR-23, BR-29 — **Future / backlog** |
-| **AC** | AC-APP-01, AC-APP-02, AC-APP-02b, AC-APP-03, AC-APP-08, AC-REQ-07, AC-DRAFT-01, AC-DRAFT-02; AC-NOTIF-01 — **Future / backlog** |
+| **FR** | FR-REQ-01, FR-REQ-02, FR-REQ-03, FR-REQ-07, FR-REQ-09; FR-AUDIT-02; FR-NOTIF-01 — **Target**; FR-NOTIF-03 — **Future / backlog** |
+| **BR** | BR-06, BR-07, BR-08, BR-18, BR-19, BR-20, BR-22, BR-24, BR-26; BR-11, BR-23, BR-29 — **Target** |
+| **AC** | AC-APP-01, AC-APP-02, AC-APP-02b, AC-APP-03, AC-APP-08, AC-REQ-07, AC-DRAFT-01, AC-DRAFT-02; AC-NOTIF-01 — **Target** |
 | **RBAC** | создание/edit/submit/cancel — `employee` (инициатор); BR-27 |
 | **BPMN** | BPMN-01 |
 

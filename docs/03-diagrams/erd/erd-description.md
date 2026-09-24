@@ -33,7 +33,7 @@
 | **Конфигурация процесса** | Live-настройки | Process, Status, Action, ProcessTransition, RequestType, RequestFieldDefinition, ApprovalRoute, ApprovalStage, StageAssignment, Dictionary* |
 | **Runtime** | Исполнение заявки | Request (`status_id`, `current_stage_id`), RequestFieldValue, ApprovalTask (`stage_id`) |
 | **Аудит** | История и комментарии | HistoryEvent, Comment |
-| **Future** | In-app уведомления | Notification (backlog) |
+| **Уведомления** | In-app persistence + list | Notification (**Target** create+list; mark-as-read — backlog) |
 
 **Нет класса Snapshot.** Устаревшие сущности (`RouteInstance*`, `FieldValueVersion`) — см. deprecated [snapshot-model.md](./snapshot-model.md).
 
@@ -50,9 +50,9 @@
 | Action Engine | ProcessTransition (live), available_actions / execute |
 | Approval Engine | ApprovalTask (читает **live** stages/assignments) |
 | Audit | HistoryEvent |
-| Notification | Notification (backlog) |
+| Notification | Notification (**Target** create+list; mark-as-read — backlog) |
 
-Транзакции submit/approve: status + tasks + audit в одной БД-транзакции; без outbox/очередей.
+Транзакции submit/approve/…: status + tasks + audit + Notification в одной БД-транзакции; без outbox/очередей.
 
 ---
 

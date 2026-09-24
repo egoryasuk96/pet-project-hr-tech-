@@ -21,7 +21,7 @@ TO-BE процесс прохождения кадровой заявки от �
 | **Pool** | Employee Service | Граница процесса сервиса заявок |
 | **Lane** | Инициатор | Роль `employee`, владелец заявки |
 | **Lane** | Согласующий | Роль `approver` (участник через Call Activity BPMN-02) |
-| **Lane** | Система | Автоматические Service Task; доставка уведомлений — **Future / backlog** |
+| **Lane** | Система | Автоматические Service Task; создание in-app уведомлений — **Target**; email/push — out of scope |
 
 RBAC: создание / edit / submit / cancel — только инициатор с ролью `employee` (матрица RBAC; BR-27 / ACL-09 — **Future / backlog**, admin сам по себе заявки не создаёт).
 
@@ -72,7 +72,7 @@ RBAC: создание / edit / submit / cancel — только инициат�
 | ST-06 | Система | Установить статус in_approval | BR-20 |
 | ST-07 | Система | Подтвердить задачи этапа 1 | При resubmit — снова этап 1 (BR-06, BR-22) |
 | ST-08 | Система | Записать событие в историю | BR-24 |
-| ST-09 | Система | Создать in-app уведомления | **Future / backlog** (BR-23, BR-29); в одной транзакции с бизнес-событием, когда модуль в scope |
+| ST-09 | Система | Создать in-app уведомления | **Target** (BR-23, BR-29); в одной транзакции с бизнес-событием |
 | ST-10 | Система | Установить статус cancelled | После успешного cancel (BR-07) |
 
 ### 4.4. Call Activity
@@ -121,7 +121,7 @@ RBAC: создание / edit / submit / cancel — только инициат�
 | SF-20 | ST-05 → ST-06 | — |
 | SF-21 | ST-06 → ST-07 | — |
 | SF-22 | ST-07 → ST-08 | История submit / resubmit |
-| SF-23 | ST-08 → ST-09 | Уведомления согласующим (**Future / backlog**) |
+| SF-23 | ST-08 → ST-09 | Уведомления согласующим (**Target**, in-app) |
 | SF-24 | ST-09 → CA-01 | Переход к обработке этапа |
 | SF-25 | CA-01 → GW-06 | Результат BPMN-02 |
 | SF-26 | GW-06 → EE-01 | `approved` |
@@ -143,10 +143,10 @@ RBAC: создание / edit / submit / cancel — только инициат�
 
 | ID | From → To | Сообщение | Правило |
 | :--- | :--- | :--- | :--- |
-| MF-01 | Система → Согласующий | Уведомление о новой задаче | **Future / backlog**; после ST-07 / ST-09; BR-23, BR-29 |
-| MF-02 | Система → Инициатор | Уведомление о смене статуса | **Future / backlog**; после return / reject / approved / cancelled (по факту события); BR-23, BR-29 |
+| MF-01 | Система → Согласующий | Уведомление о новой задаче | **Target** (in-app); после ST-07 / ST-09; BR-23, BR-29 |
+| MF-02 | Система → Инициатор | Уведомление о смене статуса | **Target** (in-app); после return / reject / approved / cancelled (по факту события); BR-23, BR-29 |
 
-Доставка только in-app (BR-11) — **Future / backlog**. Message Flow не означает отдельный канал email/push.
+Канал — только in-app (BR-11, **Target**). Message Flow не означает email/push (out of scope). Mark-as-read — **Future / backlog** (FR-NOTIF-03).
 
 ---
 
@@ -157,7 +157,7 @@ RBAC: создание / edit / submit / cancel — только инициат�
 3. **GW-05** — submit (**UT-03**), cancel (**UT-04**) или продолжение edit.
 4. При **submit**: проверки (**ST-01…ST-02**, шлюзы GW-01…GW-03).
 5. **GW-04 / ST-04 / ST-05**: `current_stage_id` → первый live-этап; **ApprovalTask** из live StageAssignment ([ADR-LIVE-CFG-01](../architecture/adr-live-config.md)).
-6. **ST-06…ST-09** — `in_approval`, задачи **этапа 1**, история; уведомления (ST-09) — **Future / backlog**, если в scope.
+6. **ST-06…ST-09** — `in_approval`, задачи **этапа 1**, история; in-app уведомления (ST-09) — **Target**.
 7. **CA-01** — BPMN-02 до исхода: следующий этап / approved / rejected / returned.
 8. При **returned** — **UT-05/UT-02**, затем снова submit (с первого этапа, BR-06) или cancel.
 9. **Cancel** только из `draft`/`returned` → `cancelled` (**EE-03**).
@@ -190,9 +190,9 @@ stateDiagram-v2
 | Тип | ID |
 | :--- | :--- |
 | **UC** | UC-04, UC-05, UC-07 (через CA-01), UC-08, UC-09, UC-10 |
-| **FR** | FR-REQ-01, FR-REQ-02, FR-REQ-03, FR-REQ-07, FR-REQ-08, FR-REQ-09; FR-APP-06, FR-APP-07 (итог); FR-AUDIT-02; FR-NOTIF-01 — **Future / backlog** |
-| **BR** | BR-06, BR-07, BR-08, BR-18, BR-19, BR-20, BR-22, BR-24, BR-26; BR-23, BR-29 — **Future / backlog** |
-| **AC** | AC-APP-01, AC-APP-02, AC-APP-02b, AC-APP-03, AC-APP-05, AC-APP-05b, AC-APP-08, AC-REQ-07, AC-DRAFT-01, AC-DRAFT-02; AC-NOTIF-01 — **Future / backlog** |
+| **FR** | FR-REQ-01, FR-REQ-02, FR-REQ-03, FR-REQ-07, FR-REQ-08, FR-REQ-09; FR-APP-06, FR-APP-07 (итог); FR-AUDIT-02; FR-NOTIF-01 — **Target**; FR-NOTIF-03 — **Future / backlog** |
+| **BR** | BR-06, BR-07, BR-08, BR-18, BR-19, BR-20, BR-22, BR-24, BR-26; BR-11, BR-23, BR-29 — **Target** |
+| **AC** | AC-APP-01, AC-APP-02, AC-APP-02b, AC-APP-03, AC-APP-05, AC-APP-05b, AC-APP-08, AC-REQ-07, AC-DRAFT-01, AC-DRAFT-02; AC-NOTIF-01 — **Target** |
 | **RBAC** | создание/edit/submit/cancel — `employee` (инициатор); BR-27 / ACL-09 — **Future / backlog** |
 
 ---

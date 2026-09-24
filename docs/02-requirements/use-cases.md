@@ -54,7 +54,7 @@ MVP Baseline. Сценарии вне Baseline — [docs/backlog.md](../backlog.
 | **Primary actor** | employee (инициатор) |
 | **Preconditions** | Заявка в `draft` или `returned`; пользователь — инициатор |
 | **Trigger** | Команда «Отправить» |
-| **Main flow** | 1. Валидация полей по live-схеме (BR-26) 2. Проверка live-маршрута (BR-18) 3. `current_stage_id` → первый live ApprovalStage (BR-08) 4. Статус `in_approval` (BR-20) 5. ApprovalTask из live StageAssignment 6. История (in-app — [backlog](../backlog.md)). Канон: [ADR-LIVE-CFG-01](../03-diagrams/architecture/adr-live-config.md) |
+| **Main flow** | 1. Валидация полей по live-схеме (BR-26) 2. Проверка live-маршрута (BR-18) 3. `current_stage_id` → первый live ApprovalStage (BR-08) 4. Статус `in_approval` (BR-20) 5. ApprovalTask из live StageAssignment 6. История + in-app уведомления согласующим (FR-NOTIF-01, BR-23/29 — Target). Канон: [ADR-LIVE-CFG-01](../03-diagrams/architecture/adr-live-config.md) |
 | **Alternative flows** | A1. Resubmit после return — с **первого** live-этапа (BR-06); новые ApprovalTask |
 | **Exceptions** | E1. ERR_VALIDATION  E2. ERR_ROUTE_CONFIG  E3. ERR_INVALID_STATE  E4. ERR_INACTIVE_TYPE |
 | **Postconditions** | Заявка на согласовании; задачи созданы; данные зафиксированы |
@@ -88,7 +88,7 @@ MVP Baseline. Сценарии вне Baseline — [docs/backlog.md](../backlog.
 | **Primary actor** | approver |
 | **Preconditions** | Есть открытая задача, пользователь — assignee; не инициатор заявки |
 | **Trigger** | Действие Approve в карточке задачи |
-| **Main flow** | 1. Просмотр **полной** карточки заявки (BR-14) 2. Approve (комментарий необязателен, BR-25) 3. Задача завершена 4. Остальные активные задачи этапа → `cancelled` (BR-03) 5. Если есть следующий этап — создание его задач (FR-APP-06) 6. Если последний — статус `approved` 7. История (in-app уведомления — [docs/backlog.md](../backlog.md)) |
+| **Main flow** | 1. Просмотр **полной** карточки заявки (BR-14) 2. Approve (комментарий необязателен, BR-25) 3. Задача завершена 4. Остальные активные задачи этапа → `cancelled` (BR-03) 5. Если есть следующий этап — создание его задач (FR-APP-06) 6. Если последний — статус `approved` 7. История + in-app уведомления (FR-NOTIF-01, BR-23/29 — Target) |
 | **Alternative flows** | A1. Несколько assignees — достаточно одного approve (BR-03) |
 | **Exceptions** | E1. ERR_FORBIDDEN_APPROVAL  E2. ERR_TASK_DONE  E3. Самосогласование → ERR_FORBIDDEN_APPROVAL (BR-21) |
 | **Postconditions** | Этап пройден или заявка `approved` |
@@ -109,7 +109,7 @@ MVP Baseline. Сценарии вне Baseline — [docs/backlog.md](../backlog.
 | **Alternative flows** | — |
 | **Exceptions** | E1. ERR_FORBIDDEN_APPROVAL  E2. ERR_TASK_DONE  E3. Пустой комментарий → ERR_VALIDATION |
 | **Postconditions** | Заявка `rejected`; маршрут завершён |
-| **Related FR** | FR-APP-04, FR-AUDIT-02; уведомления — [docs/backlog.md](../backlog.md) |
+| **Related FR** | FR-APP-04, FR-AUDIT-02, FR-NOTIF-01 (Target); FR-NOTIF-03 — [docs/backlog.md](../backlog.md) |
 | **Related BR** | BR-04, BR-15, BR-21, BR-25 |
 
 ---
