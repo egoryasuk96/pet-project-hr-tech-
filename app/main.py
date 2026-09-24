@@ -50,7 +50,17 @@ def _error_body(error_code: str, message: str, details: dict | None = None) -> d
 
 
 def _wants_html(request: Request) -> bool:
-    """True for browser navigation; false for apiFetch (Accept: application/json)."""
+    """True for browser navigation; false for apiFetch (Accept: application/json).
+
+    Document navigations (login redirect → GET /requests) never send Authorization.
+    Prefer HTML when Sec-Fetch-Mode is navigate / Sec-Fetch-Dest is document so those
+    hits do not fall through to the protected JSON API. apiFetch uses mode cors and
+    Accept: application/json only.
+    """
+    fetch_mode = request.headers.get("sec-fetch-mode", "").lower()
+    fetch_dest = request.headers.get("sec-fetch-dest", "").lower()
+    if fetch_mode == "navigate" or fetch_dest == "document":
+        return True
     accept = (request.headers.get("accept") or "").lower()
     if "text/html" not in accept:
         return False
@@ -60,7 +70,14 @@ def _wants_html(request: Request) -> bool:
     return accept.find("text/html") < json_pos
 
 
+def _normalize_page_path(path: str) -> str:
+    if path != "/" and path.endswith("/"):
+        return path.rstrip("/")
+    return path
+
+
 def _html_page_for_path(path: str, *, accept_negotiated: bool) -> str | None:
+    path = _normalize_page_path(path)
     if path in _HTML_EXACT:
         return _HTML_EXACT[path]
     if accept_negotiated:
@@ -95,7 +112,7 @@ def create_app() -> FastAPI:
 
     @application.middleware("http")
     async def serve_html_when_accepted(request: Request, call_next) -> Response:
-        """Serve UI pages for browser Accept: text/html without shadowing JSON API."""
+        """Intercept document navigation to page paths before JSON API handlers."""
         if request.method == "GET" and _wants_html(request):
             page = _html_page_for_path(request.url.path, accept_negotiated=True)
             if page is not None:
