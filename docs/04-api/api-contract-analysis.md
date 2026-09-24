@@ -192,14 +192,15 @@ Live-схема формы.
       "data_type": "date",
       "required": true,
       "order_no": 1,
-      "dictionary_id": null
+      "dictionary_id": null,
+      "dictionary": null
     }
   ]
 }
 ```
 
 `data_type`: `text` \| `date` \| `number` \| `catalog` \| `boolean`.  
-Вложение dictionary items в schema **не** зафиксировано (OPEN §11).
+Для `catalog` runtime вкладывает optional `dictionary: { id, name, items[] }` (только **active** items); `dictionary_id` сохраняется. Отдельный read endpoint словаря **не** требуется (review #3 CLOSED).
 
 Errors: `403 FORBIDDEN`, `404 NOT_FOUND` (нет / inactive), `500 INTERNAL`.
 
@@ -676,7 +677,7 @@ Admin UC-11/12/15 и mark-read FR-NOTIF-03 — вне Target-active inventory.
 | ---: | :--- | :--- | :--- |
 | 1 | Authentication | **CLOSED** | JWT; `POST /auth/login` + `GET /me` |
 | 2 | Inactive type read | **OPEN** | Interim: GET detail/schema → `404 NOT_FOUND` |
-| 3 | Dictionary items | **OPEN** | Embed в schema vs отдельный read endpoint не зафиксирован |
+| 3 | Dictionary items | **CLOSED** | Embed в `GET .../schema`: optional `dictionary` `{ id, name, items[] }` (active items); `dictionary_id` retained |
 | 4 | ApprovalTask queue date | **CLOSED** | `/approval-tasks/*` disabled; queue вне Target-active |
 | 5 | Approver card route | **CLOSED** | Approver читает `GET /requests/{id}` (BR-14); task card stub |
 | 6 | Task visibility error | **CLOSED** | Superseded: stubs всегда `409 INVALID_STATE` |
@@ -687,7 +688,7 @@ Admin UC-11/12/15 и mark-read FR-NOTIF-03 — вне Target-active inventory.
 | 11 | Error envelope | **CLOSED** | ADR-ERR-03 nested; без `ERR_` |
 | 12 | OpenAPI x-requirement | **OPEN** | Проект использует UC/FR/AC, не US-XXX |
 
-**Истинно открытые для Target:** dictionary embed, pagination envelopes, inactive-type read code, cancelled values nuance, x-requirement convention.
+**Истинно открытые для Target:** pagination envelopes, inactive-type read code, cancelled values nuance, x-requirement convention.
 
 ---
 

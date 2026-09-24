@@ -90,7 +90,7 @@ def _load_request(session: Session, request_id: int) -> Request:
 def _draft_status(session: Session) -> Status:
     status = session.scalar(select(Status).where(Status.code == "draft"))
     if status is None:
-        raise AppError("ERR_INTERNAL", "Status draft is not configured", 500)
+        raise AppError("INTERNAL", "Status draft is not configured", 500)
     return status
 
 

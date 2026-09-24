@@ -15,6 +15,9 @@ info:
     Approver flow: `GET /requests/{id}` → `GET /requests/{id}/available-actions`
     → `POST /requests/{id}/actions/{action_id}`.
 
+    `GET /health` is an **operational** liveness check (process only; no DB).
+    It is **outside** this Frozen business API contract and is not listed below.
+
     `/approval-tasks/*` routes are **disabled compatibility stubs** (`409 INVALID_STATE`).
     Legacy `POST .../submit` and `POST .../cancel` are **deprecated thin aliases**
     of Action Engine (response = `RequestCard`).
@@ -30,8 +33,10 @@ x-requires-review:
     description: Interim behavior is 404 NOT_FOUND for inactive type detail/schema reads.
   - number: 3
     title: Dictionary items
-    status: OPEN
-    description: Whether active items are embedded in schema or a separate read endpoint is not fixed.
+    status: CLOSED
+    description: >
+      Target = optional embedded dictionary (id, name, active items) on
+      RequestFieldDefinition in GET .../schema; dictionary_id retained.
   - number: 4
     title: ApprovalTask date
     status: CLOSED
@@ -1145,6 +1150,39 @@ components:
           type: integer
           format: int64
           nullable: true
+        dictionary:
+          allOf:
+            - $ref: "#/components/schemas/Dictionary"
+          nullable: true
+          description: >
+            Optional embed of the linked dictionary with **active** items only
+            (runtime Target). Null when `dictionary_id` is null.
+
+    DictionaryItem:
+      type: object
+      required: [id, code, name]
+      properties:
+        id:
+          type: integer
+          format: int64
+        code:
+          type: string
+        name:
+          type: string
+
+    Dictionary:
+      type: object
+      required: [id, name, items]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DictionaryItem"
 
     RequestTypeSchema:
       type: object

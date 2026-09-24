@@ -74,7 +74,7 @@ python -m app.db.seed
 uvicorn app.main:app --reload
 ```
 
-`GET /health` возвращает `{"status":"ok"}`.
+`GET /health` возвращает `{"status":"ok"}` — **operational** liveness (без обращения к PostgreSQL). Endpoint **вне** Frozen business OpenAPI (`docs/04-api/openapi.yaml`); для инфраструктуры/мониторинга, не часть бизнес-контракта.
 
 ## Core API (Stage 5.3)
 

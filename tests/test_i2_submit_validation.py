@@ -293,9 +293,8 @@ def test_submit_inactive_request_type_validation(
 
     try:
         response = _submit(client, emp, request_id, dataset.submit_action_id)
-        assert response.status_code == 422
-        assert _error_code(response) == "VALIDATION"
-        assert response.json()["error"]["details"]["reason"] == "inactive_type"
+        assert response.status_code == 409
+        assert _error_code(response) == "INACTIVE_TYPE"
         assert _request_status_code(request_id) == "draft"
         assert _task_count(request_id) == 0
         assert _history_count(request_id) == 1

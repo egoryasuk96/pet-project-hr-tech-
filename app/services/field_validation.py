@@ -7,7 +7,7 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.errors import validation
+from app.core.errors import inactive_type, validation
 from app.domain.catalog import DictionaryItem, RequestFieldDefinition, RequestType
 from app.domain.enums import FieldDataType
 from app.domain.request import Request, RequestFieldValue
@@ -20,11 +20,12 @@ def validate_submit(
 ) -> None:
     """Validate live RequestType + RequestFieldValue before creating ApprovalTask.
 
-    Raises AppError VALIDATION (422) on any failure. Does not mutate request.
+    Raises AppError ``INACTIVE_TYPE`` (409) if the type is missing/inactive;
+    ``VALIDATION`` (422) for field-level failures. Does not mutate request.
     """
     live_type = session.get(RequestType, request.request_type_id)
     if live_type is None or not live_type.active:
-        raise validation({"reason": "inactive_type"})
+        raise inactive_type()
 
     definitions = session.scalars(
         select(RequestFieldDefinition)
