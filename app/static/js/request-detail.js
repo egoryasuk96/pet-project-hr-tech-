@@ -15,7 +15,7 @@
 
   const COMMENT_REQUIRED = { reject: true, return: true };
 
-  const pathMatch = window.location.pathname.match(/^\/my-requests\/(\d+)\/?$/);
+  const pathMatch = window.location.pathname.match(/^\/requests\/(\d+)\/?$/);
   const requestId = pathMatch ? pathMatch[1] : null;
 
   const userNameEl = document.getElementById("user-name");
@@ -35,12 +35,15 @@
   const commentInput = document.getElementById("action-comment-input");
   const commentConfirm = document.getElementById("action-comment-confirm");
   const commentCancel = document.getElementById("action-comment-cancel");
+  const editValuesBtn = document.getElementById("edit-values-btn");
+  const deferredEditBanner = document.getElementById("deferred-edit-banner");
 
   const user = Session.getUser();
   userNameEl.textContent = (user && user.full_name) || "";
 
   let actionBusy = false;
   let pendingCommentAction = null;
+  let fieldNameByCode = {};
 
   logoutBtn.addEventListener("click", function () {
     Session.clear();
@@ -60,6 +63,10 @@
       return;
     }
     executeAction(pendingCommentAction.id, pendingCommentAction.code, comment);
+  });
+
+  editValuesBtn.addEventListener("click", function () {
+    deferredEditBanner.hidden = false;
   });
 
   function escapeHtml(value) {
@@ -98,6 +105,8 @@
   function showPageError(message) {
     stateLoading.hidden = true;
     detailContent.hidden = true;
+    editValuesBtn.hidden = true;
+    deferredEditBanner.hidden = true;
     stateErrorMessage.textContent = message || "Произошла внутренняя ошибка. Попробуйте позже";
     stateError.hidden = false;
   }
@@ -132,6 +141,14 @@
     commentConfirm.disabled = disabled;
     commentCancel.disabled = disabled;
     commentInput.disabled = disabled;
+  }
+
+  function updateEditControls(card) {
+    const isDraft = statusCode(card.status) === "draft";
+    editValuesBtn.hidden = !isDraft;
+    if (!isDraft) {
+      deferredEditBanner.hidden = true;
+    }
   }
 
   function renderMeta(card) {
@@ -174,6 +191,11 @@
       "</dd></div>";
   }
 
+  function fieldLabel(fieldCode) {
+    if (fieldCode && fieldNameByCode[fieldCode]) return fieldNameByCode[fieldCode];
+    return fieldCode || "—";
+  }
+
   function renderValues(values) {
     if (!values || values.length === 0) {
       detailValues.innerHTML = '<p class="detail-empty">Поля пока не заполнены.</p>';
@@ -187,7 +209,7 @@
           const value = row.value == null || row.value === "" ? "—" : row.value;
           return (
             "<div><dt>" +
-            escapeHtml(code) +
+            escapeHtml(fieldLabel(code)) +
             "</dt><dd>" +
             escapeHtml(value) +
             "</dd></div>"
@@ -287,6 +309,29 @@
     renderValues(card.values);
     renderActions(actions && actions.available_actions);
     renderHistory(history && history.items);
+    updateEditControls(card);
+  }
+
+  async function loadFieldNames(card) {
+    fieldNameByCode = {};
+    const typeId =
+      card && card.request_type && card.request_type.id != null
+        ? card.request_type.id
+        : null;
+    if (typeId == null) return;
+    try {
+      const schema = await apiFetch(
+        "/request-types/" + encodeURIComponent(typeId) + "/schema"
+      );
+      const fields = (schema && schema.fields) || [];
+      fields.forEach(function (field) {
+        if (field && field.code) {
+          fieldNameByCode[field.code] = field.name || field.code;
+        }
+      });
+    } catch (_err) {
+      // Optional labels: keep field_code fallback.
+    }
   }
 
   async function fetchDetailParts() {
@@ -310,11 +355,17 @@
       stateLoading.hidden = false;
       stateError.hidden = true;
       detailContent.hidden = true;
+      editValuesBtn.hidden = true;
+      deferredEditBanner.hidden = true;
     }
 
     try {
       const results = await fetchDetailParts();
-      applyDetailPayload(results[0], results[1], results[2]);
+      const card = results[0];
+      if (!soft) {
+        await loadFieldNames(card);
+      }
+      applyDetailPayload(card, results[1], results[2]);
       clearActionError();
       stateLoading.hidden = true;
       stateError.hidden = true;

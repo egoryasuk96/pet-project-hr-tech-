@@ -1,6 +1,6 @@
 (function () {
   if (Session.getAccessToken()) {
-    window.location.replace("/my-requests");
+    window.location.replace("/requests");
     return;
   }
 
@@ -46,7 +46,7 @@
         },
       });
       Session.saveLoginResponse(payload);
-      window.location.href = "/my-requests";
+      window.location.href = "/requests";
     } catch (err) {
       const message =
         err && err.message

@@ -98,7 +98,8 @@ a {
   color: var(--text);
 }
 
-.field input {
+.field input,
+.field select {
   height: 44px;
   padding: 10px 12px;
   border: 1px solid var(--border);
@@ -111,9 +112,120 @@ a {
   color: var(--placeholder);
 }
 
-.field input:focus {
+.field input:focus,
+.field select:focus {
   outline: 2px solid rgba(17, 17, 17, 0.2);
   outline-offset: 1px;
+}
+
+.field input:disabled,
+.field select:disabled {
+  background: var(--bg);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.field-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: default;
+}
+
+.field-checkbox input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.field-required {
+  color: var(--error);
+}
+
+.info-banner {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: #eef3f8;
+  color: #1a3a5c;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.info-banner[hidden],
+.create-form-card[hidden],
+.type-catalog[hidden],
+#select-step[hidden],
+#form-step[hidden] {
+  display: none !important;
+}
+
+.type-catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  padding: 20px 22px;
+  background: var(--white);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.type-card:hover {
+  border-color: var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.type-card-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.type-card-desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.create-form-card {
+  background: var(--white);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 560px;
+}
+
+.schema-fields {
+  margin-bottom: 8px;
+}
+
+.create-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.detail-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
 }
 
 .btn {

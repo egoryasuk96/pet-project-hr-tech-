@@ -37,9 +37,8 @@
     window.location.href = "/login";
   });
 
-  // Shown on mockup; next screens are out of this slice scope.
-  createBtn.addEventListener("click", function (event) {
-    event.preventDefault();
+  createBtn.addEventListener("click", function () {
+    window.location.href = "/requests/create";
   });
 
   filtersEl.addEventListener("click", function (event) {
@@ -132,7 +131,7 @@
         event.preventDefault();
         const id = btn.getAttribute("data-id");
         if (id) {
-          window.location.href = "/my-requests/" + encodeURIComponent(id);
+          window.location.href = "/requests/" + encodeURIComponent(id);
         }
       });
     });

@@ -17,8 +17,8 @@
       <div class="topbar-left">
         <div class="topbar-brand">HR Tech</div>
         <nav class="topbar-nav" aria-label="Основная навигация">
-          <a href="/my-requests" class="is-active">Мои заявки</a>
-          <a href="/my-notifications">Уведомления</a>
+          <a href="/requests" class="is-active">Мои заявки</a>
+          <a href="/notifications">Уведомления</a>
         </nav>
       </div>
       <div class="topbar-right">
@@ -30,10 +30,19 @@
     <main class="page-body">
       <div class="page-header detail-header">
         <div class="detail-header-left">
-          <a class="back-link" href="/my-requests">← К списку</a>
+          <a class="back-link" href="/requests">← К списку</a>
           <h1 class="page-title" id="detail-title">Заявка</h1>
         </div>
-        <div id="detail-status"></div>
+        <div class="detail-header-right">
+          <div id="detail-status"></div>
+          <button type="button" class="btn btn-secondary" id="edit-values-btn" style="width: auto" hidden>
+            Редактировать
+          </button>
+        </div>
+      </div>
+
+      <div class="info-banner" id="deferred-edit-banner" hidden>
+        Сохранение значений полей (PATCH) будет доступно на следующем этапе API.
       </div>
 
       <div class="state-panel" id="state-loading">
@@ -43,7 +52,7 @@
       <div class="state-panel" id="state-error" hidden>
         <h2>Не удалось открыть заявку</h2>
         <p id="state-error-message">Произошла внутренняя ошибка. Попробуйте позже</p>
-        <a class="btn btn-secondary" href="/my-requests" style="width: auto; display: inline-flex">
+        <a class="btn btn-secondary" href="/requests" style="width: auto; display: inline-flex">
           К списку заявок
         </a>
       </div>

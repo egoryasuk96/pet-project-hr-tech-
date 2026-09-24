@@ -69,7 +69,7 @@
         const at = formatDateTime(item.created_at);
         const openLink =
           item.request_id != null
-            ? '<a class="btn-link notif-open" href="/my-requests/' +
+            ? '<a class="btn-link notif-open" href="/requests/' +
               encodeURIComponent(item.request_id) +
               '">Открыть заявку</a>'
             : "";

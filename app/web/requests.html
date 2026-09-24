@@ -17,8 +17,8 @@
       <div class="topbar-left">
         <div class="topbar-brand">HR Tech</div>
         <nav class="topbar-nav" aria-label="Основная навигация">
-          <a href="/my-requests" class="is-active">Мои заявки</a>
-          <a href="/my-notifications">Уведомления</a>
+          <a href="/requests" class="is-active">Мои заявки</a>
+          <a href="/notifications">Уведомления</a>
         </nav>
       </div>
       <div class="topbar-right">
@@ -39,8 +39,10 @@
         <button type="button" class="chip is-active" data-status="">Все</button>
         <button type="button" class="chip" data-status="draft">Черновики</button>
         <button type="button" class="chip" data-status="in_approval">На согласовании</button>
+        <button type="button" class="chip" data-status="returned">Возвращены</button>
         <button type="button" class="chip" data-status="approved">Согласовано</button>
         <button type="button" class="chip" data-status="rejected">Отклонено</button>
+        <button type="button" class="chip" data-status="cancelled">Отменены</button>
       </div>
 
       <div class="state-panel" id="state-loading" hidden>

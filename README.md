@@ -38,13 +38,13 @@
 | API-контракт (OpenAPI) | Frozen Target (`docs/04-api/`) |
 | Core API + Approval E2E | Готово (Stage 5.3 + Action Engine) |
 | Backend polish (history / cancel / comments) | Stage 6.1 |
-| Frontend (static HTML/JS) | Частично: Login, My Requests, Request Detail (available-actions / execute), Notifications. Create UI / Admin UI / Approver Queue — не реализованы |
+| Frontend (static HTML/JS) | Срез: Login → Requests → Details → Create (schema → POST draft). Admin UI / Approver Queue / PATCH values — deferred |
 | In-app Notifications | Target API + UI список |
 | Деплой (Render + Neon) | Запланировано |
 
 ## Стек
 
-FastAPI + PostgreSQL. Auth runtime: JWT (`POST /auth/login`, Bearer, без refresh). Лёгкий веб-клиент — static HTML/JS от того же FastAPI (реализованный срез: Login, My Requests, Request Detail, Notifications).
+FastAPI + PostgreSQL. Auth runtime: JWT (`POST /auth/login`, Bearer, без refresh). Лёгкий веб-клиент — static HTML/JS от того же FastAPI (срез: Login, My Requests `/requests`, Request Detail, Create `/requests/create`, Notifications).
 
 ## Локальная БД (Stage 5.2)
 

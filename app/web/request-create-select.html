@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Создать заявку — HR Tech</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/app.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-brand">HR Tech</div>
+        <nav class="topbar-nav" aria-label="Основная навигация">
+          <a href="/requests" class="is-active">Мои заявки</a>
+          <a href="/notifications">Уведомления</a>
+        </nav>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-user" id="user-name"></span>
+        <button type="button" class="btn btn-ghost" id="logout-btn">Выйти</button>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <div class="page-header detail-header">
+        <div class="detail-header-left">
+          <a class="back-link" href="/requests" id="back-link">← К списку</a>
+          <h1 class="page-title" id="page-title">Выберите тип заявки</h1>
+        </div>
+      </div>
+
+      <div id="select-step">
+        <div class="state-panel" id="state-loading">
+          <p>Загрузка типов заявок…</p>
+        </div>
+
+        <div class="state-panel" id="state-empty" hidden>
+          <h2>Типы заявок недоступны</h2>
+          <p>Сейчас нет активных типов для создания заявки.</p>
+        </div>
+
+        <div class="state-panel" id="state-error" hidden>
+          <h2>Не удалось загрузить типы</h2>
+          <p id="state-error-message">Произошла внутренняя ошибка. Попробуйте позже</p>
+          <button type="button" class="btn btn-secondary" id="retry-btn">Повторить</button>
+        </div>
+
+        <div class="type-catalog" id="type-catalog" hidden></div>
+      </div>
+
+      <div id="form-step" hidden>
+        <div class="info-banner" id="deferred-banner">
+          Заполнение и сохранение значений полей (PATCH) будет доступно на следующем этапе.
+          Сейчас создаётся черновик заявки выбранного типа.
+        </div>
+
+        <div class="state-panel" id="form-loading" hidden>
+          <p>Загрузка схемы…</p>
+        </div>
+
+        <div class="state-panel" id="form-error" hidden>
+          <h2>Не удалось открыть форму</h2>
+          <p id="form-error-message">Произошла внутренняя ошибка. Попробуйте позже</p>
+          <button type="button" class="btn btn-secondary" id="back-to-types-btn">
+            К выбору типа
+          </button>
+        </div>
+
+        <div class="create-form-card" id="form-content" hidden>
+          <form id="create-form" novalidate>
+            <div id="schema-fields" class="schema-fields"></div>
+            <p class="form-error" id="create-error" hidden></p>
+            <div class="create-form-actions">
+              <button type="submit" class="btn btn-primary" id="create-submit" style="width: auto">
+                Создать заявку
+              </button>
+              <button type="button" class="btn btn-secondary" id="cancel-form-btn" style="width: auto">
+                Отмена
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+
+    <script src="/static/js/session.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/schema-form.js"></script>
+    <script src="/static/js/request-create-select.js"></script>
+  </body>
+</html>
