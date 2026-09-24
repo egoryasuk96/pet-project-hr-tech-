@@ -77,8 +77,8 @@ NFR задают проверяемые ограничения качества 
 Повторный approve/reject/return по уже завершённой задаче не меняет состояние повторно и возвращает ошибку duplicate/invalid state.  
 **Проверка:** error-matrix ERR_DUP_ACTION, ERR_TASK_DONE.
 
-### NFR-REL-03 — Сохранность RouteInstance
-RouteInstance после первого submit неизменяем прикладными операциями.  
+### NFR-REL-03 — Согласованность runtime и live config *(обновлено)*
+Операции submit/approve не должны оставлять заявку в inconsistent state (`current_stage_id` согласован с open ApprovalTask.stage_id). Историческая формулировка про immutability RouteInstance — **deprecated** ([ADR-LIVE-CFG-01](../03-diagrams/architecture/adr-live-config.md)).  
 **Проверка:** AC-APP-10.
 
 ---
@@ -96,7 +96,7 @@ RouteInstance после первого submit неизменяем прикла
 
 ### NFR-MNT-03 — Трассируемые ID требований
 Код и тесты критичных правил ссылаются на ID FR/BR/AC в комментариях или именах тестов для ключевых сценариев согласования.  
-**Проверка:** наличие ссылок в тестах approve/reject/return/snapshot.
+**Проверка:** наличие ссылок в тестах approve/reject/return и согласованности stage_id.
 
 ---
 

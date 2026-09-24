@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Вход — HR Tech</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/app.css" />
+  </head>
+  <body>
+    <main class="page-login">
+      <form class="login-card" id="login-form" novalidate>
+        <h1 class="login-brand">HR Tech</h1>
+        <p class="login-subtitle">Вход в сервис заявок сотрудников</p>
+
+        <div class="field">
+          <label for="login">Логин</label>
+          <input
+            id="login"
+            name="login"
+            type="text"
+            autocomplete="username"
+            placeholder="Логин"
+            required
+          />
+        </div>
+
+        <div class="field">
+          <label for="password">Пароль</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            placeholder="Пароль"
+            required
+          />
+        </div>
+
+        <p class="form-error" id="login-error" hidden></p>
+
+        <button class="btn btn-primary" id="login-submit" type="submit">Войти</button>
+      </form>
+    </main>
+
+    <script src="/static/js/session.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/login.js"></script>
+  </body>
+</html>

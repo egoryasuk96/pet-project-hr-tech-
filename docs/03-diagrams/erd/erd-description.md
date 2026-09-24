@@ -2,21 +2,15 @@
 
 **Продукт:** Employee Service  
 **ID:** ERD-00  
-**Версия:** 1.0  
-**Статус:** Baseline v1.0  
-**Связанные документы:** [README.md](./README.md), [Snapshot Model](./snapshot-model.md)
+**Версия:** 2.0  
+**Статус:** Target architecture (docs E0–E1)  
+**Связанные документы:** [README.md](./README.md), [ADR-LIVE-CFG-01](../architecture/adr-live-config.md), [erd-domain-model.md](./erd-domain-model.md)
 
 ---
 
 ## 1. Назначение
 
-Зафиксировать **концептуальную и логическую** модель данных Employee Service как мост между:
-
-- глоссарием и требованиями (Vision / требования);
-- BPMN / UML / Architecture;
-- будущим проектированием API и PostgreSQL (после Baseline).
-
-Модель должна быть достаточно детальной для будущего контракта API, но **не** превращаться в физическую схему БД раньше времени.
+Концептуальная и логическая модель данных Employee Service — мост между Vision / требованиями, BPMN / UML / Architecture и будущим API / PostgreSQL.
 
 ---
 
@@ -24,11 +18,9 @@
 
 | Уровень | Что включает ERD | Что исключено |
 | :--- | :--- | :--- |
-| **Conceptual** | Сущности предметной области, смысл, связи | Реализация |
-| **Logical** | Атрибуты, логические типы, кардинальности, обязательность, ограничения целостности, enum-статусы | PostgreSQL DDL, индексы, партиции |
-| **Physical** | — | Миграции, `jsonb` vs `text`, PK-стратегии СУБД |
-
-Логический тип `JSON` в Data Dictionary означает «структурированный документ на уровне анализа», а не выбор `jsonb` в PostgreSQL.
+| **Conceptual** | Сущности, смысл, связи | Реализация |
+| **Logical** | Атрибуты, кардинальности, инварианты | PostgreSQL DDL |
+| **Physical** | — | Миграции (последующие этапы) |
 
 ---
 
@@ -36,31 +28,31 @@
 
 | Класс | Назначение | Сущности |
 | :--- | :--- | :--- |
-| **Бизнес** | Предметные объекты пользователя | User (профиль), Request, Comment, ApprovalTask |
-| **Конфигурация** | Live-настройки admin (каталог, маршрут, справочники) | RequestType, RequestFieldDefinition, ApprovalRoute, ApprovalStage, StageAssignment, Dictionary, DictionaryItem |
-| **Runtime** | Состояние исполнения заявки | Request (status, currentStageNumber), RequestFieldValue, ApprovalTask |
-| **Snapshot / historical** | Замороженные копии и прикладной аудит | RouteInstance, RouteInstanceStage, RouteInstanceAssignment, FieldValueVersion, HistoryEvent |
-| **Технические** | RBAC, credentials; Notification (**Future / backlog**) | Role, UserRole, User.passwordHash, Notification |
+| **Организация** | Оргструктура | Company, Department, Employee |
+| **Identity / RBAC** | Учёт и роли | User, Role (одна роль на User) |
+| **Конфигурация процесса** | Live-настройки | Process, Status, Action, ProcessTransition, RequestType, RequestFieldDefinition, ApprovalRoute, ApprovalStage, StageAssignment, Dictionary* |
+| **Runtime** | Исполнение заявки | Request (`status_id`, `current_stage_id`), RequestFieldValue, ApprovalTask (`stage_id`) |
+| **Аудит** | История и комментарии | HistoryEvent, Comment |
+| **Future** | In-app уведомления | Notification (backlog) |
 
-Одна сущность может участвовать в нескольких классах (например, Request — бизнес + runtime). Классификация нужна, чтобы не смешивать **live config**, **working values** и **frozen snapshots**.
+**Нет класса Snapshot.** Устаревшие сущности (`RouteInstance*`, `FieldValueVersion`) — см. deprecated [snapshot-model.md](./snapshot-model.md).
 
 ---
 
-## 4. Границы модулей → данные (без микросервисов)
+## 4. Границы модулей → данные
 
-Архитектура — **modular monolith + одна PostgreSQL**. Логические модули владеют зонами данных, но не отдельными БД:
-
-| Модуль (Architecture) | Зона данных |
+| Модуль | Зона данных |
 | :--- | :--- |
-| Auth / Authorization | User, Role, UserRole |
-| Catalog / Admin Config | RequestType, FieldDefinition, Route/Stage/Assignment, Dictionary* |
+| Auth / Authorization | User, Role |
+| Org | Company, Department, Employee |
+| Catalog / Admin Config | Process*, RequestType, fields, Route/Stage/Assignment, Dictionary*, ProcessTransition |
 | Request | Request, RequestFieldValue, Comment |
-| Snapshot | RouteInstance*, FieldValueVersion |
-| Approval Engine | ApprovalTask (читает RouteInstance) |
+| Action Engine | ProcessTransition (live), available_actions / execute |
+| Approval Engine | ApprovalTask (читает **live** stages/assignments) |
 | Audit | HistoryEvent |
-| Notification | Notification (**Future / backlog**) |
+| Notification | Notification (backlog) |
 
-Транзакционные границы submit/approve (status + snapshots/tasks + audit; + notifications **Future / backlog** при BR-29) заданы Architecture ADR-TX-* и NFR-REL-01; ERD обеспечивает сущности для этих границ, не вводя очереди/outbox.
+Транзакции submit/approve: status + tasks + audit в одной БД-транзакции; без outbox/очередей.
 
 ---
 
@@ -68,29 +60,21 @@
 
 | Тема | Причина |
 | :--- | :--- |
-| Версии значений | **FieldValueVersion** по номеру submit; канон — [snapshot-model.md](./snapshot-model.md) |
-| Оргструктура / дерево руководителей | Out of scope; BR-12 — явные назначения |
+| RouteInstance / FieldValueVersion | ADR-LIVE-CFG-01 — отказ от snapshot |
+| Process versioning | Out of scope |
+| Auto-routing по manager | Out of scope; BR-12 |
+| BPM engine / Kafka / микросервисы | Out of scope |
 | Attachments, email/push | Out of scope Vision |
-| JWT / refresh sessions на сервере | Полная auth/JWT — **Future / backlog**; Baseline demo-auth не требует session entities |
-| Technical API logs | NFR-LOG-01; retention 14 дней (NFR-LOG-03 п.1); infra, не предметная ERD |
-| Optimistic locking / version columns | Не входит в MVP |
-| Параллельные этапы маршрута | Out of scope |
-| Физические индексы, soft-delete стратегии | Этап реализации / DDL |
+| Optimistic locking | Не входит в текущий scope |
 
 ---
 
-## 6. Связанные артефакты раздела
+## 6. Связанные артефакты
 
 - [erd-domain-model.md](./erd-domain-model.md)
-- [snapshot-model.md](./snapshot-model.md)
 - [data-dictionary.md](./data-dictionary.md)
 - [erd-traceability.md](./erd-traceability.md)
-
----
-
-## 7. Критерии готовности (DoD)
-
-См. [README.md §6](./README.md).
+- [snapshot-model.md](./snapshot-model.md) — Deprecated
 
 ---
 
@@ -98,4 +82,5 @@
 
 | Версия | Дата | Описание |
 | :--- | :--- | :--- |
-| 1.0 | 2026-09-19 | Первая версия ERD-00 |
+| 1.0 | 2026-09-19 | Первая версия со snapshot |
+| 2.0 | 2026-09-23 | Live config; org; process catalogs; без snapshot |

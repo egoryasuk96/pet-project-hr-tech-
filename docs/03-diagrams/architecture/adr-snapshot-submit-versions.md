@@ -2,39 +2,31 @@
 
 **Продукт:** Employee Service  
 **ID:** ADR-SNAP-01  
-**Версия:** 1.1  
-**Статус:** Baseline v1.0  
-**Связанные документы:** [Snapshot Model](../erd/snapshot-model.md), [architecture-description.md](./architecture-description.md), [Business Rules](../../02-requirements/business-rules.md)
+**Версия:** 1.2  
+**Статус:** **Superseded** by [ADR-LIVE-CFG-01](./adr-live-config.md)  
+**Связанные документы:** [Deprecated Snapshot Model](../erd/snapshot-model.md), [ADR-LIVE-CFG-01](./adr-live-config.md)
+
+> **Не использовать как актуальную архитектуру.** Документ сохранён для истории решений Baseline.
 
 ---
 
-## Контекст
+## Контекст (исторический)
 
-Для согласования нужно зафиксировать: (1) по какому маршруту идёт **конкретная** заявка; (2) с какими значениями полей принималось каждое решение. Ранняя модель «dual snapshot» с заменой current SchemaValueSnapshot при resubmit не сохраняла прошлые значения и смешивала два разных жизненных цикла в одном эссе по многим документам.
-
-В MVP нет admin UI для смены маршрута в runtime, но принцип изоляции запущенных заявок нужен для будущего ([backlog](../../backlog.md)).
-
-Открытый вопрос OQ-A / OQ-B (same stage vs restart after return) **закрыт** решением OQ-B.
+Для согласования фиксировались: (1) маршрут конкретной заявки; (2) значения полей на момент решения. Вариант B + OQ-B.
 
 ---
 
-## Решение (вариант B + OQ-B)
+## Решение (историческое, вариант B + OQ-B)
 
-1. **RouteInstance** создаётся **один раз** при первом successful submit и при resubmit **не** пересобирается.
-2. **FieldValueVersion** создаётся на каждый successful submit (номер отправки); решение согласующего привязано к версии; прошлые версии видны в истории (BR-24, UC-14).
-3. После return + resubmit согласование **начинается с первого этапа** RouteInstance (`currentStageNumber` → 1); новая версия получает **полный цикл** решений. Предыдущие решения остаются bound к предыдущим версиям (BR-06, OQ-B).
-4. Полная механика — только в [snapshot-model.md](../erd/snapshot-model.md); в BR/ERD/UML/ARCH — краткие ссылки.
+1. **RouteInstance** — один раз при первом submit; при resubmit не пересобирается.
+2. **FieldValueVersion** — на каждый successful submit; решение bound to version.
+3. После return + resubmit — с первого этапа; новая версия — полный цикл решений.
 
 ---
 
-## Последствия
+## Почему superseded
 
-| + | − |
-| :--- | :--- |
-| Прозрачная история значений и решений | Нужно хранить цепочку версий (объём данных) |
-| Маршрут стабилен для in-flight заявки | После каждой доработки все этапы проходят заново (нагрузка на согласующих) |
-| Все этапы видят актуальную FieldValueVersion | Переименование сущностей относительно старых черновиков RouteSnapshot / SchemaValueSnapshot |
-| Готовность к будущей админке без смены модели | Возможный компромисс (restart только при значимых полях) — идея в [backlog](../../backlog.md) |
+Для pet-project snapshot усложнял модель без необходимой ценности. Актуальная архитектура: **live** `ApprovalRoute` / stages / assignments и live `ProcessTransition`; см. [ADR-LIVE-CFG-01](./adr-live-config.md). Process versioning и snapshot — **out of scope**.
 
 ---
 
@@ -43,4 +35,5 @@
 | Версия | Дата | Описание |
 | :--- | :--- | :--- |
 | 1.0 | 2026-09-20 | Принят вариант B |
-| 1.1 | 2026-09-20 | Закрыт OQ-B: resubmit с первого этапа |
+| 1.1 | 2026-09-20 | Закрыт OQ-B |
+| 1.2 | 2026-09-23 | **Superseded** ADR-LIVE-CFG-01 |

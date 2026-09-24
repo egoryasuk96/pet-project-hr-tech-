@@ -12,3 +12,4 @@ venv/
 .idea/
 .DS_Store
 .cursor/settings.json
+.cursor/mcp.json

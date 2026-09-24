@@ -96,12 +96,12 @@ AUTH, NOTIF, ADMIN и часть CAB — [docs/backlog.md](../backlog.md).
 | Поле | Содержание |
 | :--- | :--- |
 | **Название** | Submit заявки |
-| **Описание** | Инициатор отправляет заявку из `draft` (первый submit) или `returned` (повторный). При первом submit создаётся экземпляр маршрута (BR-08). При любом успешном submit создаётся **версия** схемы и значений полей с номером отправки (BR-26); решение согласующего привязано к версии. Статус → `in_approval`. Создаются задачи **первого** этапа (при resubmit — тоже этап 1, BR-06). Перед submit — валидация по актуальной схеме и проверка маршрута (BR-18). Механика: [Snapshot Model](../03-diagrams/erd/snapshot-model.md) |
+| **Описание** | Инициатор отправляет заявку из `draft` (первый submit) или `returned` (повторный). Система читает **live** ApprovalRoute/Stage/Assignment (BR-08). Статус → `in_approval`; `current_stage_id` → первый live-этап. Создаются ApprovalTask из live StageAssignment (BR-08). При resubmit — снова этап 1 (BR-06). Валидация полей по live-схеме (BR-26) и маршрута (BR-18). Канон: [ADR-LIVE-CFG-01](../03-diagrams/architecture/adr-live-config.md) |
 | **Actor** | employee (инициатор) |
 | **Preconditions** | Статус `draft` или `returned`; обязательные поля валидны по актуальной схеме; маршрут валиден (BR-18); тип активен |
-| **Основной сценарий** | 1) Submit 2) Валидация полей по актуальной схеме 3) Проверка маршрута 4) Экземпляр маршрута (если первый) 5) Новая версия схемы и значений 6) Статус in_approval 7) Задачи этапа 8) История (in-app уведомления — [docs/backlog.md](../backlog.md)) |
+| **Основной сценарий** | 1) Submit 2) Валидация полей по live-схеме 3) Проверка live-маршрута 4) status_id → in_approval; current_stage_id → stage 1 5) ApprovalTask из live assignments 6) История (in-app — [backlog](../backlog.md)) |
 | **Альтернативы / исключения** | ERR_VALIDATION; ERR_ROUTE_CONFIG; ERR_INVALID_STATE; ERR_INACTIVE_TYPE |
-| **Postconditions** | BR-20; задачи созданы; версия значений зафиксирована; маршрут по BR-08/BR-22 |
+| **Postconditions** | BR-20; задачи созданы; working values сохранены (BR-26) |
 | **Связи** | BR-08, BR-18, BR-20, BR-22, BR-26; UC-05; AC-APP-02, AC-APP-02b, AC-APP-03, AC-APP-08, AC-APP-10, AC-DRAFT-01, AC-DRAFT-02; уведомления — [docs/backlog.md](../backlog.md) |
 
 ### FR-REQ-04 — Просмотр заявки
@@ -168,10 +168,10 @@ AUTH, NOTIF, ADMIN и часть CAB — [docs/backlog.md](../backlog.md).
 | Поле | Содержание |
 | :--- | :--- |
 | **Название** | Resubmit из returned |
-| **Описание** | После редактирования инициатор выполняет submit; согласование продолжается с **первого** этапа RouteInstance (маршрут не rebuild; новая FieldValueVersion) |
+| **Описание** | После редактирования инициатор выполняет submit; согласование продолжается с **первого** live-этапа; `current_stage_id` обновляется; новые ApprovalTask (BR-06, BR-22) |
 | **Actor** | employee (инициатор) |
 | **Preconditions** | Статус `returned`; BR-06, BR-22 |
-| **Основной сценарий** | Аналогично FR-REQ-03 (ветка returned); `currentStageNumber` → 1 |
+| **Основной сценарий** | Аналогично FR-REQ-03 (ветка returned); `current_stage_id` → первый live-этап |
 | **Альтернативы / исключения** | Как у FR-REQ-03 |
 | **Postconditions** | `in_approval`; задачи этапа 1 созданы заново |
 | **Связи** | BR-06, BR-22; UC-05; AC-APP-08 |
@@ -244,11 +244,11 @@ AUTH, NOTIF, ADMIN и часть CAB — [docs/backlog.md](../backlog.md).
 | Поле | Содержание |
 | :--- | :--- |
 | **Название** | Переход после approve |
-| **Описание** | Если после approve есть следующий этап в RouteInstance, система делает его текущим и создаёт задачи назначенным согласующим |
+| **Описание** | Если после approve есть следующий live ApprovalStage, система обновляет `current_stage_id` и создаёт задачи из live StageAssignment (approve_advance) |
 | **Actor** | Система |
 | **Preconditions** | Успешный approve; есть следующий этап (BR-02) |
 | **Основной сценарий** | 1) Определение next step 2) Создание задач 3) История перехода |
-| **Альтернативы / исключения** | Нет назначений на следующем этапе в RouteInstance — не должно возникать, если RouteInstance валиден; иначе ERR_INTERNAL + лог |
+| **Альтернативы / исключения** | Нет назначений на следующем live-этапе — не должно возникать при валидном маршруте (BR-18); иначе ERR_INTERNAL + лог |
 | **Postconditions** | Заявка остаётся `in_approval` |
 | **Связи** | BR-02, BR-03; AC-APP-05 |
 
@@ -258,7 +258,7 @@ AUTH, NOTIF, ADMIN и часть CAB — [docs/backlog.md](../backlog.md).
 | **Название** | Финальный approve |
 | **Описание** | Approve на последнем этапе → статус `approved` |
 | **Actor** | Система |
-| **Preconditions** | Approve на последнем этапе RouteInstance |
+| **Preconditions** | Approve на последнем live-этапе маршрута |
 | **Основной сценарий** | 1) Статус approved 2) История |
 | **Альтернативы / исключения** | — |
 | **Postconditions** | BR-17; задач открытых нет |

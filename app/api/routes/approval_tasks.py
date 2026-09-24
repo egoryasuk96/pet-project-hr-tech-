@@ -1,8 +1,10 @@
-"""Approval task queue, request card, and decision endpoints."""
+"""Approval task endpoints — disabled compatibility stubs (not Target-active).
+
+Target approver flow: GET /requests/{id} → available-actions → POST .../actions/{id}.
+These routes remain for compatibility and always raise INVALID_STATE (409).
+"""
 
 from __future__ import annotations
-
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
@@ -24,22 +26,27 @@ router = APIRouter(prefix="/approval-tasks", tags=["ApprovalTasks"])
 
 _approver = require_roles(RoleCode.APPROVER)
 
+_STUB_NOTE = (
+    "Disabled compatibility stub — not Target-active. "
+    "Always returns 409 INVALID_STATE. "
+    "Use GET /requests/{id}/available-actions and "
+    "POST /requests/{id}/actions/{action_id} instead."
+)
+
 
 @router.get(
     "",
     response_model=list[ApprovalTaskListItem],
     status_code=status.HTTP_200_OK,
-    summary="List approval tasks",
-    description=(
-        "UC-07 / FR-APP-01 / BR-14. "
-        "Returns open approval tasks assigned to the current approver. "
-        "Empty queue is 200 and []."
-    ),
+    deprecated=True,
+    summary="[Disabled stub] List approval tasks",
+    description=_STUB_NOTE,
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        403: {"model": ErrorResponse, "description": "ERR_FORBIDDEN"},
-        422: {"model": ErrorResponse, "description": "ERR_VALIDATION"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN"},
+        409: {"model": ErrorResponse, "description": "INVALID_STATE — disabled stub"},
+        422: {"model": ErrorResponse, "description": "VALIDATION"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def list_approval_tasks(
@@ -60,24 +67,19 @@ def list_approval_tasks(
     "/{task_id}",
     response_model=ApprovalTaskCardResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get an approval task and request card",
-    description=(
-        "UC-07 / FR-APP-02 / BR-14. "
-        "Returns an assigned task in any status and the full snapshot-based request card. "
-        "Available actions are returned only for an actionable open task."
-    ),
+    deprecated=True,
+    summary="[Disabled stub] Get an approval task and request card",
+    description=_STUB_NOTE,
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        403: {
-            "model": ErrorResponse,
-            "description": "ERR_FORBIDDEN / ERR_FORBIDDEN_APPROVAL",
-        },
-        422: {"model": ErrorResponse, "description": "ERR_VALIDATION"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN / FORBIDDEN_APPROVAL"},
+        409: {"model": ErrorResponse, "description": "INVALID_STATE — disabled stub"},
+        422: {"model": ErrorResponse, "description": "VALIDATION"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def get_approval_task(
-    task_id: UUID,
+    task_id: int,
     session: Session = Depends(get_db),
     user: User = Depends(_approver),
 ) -> ApprovalTaskCardResponse:
@@ -88,28 +90,19 @@ def get_approval_task(
     "/{task_id}/approve",
     response_model=DecisionResult,
     status_code=status.HTTP_200_OK,
-    summary="Approve request",
-    description=(
-        "UC-07 / FR-APP-03 / BR-03 / BR-21. "
-        "Approves the request at the current approval stage. "
-        "Only the assigned approver can approve; self-approval is forbidden."
-    ),
+    deprecated=True,
+    summary="[Disabled stub] Approve request",
+    description=_STUB_NOTE,
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        403: {
-            "model": ErrorResponse,
-            "description": "ERR_FORBIDDEN / ERR_FORBIDDEN_APPROVAL",
-        },
-        409: {
-            "model": ErrorResponse,
-            "description": "ERR_TASK_DONE / ERR_INVALID_STATE",
-        },
-        422: {"model": ErrorResponse, "description": "ERR_VALIDATION"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN / FORBIDDEN_APPROVAL"},
+        409: {"model": ErrorResponse, "description": "INVALID_STATE — disabled stub"},
+        422: {"model": ErrorResponse, "description": "VALIDATION"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def approve_task(
-    task_id: UUID,
+    task_id: int,
     body: DecisionCommentInput,
     session: Session = Depends(get_db),
     user: User = Depends(_approver),
@@ -121,28 +114,19 @@ def approve_task(
     "/{task_id}/return",
     response_model=DecisionResult,
     status_code=status.HTTP_200_OK,
-    summary="Return request for revision",
-    description=(
-        "UC-09 / FR-APP-05 / BR-05 / BR-21 / BR-25. "
-        "Returns the request to the initiator for revision. "
-        "Only the assigned approver can return; a non-empty comment is required."
-    ),
+    deprecated=True,
+    summary="[Disabled stub] Return request for revision",
+    description=_STUB_NOTE,
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        403: {
-            "model": ErrorResponse,
-            "description": "ERR_FORBIDDEN / ERR_FORBIDDEN_APPROVAL",
-        },
-        409: {
-            "model": ErrorResponse,
-            "description": "ERR_TASK_DONE / ERR_INVALID_STATE",
-        },
-        422: {"model": ErrorResponse, "description": "ERR_VALIDATION"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN / FORBIDDEN_APPROVAL"},
+        409: {"model": ErrorResponse, "description": "INVALID_STATE — disabled stub"},
+        422: {"model": ErrorResponse, "description": "VALIDATION"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def return_task(
-    task_id: UUID,
+    task_id: int,
     body: DecisionCommentInput,
     session: Session = Depends(get_db),
     user: User = Depends(_approver),
@@ -154,28 +138,19 @@ def return_task(
     "/{task_id}/reject",
     response_model=DecisionResult,
     status_code=status.HTTP_200_OK,
-    summary="Reject request",
-    description=(
-        "UC-08 / FR-APP-04 / BR-04 / BR-21 / BR-25. "
-        "Rejects the request and completes its approval route. "
-        "Only the assigned approver can reject; a non-empty comment is required."
-    ),
+    deprecated=True,
+    summary="[Disabled stub] Reject request",
+    description=_STUB_NOTE,
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        403: {
-            "model": ErrorResponse,
-            "description": "ERR_FORBIDDEN / ERR_FORBIDDEN_APPROVAL",
-        },
-        409: {
-            "model": ErrorResponse,
-            "description": "ERR_TASK_DONE / ERR_INVALID_STATE",
-        },
-        422: {"model": ErrorResponse, "description": "ERR_VALIDATION"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN / FORBIDDEN_APPROVAL"},
+        409: {"model": ErrorResponse, "description": "INVALID_STATE — disabled stub"},
+        422: {"model": ErrorResponse, "description": "VALIDATION"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def reject_task(
-    task_id: UUID,
+    task_id: int,
     body: DecisionCommentInput,
     session: Session = Depends(get_db),
     user: User = Depends(_approver),

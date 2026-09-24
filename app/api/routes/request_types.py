@@ -1,9 +1,5 @@
 """Active request type catalog and live form schema."""
 
-from __future__ import annotations
-
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
@@ -25,11 +21,11 @@ _catalog_reader = require_roles(RoleCode.EMPLOYEE, RoleCode.ADMIN)
     response_model=list[RequestTypeSummary],
     status_code=status.HTTP_200_OK,
     summary="List active request types",
-    description="UC-03 / FR-CAT-01. Returns only is_active=true. Empty catalog is 200 and [].",
+    description="UC-03 / FR-CAT-01. Returns only active=true. Empty catalog is 200 and [].",
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        403: {"model": ErrorResponse, "description": "ERR_FORBIDDEN"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def list_request_types(
@@ -44,16 +40,16 @@ def list_request_types(
     response_model=RequestTypeSummary,
     status_code=status.HTTP_200_OK,
     summary="Get an active request type",
-    description="UC-03 / FR-CAT-02. Missing or inactive type → 404 ERR_NOT_FOUND.",
+    description="UC-03 / FR-CAT-02. Missing or inactive type → 404 NOT_FOUND.",
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        403: {"model": ErrorResponse, "description": "ERR_FORBIDDEN"},
-        404: {"model": ErrorResponse, "description": "ERR_NOT_FOUND"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN"},
+        404: {"model": ErrorResponse, "description": "NOT_FOUND"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def get_request_type(
-    type_id: UUID,
+    type_id: int,
     session: Session = Depends(get_db),
     _: User = Depends(_catalog_reader),
 ) -> RequestTypeSummary:
@@ -70,14 +66,14 @@ def get_request_type(
         "Active dictionary items are embedded for catalog fields."
     ),
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        403: {"model": ErrorResponse, "description": "ERR_FORBIDDEN"},
-        404: {"model": ErrorResponse, "description": "ERR_NOT_FOUND"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN"},
+        404: {"model": ErrorResponse, "description": "NOT_FOUND"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def get_request_type_schema(
-    type_id: UUID,
+    type_id: int,
     session: Session = Depends(get_db),
     _: User = Depends(_catalog_reader),
 ) -> RequestTypeSchemaOut:

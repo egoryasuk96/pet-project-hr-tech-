@@ -1,11 +1,6 @@
-"""Domain models and closed enums (Stage 5.2). Business services are later stages."""
+"""Domain models and closed enums (Target E2). Business services are separate."""
 
-from app.domain.approval import (
-    ApprovalTask,
-    RouteInstance,
-    RouteInstanceAssignment,
-    RouteInstanceStage,
-)
+from app.domain.approval import ApprovalTask
 from app.domain.audit import Comment, HistoryEvent
 from app.domain.catalog import Dictionary, DictionaryItem, RequestFieldDefinition, RequestType
 from app.domain.enums import (
@@ -15,15 +10,19 @@ from app.domain.enums import (
     CommentKind,
     FieldDataType,
     NotificationEventType,
+    ProcessTransitionEffect,
     RequestStatus,
     RoleCode,
 )
-from app.domain.identity import Role, User, UserRole
+from app.domain.identity import Role, User
 from app.domain.notification import Notification
-from app.domain.request import FieldValueVersion, Request, RequestFieldValue
+from app.domain.org import Company, Department, Employee
+from app.domain.process import Action, Process, ProcessTransition, Status
+from app.domain.request import Request, RequestFieldValue
 from app.domain.routing import ApprovalRoute, ApprovalStage, StageAssignment
 
 __all__ = [
+    "Action",
     "ApprovalDecision",
     "ApprovalRoute",
     "ApprovalStage",
@@ -32,13 +31,18 @@ __all__ = [
     "AssignmentKind",
     "Comment",
     "CommentKind",
+    "Company",
+    "Department",
     "Dictionary",
     "DictionaryItem",
+    "Employee",
     "FieldDataType",
-    "FieldValueVersion",
     "HistoryEvent",
     "Notification",
     "NotificationEventType",
+    "Process",
+    "ProcessTransition",
+    "ProcessTransitionEffect",
     "Request",
     "RequestFieldDefinition",
     "RequestFieldValue",
@@ -46,10 +50,7 @@ __all__ = [
     "RequestType",
     "Role",
     "RoleCode",
-    "RouteInstance",
-    "RouteInstanceAssignment",
-    "RouteInstanceStage",
     "StageAssignment",
+    "Status",
     "User",
-    "UserRole",
 ]

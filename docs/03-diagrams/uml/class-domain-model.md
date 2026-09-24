@@ -2,15 +2,15 @@
 
 **Продукт:** Employee Service  
 **ID:** UML-CL-01  
-**Версия:** 1.0  
-**Статус:** Baseline v1.0  
-**Связанные документы:** [uml-description.md](./uml-description.md), [Snapshot Model](../erd/snapshot-model.md)
+**Версия:** 1.1  
+**Статус:** Target architecture (docs E0–E1)  
+**Связанные документы:** [uml-description.md](./uml-description.md), [erd-domain-model.md](../erd/erd-domain-model.md), [ADR-LIVE-CFG-01](../architecture/adr-live-config.md)
 
 ---
 
 ## 1. Назначение
 
-Аналитическая (conceptual) модель сущностей предметной области Employee Service — мост между глоссарием / BR и ERD.
+Аналитическая (conceptual) модель сущностей предметной области Employee Service — мост между глоссарием / BR и ERD v2.
 
 ### Важно: это не ERD
 
@@ -18,67 +18,73 @@
 | :--- | :--- |
 | Классы анализа, смысл предметной области | Таблицы, колонки, типы SQL |
 | Связи и кратности на уровне бизнеса | PK / FK / индексы / нормализация |
-| Без DTO, слоёв приложения, API | Физическая схема PostgreSQL |
 
-Новые бизнес-правила **не вводятся**. Атрибуты — на уровне анализа (без технических id-стратегий).
+Новые бизнес-правила **не вводятся**.
 
 ---
 
 ## 2. Каталог классов
 
-### 2.1. Пользователи и роли
+### 2.1. Пользователи, роли, org
 
 | Класс | Атрибуты (анализ) | Смысл |
 | :--- | :--- | :--- |
-| **User** | fullName, email, position, department, active | Пользователь системы |
-| **Role** | code (`employee` / `approver` / `admin`) | Системная роль; у User — множество ролей (BR-16) |
+| **User** | login, active | Пользователь системы |
+| **Role** | code (`employee` / `approver` / `admin`) | Системная роль |
+| **Company** | name, active | Организация (демо: одна) |
+| **Department** | name, active | Подразделение |
+| **Employee** | employeeNumber, name, position, active | Кадровая запись; не auto-routing |
 
-### 2.2. Каталог и конфигурация
+### 2.2. Процесс и переходы (live)
+
+| Класс | Атрибуты (анализ) | Смысл |
+| :--- | :--- | :--- |
+| **Process** | code, name, active | Контейнер процесса |
+| **Status** | code, name | Статус заявки (сущность) |
+| **Action** | code, name | Действие (submit, approve, …) |
+| **ProcessTransition** | effect (`status_only` / `approve_advance`) | Live-переход process+status+action+role |
+
+### 2.3. Каталог и конфигурация маршрута (live)
 
 | Класс | Атрибуты (анализ) | Смысл |
 | :--- | :--- | :--- |
 | **RequestType** | name, description, isActive | Тип заявки / услуга каталога |
-| **RequestFieldDefinition** | code, name, dataType, required, order | Поле схемы формы типа |
-| **Dictionary** | name | Справочник |
-| **DictionaryItem** | code, name, isActive | Элемент справочника |
-| **ApprovalRoute** | — | Маршрут типа (конфиг) |
-| **ApprovalStage** | name, sequence | Этап маршрута (конфиг) |
-| **StageAssignment** | assignmentKind (role / user) | Явное назначение на этап (BR-12) |
+| **RequestFieldDefinition** | code, name, dataType, required, order | Поле live-схемы формы |
+| **Dictionary** / **DictionaryItem** | name, code, isActive | Справочники |
+| **ApprovalRoute** | — | Live-маршрут типа |
+| **ApprovalStage** | name, sequence | Live-этап |
+| **StageAssignment** | assignmentKind (role / user) | Явное назначение (BR-12) |
 
-### 2.3. Экземпляр заявки и snapshot-сущности
-
-| Класс | Атрибуты (анализ) | Смысл |
-| :--- | :--- | :--- |
-| **Request** | status, currentStageNumber | Экземпляр заявки; инициатор = User |
-| **RequestFieldValue** | fieldCode, value | Working values заявки (live schema в draft/returned); не FieldValueVersion. Канон: Snapshot Model / DD §4.2 |
-| **RouteInstance** | stagesOrder, assignmentsCopy | Экземпляр маршрута при **первом** submit (BR-08); при resubmit не rebuild (BR-22). Ранее: RouteSnapshot |
-| **FieldValueVersion** | submitNumber, fieldSchemaCopy, fieldValuesCopy | Версия схемы+значений на каждый successful submit (BR-26); решение bound to version. Ранее: SchemaValueSnapshot |
-
-### 2.4. Согласование, комментарии, уведомления, аудит
+### 2.4. Экземпляр заявки (runtime)
 
 | Класс | Атрибуты (анализ) | Смысл |
 | :--- | :--- | :--- |
-| **ApprovalTask** | status (`open` / `completed` / `cancelled`), stageNumber | Задача согласующего по этапу RouteInstance |
-| **Comment** | text, kind (free / decision) | Свободный комментарий инициатора или комментарий решения |
-| **Notification** | text, read, eventType | In-app уведомление (BR-11) — **Future / backlog** |
+| **Request** | statusId, currentStageId | Экземпляр заявки; инициатор = User |
+| **RequestFieldValue** | fieldCode, value | Working values (единственный носитель значений) |
+
+### 2.5. Согласование, комментарии, аудит
+
+| Класс | Атрибуты (анализ) | Смысл |
+| :--- | :--- | :--- |
+| **ApprovalTask** | status, stageId, comment, createdAt, completedAt | Задача на live `stageId`; assignee = User |
+| **Comment** | text, kind (free / decision) | Свободный или decision-комментарий |
+| **Notification** | text, read, eventType | In-app — **Future / backlog** |
 | **HistoryEvent** | action, fromState, toState, at, comment | Событие истории (BR-24) |
+
+**Удалено из модели:** RouteInstance, FieldValueVersion — [ADR-LIVE-CFG-01](../architecture/adr-live-config.md).
 
 ---
 
 ## 3. Ключевые связи и ограничения (notes)
 
-| Тема | Ограничение (существующие BR) |
+| Тема | Ограничение |
 | :--- | :--- |
-| RouteInstance | `Request` имеет не более одного после первого submit; создаётся только из `draft` |
-| RequestFieldValue | Working values; мутабельны в `draft`/`returned` по live schema (BR-26) |
-| FieldValueVersion | Append-only на каждый successful submit; решение bound to version |
-| Задачи | `ApprovalTask` из назначений **RouteInstance**, не из live `StageAssignment` |
-| First-approve | При approve прочие `open` задачи того же stageNumber → `cancelled` (BR-03) |
-| Self-approval | Исполнитель задачи не может быть инициатором той же `Request` (BR-21) |
-| Comment on decision | Для decision reject/return `Comment.text` обязателен (BR-25); для approve — нет |
-| Visibility | Сотрудник видит свои Request; approver — по своим Task (BR-01, BR-14) |
-| Config isolation | Изменение live-маршрута не изменяет существующие `RouteInstance` (BR-09; admin — backlog) |
-| Канон | [Snapshot Model](../erd/snapshot-model.md) |
+| Live route | ApprovalTask создаётся из **live** StageAssignment текущего stage |
+| current_stage_id | Request.currentStageId → ApprovalStage; согласован с task.stageId |
+| RequestFieldValue | Working values; мутабельны в draft/returned по live schema (BR-26) |
+| First-approve | При approve прочие open задачи того же stageId → cancelled (BR-03) |
+| Self-approval | Assignee ≠ initiator Request (BR-21) |
+| Config caveat | Изменение live-маршрута **может** затронуть in-flight (ADR-LIVE-CFG-01) |
 
 ---
 
@@ -88,109 +94,51 @@
 classDiagram
   direction TB
 
-  class User {
-    fullName
-    email
-    position
-    department
-    active
-  }
-  class Role {
-    code
-  }
-  class RequestType {
-    name
-    description
-    isActive
-  }
-  class RequestFieldDefinition {
-    code
-    name
-    dataType
-    required
-    order
-  }
-  class Dictionary {
-    name
-  }
-  class DictionaryItem {
-    code
-    name
-    isActive
-  }
+  class User { login active }
+  class Role { code }
+  class Company { name active }
+  class Department { name active }
+  class Employee { employeeNumber name position active }
+  class Process { code name active }
+  class Status { code name }
+  class Action { code name }
+  class ProcessTransition { effect }
+  class RequestType { name description isActive }
+  class RequestFieldDefinition { code name dataType required order }
   class ApprovalRoute
-  class ApprovalStage {
-    name
-    sequence
-  }
-  class StageAssignment {
-    assignmentKind
-  }
-  class Request {
-    status
-    currentStageNumber
-  }
-  class RequestFieldValue {
-    fieldCode
-    value
-  }
-  class RouteInstance {
-    stagesOrder
-    assignmentsCopy
-  }
-  class FieldValueVersion {
-    submitNumber
-    fieldSchemaCopy
-    fieldValuesCopy
-  }
-  class ApprovalTask {
-    status
-    stageNumber
-  }
-  class Comment {
-    text
-    kind
-  }
-  class Notification {
-    text
-    read
-    eventType
-  }
-  class HistoryEvent {
-    action
-    fromState
-    toState
-    at
-    comment
-  }
+  class ApprovalStage { name sequence }
+  class StageAssignment { assignmentKind }
+  class Request { statusId currentStageId }
+  class RequestFieldValue { fieldCode value }
+  class ApprovalTask { status stageId comment createdAt completedAt }
+  class Comment { text kind }
+  class HistoryEvent { action fromState toState at comment }
 
-  User "many" -- "many" Role : has
-  User "1" --> "many" Request : initiates
-  RequestType "1" --> "many" RequestFieldDefinition : defines
-  RequestType "1" --> "0..1" ApprovalRoute : has
-  ApprovalRoute "1" --> "many" ApprovalStage : ordered
-  ApprovalStage "1" --> "many" StageAssignment : assigns
-  StageAssignment --> Role : byRole
-  StageAssignment --> User : byUser
-  RequestFieldDefinition --> Dictionary : optional
-  Dictionary "1" --> "many" DictionaryItem : contains
+  User --> Role : has
+  Company --> Department : has
+  Department --> Employee : has
+  Employee --> User : account
+  Process --> ProcessTransition : defines
+  Status --> ProcessTransition : from/to
+  Action --> ProcessTransition : via
+  RequestType --> RequestFieldDefinition : defines
+  RequestType --> ApprovalRoute : has
+  ApprovalRoute --> ApprovalStage : ordered
+  ApprovalStage --> StageAssignment : assigns
+  RequestType --> Request : typedAs
+  User --> Request : initiates
+  Status --> Request : current
+  ApprovalStage --> Request : currentStage
+  Request --> RequestFieldValue : workingValues
+  Request --> ApprovalTask : has
+  ApprovalStage --> ApprovalTask : forStage
+  User --> ApprovalTask : assignee
+  Request --> Comment : has
+  Request --> HistoryEvent : auditedBy
 
-  RequestType "1" --> "many" Request : typedAs
-  Request "1" --> "0..*" RequestFieldValue : workingValues
-  Request "1" --> "0..1" RouteInstance : firstSubmit
-  Request "1" --> "0..*" FieldValueVersion : eachSubmit
-  Request "1" --> "many" ApprovalTask : has
-  ApprovalTask --> User : assignee
-  ApprovalTask --> FieldValueVersion : decidedOn
-  Request "1" --> "many" Comment : has
-  Request "1" --> "many" HistoryEvent : auditedBy
-  User "1" --> "many" Notification : receives
-
-  note for RequestFieldValue "Working values (draft/returned).\nНе FieldValueVersion. См. Snapshot Model."
-  note for RouteInstance "Создаётся только при первом submit (BR-08).\nПри resubmit не rebuild (BR-22).\nКонфиг не ретроактивен (BR-09)."
-  note for FieldValueVersion "Новая версия на каждый successful submit (BR-26).\nРешение bound to version. См. Snapshot Model."
-  note for ApprovalTask "First-approve: прочие open → cancelled (BR-03).\nИсполнитель ≠ инициатор Request (BR-21)."
-  note for Comment "decision reject/return: text обязателен (BR-25)."
+  note for RequestFieldValue "Working values only.\nЕдинственный носитель значений."
+  note for ApprovalTask "stageId → live ApprovalStage.\nFirst-approve (BR-03).\nSelf-approval ban (BR-21)."
+  note for ProcessTransition "Live config.\nIn-flight caveat (ADR-LIVE-CFG-01)."
 ```
 
 ---
@@ -199,17 +147,23 @@ classDiagram
 
 | Тип | ID |
 | :--- | :--- |
-| **UC** | косвенно UC-03…UC-15 (структура предметной области) |
-| **FR** | FR-CAT-*, FR-REQ-*, FR-APP-*, FR-AUDIT-*; FR-ADMIN-01…06, FR-NOTIF-* — **Future / backlog** где применимо |
-| **BR** | BR-01, BR-03, BR-08, BR-09, BR-11–16, BR-21, BR-22, BR-24–27 |
-| **AC** | AC-APP-08…10b, AC-DRAFT-01, AC-DRAFT-02, AC-ACC-* (через visibility/self-approval) |
-| **Глоссарий** | термины Vision / глоссария |
+| **UC** | UC-03…UC-15 (структура предметной области) |
+| **FR** | FR-CAT-*, FR-REQ-*, FR-APP-*, FR-AUDIT-* |
+| **BR** | BR-01, BR-03, BR-08, BR-09, BR-12, BR-21, BR-22, BR-24–27 |
+| **ERD** | [erd-domain-model.md](../erd/erd-domain-model.md) v2 |
 
 ---
 
 ## 6. Границы
 
-- Нет таблиц БД, PK/FK, индексов, миграций.
+- Нет RouteInstance / FieldValueVersion.
 - Нет API DTO и слоёв приложения.
-- Нет параллельных этапов и оргструктурного auto-routing (out of scope Vision).
-- Новые сущности «для удобства реализации» не добавляются.
+
+---
+
+## История изменений
+
+| Версия | Дата | Описание |
+| :--- | :--- | :--- |
+| 1.0 | 2026-09-19 | Первая версия со snapshot |
+| 1.1 | 2026-09-23 | ERD v2; Process/Status/Action; org; snapshot removed |

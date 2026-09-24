@@ -35,16 +35,16 @@
 | Этап | Состояние |
 |------|-----------|
 | Аналитическая документация | Baseline готов |
-| API-контракт (OpenAPI) | Baseline готов (`docs/04-api/`) |
-| Core API + Approval E2E | Готово (Stage 5.3 + Approval) |
+| API-контракт (OpenAPI) | Frozen Target (`docs/04-api/`) |
+| Core API + Approval E2E | Готово (Stage 5.3 + Action Engine) |
 | Backend polish (history / cancel / comments) | Stage 6.1 |
-| Frontend (static HTML/JS) | Следующий этап (Stage 6.2+) |
-| In-app Notifications | Backlog (не в текущем scope) |
+| Frontend (static HTML/JS) | Частично: Login, My Requests, Request Detail (available-actions / execute), Notifications. Create UI / Admin UI / Approver Queue — не реализованы |
+| In-app Notifications | Target API + UI список |
 | Деплой (Render + Neon) | Запланировано |
 
 ## Стек
 
-FastAPI + PostgreSQL. Auth runtime: JWT (`POST /auth/login`, Bearer). Лёгкий веб-клиент (static HTML/JS от того же FastAPI) — следующий этап; пока UI не реализован.
+FastAPI + PostgreSQL. Auth runtime: JWT (`POST /auth/login`, Bearer, без refresh). Лёгкий веб-клиент — static HTML/JS от того же FastAPI (реализованный срез: Login, My Requests, Request Detail, Notifications).
 
 ## Локальная БД (Stage 5.2)
 
@@ -106,7 +106,7 @@ POST /auth/login
 
 Дальше: `Authorization: Bearer <access_token>`.
 
-Реализованные endpoint'ы:
+Реализованные endpoint'ы (ядро):
 
 - `POST /auth/login`
 - `GET /me`
@@ -117,15 +117,15 @@ POST /auth/login
 - `GET /requests`
 - `GET /requests/{request_id}`
 - `PATCH /requests/{request_id}`
-- `POST /requests/{request_id}/submit`
-- `POST /requests/{request_id}/cancel`
+- `GET /requests/{request_id}/available-actions`
+- `POST /requests/{request_id}/actions/{action_id}`
 - `POST /requests/{request_id}/comments`
 - `GET /requests/{request_id}/history`
-- `GET /approval-tasks`
-- `GET /approval-tasks/{task_id}`
-- `POST /approval-tasks/{task_id}/approve`
-- `POST /approval-tasks/{task_id}/return`
-- `POST /approval-tasks/{task_id}/reject`
+- Notifications API (list / mark read)
+
+Primary mutation: Action Engine (`available-actions` + `actions/{action_id}`). Legacy aliases `POST .../submit` и `POST .../cancel` — deprecated thin wrappers. `/approval-tasks/*/approve|return|reject` — disabled stubs (не primary path).
+
+Полный контракт: [docs/04-api/openapi.yaml](docs/04-api/openapi.yaml).
 
 Тесты без PostgreSQL (Stage 5.2) и API-тесты:
 

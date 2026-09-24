@@ -2,9 +2,9 @@
 
 **Продукт:** Employee Service  
 **ID:** ARCH-00  
-**Версия:** 1.2  
-**Статус:** Baseline v1.0  
-**Связанные документы:** [BPMN](../bpmn/bpmn-description.md), [UML](../uml/uml-description.md), [Snapshot Model](../erd/snapshot-model.md), [ADR snapshot](./adr-snapshot-submit-versions.md), [ADR demo role](./adr-demo-role-header.md), [ADR static web](./adr-static-web-client.md), [Vision](../../01-vision-and-scope/vision-scope.md)
+**Версия:** 1.4  
+**Статус:** Target architecture (Frozen Target)  
+**Связанные документы:** [BPMN](../bpmn/bpmn-description.md), [UML](../uml/uml-description.md), [ADR-LIVE-CFG-01](./adr-live-config.md), [ADR-ACTION-01](./adr-configurable-actions.md), [ADR-AUTH-JWT-01](./adr-jwt-core-api.md), [ADR-UI-01](./adr-static-web-client.md), [Vision](../../01-vision-and-scope/vision-scope.md)
 
 ---
 
@@ -25,7 +25,8 @@
 | **Трассировка** | Ссылки на UC / FR / BR / AC / NFR / RBAC |
 | **Требование vs ADR** | Зафиксированное в Vision / требованиях — требование; иное — **ADR / предположение MVP** |
 | **Логические модули** | Разбиение монолита, не микросервисы |
-| **Snapshot** | Полная механика только в [Snapshot Model](../erd/snapshot-model.md) |
+| **Live config** | [ADR-LIVE-CFG-01](./adr-live-config.md); snapshot deprecated |
+| **Auth** | JWT Bearer ([ADR-AUTH-JWT-01](./adr-jwt-core-api.md)); demo-header Superseded |
 
 ### 2.1. ADR
 
@@ -33,15 +34,24 @@
 | :--- | :--- |
 | **Требование** | Vision / FR / BR / NFR / AC / RBAC / BPMN / UML |
 | **ADR (MVP)** | Архитектурное решение; **не** новый FR/BR/NFR |
-| **Superseded** | Решение сохранено в тексте, не действует для Baseline; ссылка на замену |
+| **Superseded** | Решение сохранено в тексте, не действует для Target; ссылка на замену |
 
-Отдельные ADR Baseline:
+Отдельные ADR Target:
 
-- [ADR-SNAP-01](./adr-snapshot-submit-versions.md) — вариант B: RouteInstance + FieldValueVersion;
-- [ADR-AUTH-DEMO-01](./adr-demo-role-header.md) — демо-роль через заголовок + экран выбора роли;
-- [ADR-UI-01](./adr-static-web-client.md) — static HTML+JS от FastAPI; React SPA superseded.
+- [ADR-LIVE-CFG-01](./adr-live-config.md) — live config; supersedes ADR-SNAP-01;
+- [ADR-ACTION-01](./adr-configurable-actions.md) — ProcessTransition, Action Engine;
+- [ADR-ORG-01](./adr-org-model.md) — Company/Department/Employee; one `role_id`;
+- [ADR-ID-01](./adr-id-strategy.md) — User UUID; business entities integer PK;
+- [ADR-ERR-03](./adr-error-envelope.md) — Target error envelope (`error.{code,message,details}`);
+- [ADR-ERR-01](./security-and-crosscutting.md) / [ADR-ERR-02](./security-and-crosscutting.md) — HTTP mapping и validation-before-TX (не envelope);
+- [ADR-AUTH-JWT-01](./adr-jwt-core-api.md) — JWT Core API (Accepted);
+- [ADR-UI-01](./adr-static-web-client.md) — static HTML+JS от FastAPI.
 
-Прочие ADR (модули, TX) — в файлах Architecture. Superseded: ADR-CNT-03, ADR-SEC-02, ADR-SEC-03 (Baseline JWT/SPA).
+**Superseded / HISTORICAL:**
+
+- [ADR-AUTH-DEMO-01](./adr-demo-role-header.md) — demo-header stub → JWT;
+- [ADR-SNAP-01](./adr-snapshot-submit-versions.md) — snapshot → live config;
+- ADR-CNT-03, ADR-SEC-02 (React SPA JWT storage).
 
 ---
 
@@ -49,7 +59,7 @@
 
 **Выбор:** модульный монолит — один backend + лёгкий веб-клиент (HTML/JS) + одна БД.
 
-**Обоснование:** один bounded context; атомарность status + tasks + history; объём MVP; стек PostgreSQL + FastAPI + статика (Vision §12 п.7–8).
+**Обоснование:** один bounded context; атомарность status + tasks + history + notifications; объём MVP; стек PostgreSQL + FastAPI + статика (Vision §12).
 
 ---
 
@@ -61,11 +71,14 @@
 | ARCH-CTX | [context-diagram.md](./context-diagram.md) | Граница системы и актёры |
 | ARCH-CNT | [container-diagram.md](./container-diagram.md) | Web static / API / DB |
 | ARCH-CMP | [component-diagram.md](./component-diagram.md) | Логические модули и UI-зоны |
-| ARCH-FLOW | [data-flows.md](./data-flows.md) | Потоки submit / approval / admin |
-| ARCH-SEC | [security-and-crosscutting.md](./security-and-crosscutting.md) | Auth stub, ошибки, логи, NFR |
+| ARCH-FLOW | [data-flows.md](./data-flows.md) | Потоки submit / actions / admin |
+| ARCH-SEC | [security-and-crosscutting.md](./security-and-crosscutting.md) | JWT, AuthZ, ошибки, логи, NFR |
 | ARCH-MAP | [architecture-traceability.md](./architecture-traceability.md) | Трассировка |
-| ADR-SNAP-01 | [adr-snapshot-submit-versions.md](./adr-snapshot-submit-versions.md) | Вариант B |
-| ADR-AUTH-DEMO-01 | [adr-demo-role-header.md](./adr-demo-role-header.md) | Роль в заголовке |
+| ADR-LIVE-CFG-01 | [adr-live-config.md](./adr-live-config.md) | Live config |
+| ADR-ACTION-01 | [adr-configurable-actions.md](./adr-configurable-actions.md) | Action Engine |
+| ADR-AUTH-JWT-01 | [adr-jwt-core-api.md](./adr-jwt-core-api.md) | JWT Bearer |
+| ADR-SNAP-01 | [adr-snapshot-submit-versions.md](./adr-snapshot-submit-versions.md) | **Superseded** |
+| ADR-AUTH-DEMO-01 | [adr-demo-role-header.md](./adr-demo-role-header.md) | **Superseded** |
 | ADR-UI-01 | [adr-static-web-client.md](./adr-static-web-client.md) | Static HTML+JS клиент |
 
 ---
@@ -74,28 +87,29 @@
 
 | Правило | Источник | Владелец |
 | :--- | :--- | :--- |
-| RouteInstance только при первом submit | BR-08, BR-22; [Snapshot Model](../erd/snapshot-model.md) | Snapshot Module |
-| FieldValueVersion на каждый successful submit | BR-26, BR-22 | Snapshot Module |
+| Submit читает live route | BR-08; [ADR-LIVE-CFG-01](./adr-live-config.md) | Action Engine + Submit Orchestrator |
+| approve_advance по live stages | BR-02, BR-17; ADR-ACTION-01 | Action Engine + Approval Engine |
 | First-approve wins | BR-03 | Approval Engine |
-| Запрет самосогласования | BR-21 | Authorization + Approval Engine |
-| Комментарий обязателен reject/return | BR-25 | Approval Engine |
+| Запрет самосогласования | BR-21 | Authorization + Action Engine |
+| Комментарий обязателен reject/return | BR-25 | Action Engine |
 | RBAC / ownership | BR-01, BR-14–16 | Authorization Module |
-| История (+ версии значений) | BR-24 | Audit Module |
+| История | BR-24 | Audit Module |
+| available-actions / execute | ADR-ACTION-01 | Action Engine |
 
 ---
 
 ## 6. Границы
 
-ERD / OpenAPI / код / микросервисы / cloud сверх NFR — вне этого индекса. Новые FR/BR/NFR этим файлом не вводятся. Поставка — NFR-DEP-01 (Python + Neon/local PG; Render + Neon).
+Микросервисы / cloud сверх NFR — вне этого индекса. Новые FR/BR/NFR этим файлом не вводятся. Поставка — NFR-DEP-01 (Python + Neon/local PG; Render + Neon). OpenAPI Frozen Target — `docs/04-api`.
 
 ---
 
 ## 7. DoD
 
-1. Каталог содержит ARCH-00…ARCH-MAP и ADR Baseline (включая ADR-UI-01, ADR-AUTH-DEMO-01).
-2. Context / container / component описаны под static HTML+JS + demo role header.
-3. Монолит обоснован; решения вне требований помечены ADR; устаревшие SPA/JWT ADR — Superseded.
-4. Snapshot — ссылка на Snapshot Model, без дублирования механики.
+1. Каталог содержит ARCH-00…ARCH-MAP и ADR Target (включая ADR-UI-01, ADR-AUTH-JWT-01, ADR-LIVE-CFG-01, ADR-ACTION-01).
+2. Context / container / component описаны под static HTML+JS + **JWT Bearer**.
+3. Монолит обоснован; решения вне требований помечены ADR; demo-header и snapshot ADR — **Superseded**.
+4. Live config — ADR-LIVE-CFG-01; Snapshot Module удалён из target; primary mutation — Action Engine.
 
 ---
 
@@ -106,3 +120,5 @@ ERD / OpenAPI / код / микросервисы / cloud сверх NFR — в�
 | 1.0 | 2026-09-19 | Первая версия Architecture |
 | 1.1 | 2026-09-20 | ADR-SNAP-01 / ADR-AUTH-DEMO-01; вариант B |
 | 1.2 | 2026-09-20 | ADR-UI-01; выравнивание под Vision §12 (static UI, demo header) |
+| 1.3 | 2026-09-23 | Live config; Action Engine; ADR-LIVE-CFG-01 supersedes SNAP |
+| 1.4 | 2026-09-24 | Frozen Target sync: JWT CURRENT; demo/snapshot Historical; DoD |

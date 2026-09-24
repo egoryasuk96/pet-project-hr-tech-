@@ -11,9 +11,13 @@ DEFAULT_PAGE_SIZE = 20
 MAX_PAGE_SIZE = 100
 
 
-class ErrorResponse(BaseModel):
-    """Recommended Error Matrix envelope."""
-
-    error_code: str
+class ErrorBody(BaseModel):
+    code: str
     message: str
     details: dict[str, Any] = Field(default_factory=dict)
+
+
+class ErrorResponse(BaseModel):
+    """Target nested envelope (ADR-ERR-03)."""
+
+    error: ErrorBody

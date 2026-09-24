@@ -1,6 +1,8 @@
 """Closed domain enumerations confirmed by ERD / glossary / BR.
 
 HistoryEvent.action is intentionally a string, not an enum (BR-24).
+Status / Action codes live in Status and Action tables; RequestStatus
+remains as the closed set of Status.code values for validation helpers.
 """
 
 from enum import StrEnum
@@ -15,7 +17,7 @@ class RoleCode(StrEnum):
 
 
 class RequestStatus(StrEnum):
-    """Request.status — glossary / UML-SM-01."""
+    """Canonical Status.code values — glossary / UML-SM-01."""
 
     DRAFT = "draft"
     IN_APPROVAL = "in_approval"
@@ -32,10 +34,11 @@ class FieldDataType(StrEnum):
     DATE = "date"
     NUMBER = "number"
     CATALOG = "catalog"
+    BOOLEAN = "boolean"
 
 
 class AssignmentKind(StrEnum):
-    """StageAssignment / RouteInstanceAssignment.assignment_kind — BR-12."""
+    """StageAssignment.assignment_kind — BR-12."""
 
     ROLE = "role"
     USER = "user"
@@ -51,7 +54,10 @@ class ApprovalTaskStatus(StrEnum):
 
 
 class ApprovalDecision(StrEnum):
-    """ApprovalTask.decision — FR-APP-03…05; nullable while open."""
+    """Legacy Pre-E2 decision codes still used by API schemas until action engine.
+
+    Not a column on Target ApprovalTask (comment + ProcessTransition replace it).
+    """
 
     APPROVE = "approve"
     REJECT = "reject"
@@ -66,10 +72,23 @@ class CommentKind(StrEnum):
 
 
 class NotificationEventType(StrEnum):
-    """Notification.event_type — documented minimum from ERD / BR-23.
+    """Notification.event_type — closed PG enum notification_event_type.
 
-    Not a complete future set: only values explicitly named in ERD.
+    Legacy / generic: new_task, status_change.
+    Target Action Engine (E4.2): request_* values.
     """
 
     NEW_TASK = "new_task"
     STATUS_CHANGE = "status_change"
+    REQUEST_SUBMITTED = "request_submitted"
+    REQUEST_APPROVED = "request_approved"
+    REQUEST_REJECTED = "request_rejected"
+    REQUEST_RETURNED = "request_returned"
+    REQUEST_CANCELLED = "request_cancelled"
+
+
+class ProcessTransitionEffect(StrEnum):
+    """ProcessTransition.effect — ADR-ACTION-01."""
+
+    STATUS_ONLY = "status_only"
+    APPROVE_ADVANCE = "approve_advance"

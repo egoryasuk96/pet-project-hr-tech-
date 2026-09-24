@@ -37,14 +37,17 @@
 
 ---
 
-## 3. Snapshot (кратко)
+## 3. Live configuration (кратко)
 
-Канон: [Snapshot Model](../erd/snapshot-model.md) (вариант B).
+Канон: [ADR-LIVE-CFG-01](../architecture/adr-live-config.md), [erd-domain-model.md](../erd/erd-domain-model.md).
 
-| Механизм | Когда | При resubmit |
-| :--- | :--- | :--- |
-| **RouteInstance** | Первый successful submit (BR-08) | Без изменений (BR-22) |
-| **FieldValueVersion** | Каждый successful submit (BR-26) | Новая версия |
+| Механизм | Поведение |
+| :--- | :--- |
+| **ApprovalRoute / Stage / Assignment** | Live-конфиг; задачи создаются при submit из актуальных назначений (BR-08) |
+| **Request.current_stage_id** | FK на live ApprovalStage; при resubmit → первый этап (BR-06) |
+| **RequestFieldValue** | Working values — единственный носитель значений полей (BR-26) |
+
+Snapshot (RouteInstance, FieldValueVersion) — **deprecated**; см. [snapshot-model.md](../erd/snapshot-model.md).
 
 ---
 

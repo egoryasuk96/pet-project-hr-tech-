@@ -2,9 +2,9 @@
 
 **Продукт:** Employee Service  
 **ID:** UML-SEQ-02  
-**Версия:** 1.0  
-**Статус:** Baseline v1.0  
-**Связанные документы:** [uml-description.md](./uml-description.md), [BPMN-02](../bpmn/to-be-approval-stage.md)
+**Версия:** 1.1  
+**Статус:** Target architecture (docs E0–E1)  
+**Связанные документы:** [uml-description.md](./uml-description.md), [BPMN-02](../bpmn/to-be-approval-stage.md), [ADR-LIVE-CFG-01](../architecture/adr-live-config.md)
 
 ---
 
@@ -15,7 +15,7 @@
 - **first-approve wins** (BR-03);
 - **запрет самосогласования** (BR-21);
 - **обязательность комментария** при reject/return (BR-25);
-- чтение **RouteInstance** без пересоздания.
+- чтение **live** этапов через `Request.current_stage_id` и `ApprovalTask.stage_id`.
 
 ---
 
@@ -30,9 +30,7 @@
 
 ### 2.1. Логические области ответственности (не архитектура)
 
-Имена **Validation**, **Snapshot** (чтение RouteInstance), **TaskFactory**, **Audit**, **Notification** — **логические роли / области ответственности на уровне анализа**.
-
-Они **не** микросервисы, **не** компоненты архитектуры и **не** API.
+Имена **Validation**, **RouteReader** (чтение live ApprovalStage), **TaskFactory**, **Audit**, **Notification** — **логические роли / области ответственности на уровне анализа**.
 
 ---
 
@@ -41,11 +39,11 @@
 ### 3.1. Approve (happy path)
 
 1. A открывает задачу → полная карточка заявки (BR-14).
-2. Validation: задача открыта и принадлежит A (BR-15); A ≠ инициатор (BR-21).
+2. Validation: задача открыта и принадлежит A (BR-15); A ≠ инициатор (BR-21); `task.stage_id` = `request.current_stage_id`.
 3. Approve; комментарий необязателен (BR-25).
 4. Задача A → completed; прочие **активные** задачи этапа → `cancelled` (BR-03).
-5. Snapshot: определить next step **по существующему RouteInstance**.
-6. Есть следующий этап → TaskFactory создаёт задачи; статус остаётся `in_approval`.
+5. RouteReader: определить next live **ApprovalStage** по `sequence_no`.
+6. Есть следующий этап → TaskFactory создаёт задачи из live StageAssignment; `current_stage_id` обновляется; статус остаётся `in_approval`.
 7. Нет следующего → статус `approved` (BR-17).
 8. Audit + Notification (**Future / backlog**, BR-29).
 
@@ -54,13 +52,12 @@
 1. Reject + **обязательный** комментарий (BR-25).
 2. Статус `rejected`; открытые задачи этапа закрыты (BR-04).
 3. Последующие этапы не создаются.
-4. Уведомление инициатору — **Future / backlog**.
 
 ### 3.3. Return
 
 1. Return + **обязательный** комментарий (BR-25).
-2. Статус `returned`; номер этапа сохранён; задачи этапа закрыты (BR-05).
-3. Уведомление инициатору — **Future / backlog**; дальнейший resubmit — UML-SEQ-01.
+2. Статус `returned`; `current_stage_id` сохраняет этап возврата; задачи этапа закрыты (BR-05).
+3. Дальнейший resubmit — UML-SEQ-01.
 
 ### 3.4. Исключения
 
@@ -81,23 +78,23 @@ sequenceDiagram
   actor B as Согласующий B
   participant Sys as Система
   actor Init as Инициатор
-  Note over Sys: Логические области анализа<br/>(не сервисы/API): Validation, Snapshot,<br/>TaskFactory, Audit, Notification
+  Note over Sys: Логические области: Validation, RouteReader,<br/>TaskFactory, Audit, Notification
 
   A->>Sys: Открыть задачу / карточку заявки
   Sys-->>A: полная карточка (BR-14)
 
   A->>Sys: Approve (комментарий опционален)
-  Sys->>Sys: Validation: своя открытая задача; не инициатор
+  Sys->>Sys: Validation: своя open задача; stage_id = current_stage_id; не инициатор
   alt Self-approval или нет прав
     Sys-->>A: ERR_FORBIDDEN_APPROVAL
   else OK
     Sys->>Sys: задача A = completed
     Sys->>Sys: first-approve: активные задачи этапа → cancelled (BR-03)
     Note over B: задача B cancelled
-    Sys->>Sys: Snapshot: next step по RouteInstance (только чтение)
+    Sys->>Sys: RouteReader: next live ApprovalStage по sequence_no
     alt Есть следующий этап
-      Sys->>Sys: TaskFactory: задачи следующего этапа
-      Sys->>Sys: Audit + Notification новым assignees (**Future / backlog**)
+      Sys->>Sys: current_stage_id = next; TaskFactory: задачи из live assignments
+      Sys->>Sys: Audit + Notification (**Future / backlog**)
       Sys-->>A: этап пройден; заявка in_approval
     else Последний этап
       Sys->>Sys: status = approved
@@ -139,7 +136,7 @@ sequenceDiagram
     alt Пустой комментарий
       Sys-->>Appr: ERR_VALIDATION
     else OK
-      Sys->>Sys: status = returned; сохранить этап N; закрыть задачи
+      Sys->>Sys: status = returned; current_stage_id сохранён; закрыть задачи
       Sys->>Sys: Audit + Notification инициатору (**Future / backlog**)
       Sys-->>Init: уведомление returned (**Future / backlog**)
       Sys-->>Appr: заявка returned
@@ -169,6 +166,14 @@ sequenceDiagram
 ## 7. Границы
 
 - Create / submit / resubmit / cancel — UML-SEQ-01.
-- RouteInstance в этом сценарии **только читается**.
+- Следующий этап определяется по **live** ApprovalStage, не RouteInstance.
 - HTTP / микросервисы **не** моделируются.
-- Новые правила не вводятся.
+
+---
+
+## История изменений
+
+| Версия | Дата | Описание |
+| :--- | :--- | :--- |
+| 1.0 | 2026-09-19 | Первая версия |
+| 1.1 | 2026-09-23 | Live stages via current_stage_id / stage_id |

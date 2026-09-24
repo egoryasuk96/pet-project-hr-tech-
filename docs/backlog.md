@@ -1,13 +1,17 @@
-# Backlog требований (вне MVP Baseline)
+# Backlog требований (вне текущего MVP-среза / исторические тексты)
 
 **Продукт:** Employee Service  
 **ID документа:** DOC-BACKLOG  
-**Статус:** Backlog  
-**Версия:** 1.0  
+**Статус:** Backlog + Target-active markers  
+**Версия:** 1.2  
 **Связанный Baseline:** [docs/02-requirements/](./02-requirements/)
 
-Документ хранит полный исходный текст требований, вынесенных из MVP Baseline.  
+Документ хранит полный исходный текст требований, вынесенных из раннего MVP Baseline.  
 ID не удаляются и не перенумеровываются — они сохранены для трассировки и будущего scope.
+
+> **Frozen Target (2026-09-24):** **Target-active / Delivered** (не backlog): JWT login `/auth/login` + `/me` (UC-01, FR-AUTH-01…03, AC-AUTH-01, NFR-SEC-01/03/04); RBAC одна `role_id` (BR-16); создание/лист in-app notifications (FR-NOTIF-01/02, BR-11/23/29, AC-NOTIF-01; UC-13 list). Action Engine / live-route — в Baseline/Target API, не в этом backlog.  
+> **Остаётся backlog:** Admin UI/API, Cabinet/профиль, Create UI, Approver Queue, mark-as-read (FR-NOTIF-03), free comments, change-password, multi-instance (NFR-SCL-01).  
+> Тела ниже могут содержать **Legacy wording** (multi-role / ЛК) — не CURRENT; смотри пометки у разделов.
 
 > Замечание: в теле backlog-требований могут встречаться ссылки на Baseline ID (это нормально). Baseline-файлы не должны содержать backlog ID в Related/Связи/трассировке без отсылки сюда.
 
@@ -15,46 +19,39 @@ ID не удаляются и не перенумеровываются — он
 
 ## Сводка перенесённых ID
 
-| Тип | ID | Причина |
+| Тип | ID | Причина / статус |
 | :--- | :--- | :--- |
-| UC | UC-01 | Login/JWT — Vision §5, §7.1 |
-| UC | UC-02 | Профиль / ЛК — Vision §7.1 |
-| UC | UC-11 | Админ-настройка типов — Vision §7.1 |
-| UC | UC-12 | Админ-настройка маршрутов — Vision §7.1 |
-| UC | UC-13 | In-app уведомления — Vision §7.1 |
-| UC | UC-15 | Админ-реестр — Vision §7.1 |
-| FR | FR-ADMIN-01 | Админ-панель — Vision §7.1 |
-| FR | FR-ADMIN-02 | Админ-панель — Vision §7.1 |
-| FR | FR-ADMIN-03 | Админ-панель — Vision §7.1 |
-| FR | FR-ADMIN-04 | Админ-панель — Vision §7.1 |
-| FR | FR-ADMIN-05 | Админ-панель — Vision §7.1 |
-| FR | FR-ADMIN-06 | Админ-панель — Vision §7.1 |
-| FR | FR-ADMIN-07 | Админ-реестр — Vision §7.1 |
-| FR | FR-ADMIN-08 | Админ-история — Vision §7.1 |
-| FR | FR-AUTH-01 | JWT/логин — Vision §7.1 |
-| FR | FR-AUTH-02 | Сессия JWT — Vision §7.1 |
-| FR | FR-AUTH-03 | AuthN через JWT — Vision §7.1 |
-| FR | FR-CAB-01 | Профиль — Vision §7.1 |
-| FR | FR-CAB-03 | Уведомления в кабинете — Vision §7.1 |
-| FR | FR-NOTIF-01 | In-app уведомления — Vision §7.1 |
-| FR | FR-NOTIF-02 | In-app уведомления — Vision §7.1 |
-| FR | FR-NOTIF-03 | In-app уведомления — Vision §7.1 |
-| BR | BR-11 | Уведомления — Vision §7.1 |
-| BR | BR-13 | Реестр admin — Vision §7.1 |
-| BR | BR-23 | События уведомлений — Vision §7.1 |
-| BR | BR-27 | Правило admin — Vision §7.1 |
-| BR | BR-29 | Атомарность уведомлений — Vision §7.1 |
-| AC | AC-ACC-04 | Админка — Vision §7.1 |
-| AC | AC-ACC-05 | Реестр admin — Vision §7.1 |
-| AC | AC-ADMIN-01 | Активация типа admin — Vision §7.1 |
-| AC | AC-AUTH-01 | Login — Vision §7.1 |
-| AC | AC-NOTIF-01 | Уведомления — Vision §7.1 |
-| NFR | NFR-SCL-01 | Multi-instance вне MVP — отложено |
-| NFR | NFR-SEC-01 | JWT-аутентификация — Vision §7.1 |
-| NFR | NFR-SEC-03 | Хранение паролей — Vision §7.1 |
-| NFR | NFR-SEC-04 | TTL токена — Vision §7.1 |
+| UC | UC-01 | Login/JWT — **Target-active**; Legacy wording в теле |
+| UC | UC-02 | Профиль / ЛК — backlog |
+| UC | UC-11 | Админ-настройка типов — backlog |
+| UC | UC-12 | Админ-настройка маршрутов — backlog |
+| UC | UC-13 | List notifications — **Target-active**; mark-as-read в теле — Legacy / FR-NOTIF-03 backlog |
+| UC | UC-15 | Админ-реестр — backlog |
+| FR | FR-ADMIN-01…08 | Админ-панель / реестр — backlog |
+| FR | FR-AUTH-01 | JWT/логин — **Target-active**; Legacy wording |
+| FR | FR-AUTH-02 | `/me` / сессия JWT — **Target-active**; Legacy wording (роли plural) |
+| FR | FR-AUTH-03 | AuthZ через JWT + `role_id` — **Target-active**; Legacy wording (union roles) |
+| FR | FR-CAB-01 | Профиль — backlog |
+| FR | FR-CAB-03 | Уведомления в кабинете — backlog (Cabinet UI) |
+| FR | FR-NOTIF-01 | Создание in-app — **Target-active** |
+| FR | FR-NOTIF-02 | Список уведомлений — **Target-active** |
+| FR | FR-NOTIF-03 | Mark as read — **backlog** (не Target contract) |
+| BR | BR-11 | In-app only — **Target-active** |
+| BR | BR-13 | Реестр admin — backlog |
+| BR | BR-23 | События уведомлений — **Target-active** |
+| BR | BR-27 | Правило admin — backlog |
+| BR | BR-29 | Атомарность уведомлений — **Target-active** |
+| AC | AC-ACC-04 | Админка — backlog |
+| AC | AC-ACC-05 | Реестр admin — backlog |
+| AC | AC-ADMIN-01 | Активация типа admin — backlog |
+| AC | AC-AUTH-01 | Login — **Target-active**; Legacy wording (multi-role) |
+| AC | AC-NOTIF-01 | TX уведомления — **Target-active** |
+| NFR | NFR-SCL-01 | Multi-instance — backlog |
+| NFR | NFR-SEC-01 | JWT AuthN — **Target-active** |
+| NFR | NFR-SEC-03 | Password hash — **Target-active** |
+| NFR | NFR-SEC-04 | TTL токена — **Target-active** |
 
-**Итого backlog:** UC 6 + FR 16 + BR 5 + AC 5 + NFR 4 = **36**
+**Итого ID в файле (исторический инвентарь):** UC 6 + FR 16 + BR 5 + AC 5 + NFR 4 = **36** (часть — Target-active, не deferred scope).
 
 **Итого Baseline:** UC 9 + FR 22 + BR 24 + AC 27 + NFR 25 = **107**
 
@@ -66,7 +63,8 @@ ID не удаляются и не перенумеровываются — он
 
 ### UC-01
 
-**Причина выноса:** Login/JWT — Vision §5, §7.1
+**Статус:** Target-active (Delivered) — `POST /auth/login`, JWT Bearer; см. ADR-AUTH-JWT-01.  
+**Legacy wording:** main flow / A1 / postconditions описывают multi-role и ЛК. **Target wording:** одна `User.role_id`; после login — My Requests (не полный ЛК).
 
 ## UC-01 — Login
 
@@ -125,7 +123,7 @@ ID не удаляются и не перенумеровываются — он
 | **Main flow** | 1. Создание/редактирование типа (имя, описание, is_active) 2. CRUD полей формы 3. При необходимости привязка справочников 4. При активации — проверка валидности маршрута (BR-18) 5. Сохранение |
 | **Alternative flows** | A1. Деактивация типа — тип исчезает из каталога (BR-10) |
 | **Exceptions** | E1. ERR_VALIDATION  E2. ERR_FORBIDDEN  E3. Активация при невалидном маршруте → ERR_ROUTE_CONFIG |
-| **Postconditions** | Конфигурация сохранена; RouteInstance / FieldValueVersion запущенных заявок не затрагиваются (BR-09); draft/returned при edit видят актуальную схему (BR-26) |
+| **Postconditions** | Конфигурация сохранена; in-flight caveat — правки live config **могут** затронуть незавершённые заявки ([ADR-LIVE-CFG-01](./03-diagrams/architecture/adr-live-config.md), BR-09 guard); draft/returned при edit видят актуальную схему (BR-26) |
 | **Related FR** | FR-ADMIN-01, FR-ADMIN-02, FR-ADMIN-06 |
 | **Related BR** | BR-09, BR-10, BR-18, BR-26, BR-27 |
 
@@ -158,7 +156,9 @@ ID не удаляются и не перенумеровываются — он
 
 ### UC-13
 
-**Причина выноса:** In-app уведомления — Vision §7.1
+**Статус:** Target-active (list) — `GET /notifications`, FR-NOTIF-02. Создание на событиях — FR-NOTIF-01 / BR-23/29.  
+**Остаётся backlog:** mark-as-read (шаг 3 / FR-NOTIF-03); Cabinet entry (FR-CAB-03).  
+**Legacy wording:** goal/postconditions предполагают mark-as-read как обязательный шаг.
 
 ## UC-13 — View Notifications
 
@@ -217,7 +217,7 @@ ID не удаляются и не перенумеровываются — он
 | **Preconditions** | Роль admin |
 | **Основной сценарий** | Стандартный CRUD; при активации — проверка маршрута; деактивация через is_active=false (BR-10) |
 | **Альтернативы / исключения** | ERR_VALIDATION; ERR_FORBIDDEN; невалидный маршрут при активации → ERR_ROUTE_CONFIG |
-| **Postconditions** | Изменения не ретроактивны для RouteInstance (BR-09); admin не создаёт заявки от сотрудников (BR-27) |
+| **Postconditions** | Live config caveat (ADR-LIVE-CFG-01); admin не создаёт заявки от сотрудников (BR-27) |
 | **Связи** | UC-11; BR-09, BR-10, BR-18, BR-27; AC-ADMIN-01 |
 
 ---
@@ -235,7 +235,7 @@ ID не удаляются и не перенумеровываются — он
 | **Preconditions** | Тип существует |
 | **Основной сценарий** | CRUD полей |
 | **Альтернативы / исключения** | ERR_VALIDATION (дубликат кода поля) |
-| **Postconditions** | При edit draft/returned клиенты получают актуальную схему (BR-26); после submit у заявки фиксируются схема и значения; RouteInstance запущенных заявок не меняется (BR-09) |
+| **Postconditions** | При edit draft/returned клиенты получают актуальную схему (BR-26); working values — единственный носитель значений; in-flight caveat ADR-LIVE-CFG-01 |
 | **Связи** | UC-11; FR-CAT-03; BR-26; AC-DRAFT-01, AC-DRAFT-02 |
 
 ---
@@ -352,7 +352,8 @@ ID не удаляются и не перенумеровываются — он
 
 ### FR-AUTH-01
 
-**Причина выноса:** JWT/логин — Vision §7.1
+**Статус:** Target-active (Delivered) — `POST /auth/login`.  
+**Legacy wording:** «полный список ролей», ЛК, union permissions. **Target wording:** JWT + одна `role_id` (BR-16); UI → My Requests.
 
 ### FR-AUTH-01 — Вход в систему
 | Поле | Содержание |
@@ -370,7 +371,8 @@ ID не удаляются и не перенумеровываются — он
 
 ### FR-AUTH-02
 
-**Причина выноса:** Сессия JWT — Vision §7.1
+**Статус:** Target-active (Delivered) — `GET /me`.  
+**Legacy wording:** «роли» (plural). **Target wording:** одна системная роль `role_id`.
 
 ### FR-AUTH-02 — Текущий пользователь
 | Поле | Содержание |
@@ -388,7 +390,8 @@ ID не удаляются и не перенумеровываются — он
 
 ### FR-AUTH-03
 
-**Причина выноса:** AuthN через JWT — Vision §7.1
+**Статус:** Target-active (Delivered) — AuthZ на backend после JWT.  
+**Legacy wording:** «роли (union)». **Target wording:** одна `User.role_id` + ownership (BR-16).
 
 ### FR-AUTH-03 — Авторизация по ролям и правилам
 | Поле | Содержание |
@@ -444,11 +447,11 @@ ID не удаляются и не перенумеровываются — он
 
 ---
 
-## NOTIF — Уведомления (backlog)
+## NOTIF — Уведомления
 
 ### FR-NOTIF-01
 
-**Причина выноса:** In-app уведомления — Vision §7.1
+**Статус:** Target-active (Delivered) — создание в TX с бизнес-событием.
 
 ### FR-NOTIF-01 — Создание in-app уведомления
 | Поле | Содержание |
@@ -466,7 +469,7 @@ ID не удаляются и не перенумеровываются — он
 
 ### FR-NOTIF-02
 
-**Причина выноса:** In-app уведомления — Vision §7.1
+**Статус:** Target-active (Delivered) — `GET /notifications`.
 
 ### FR-NOTIF-02 — Просмотр уведомлений
 | Поле | Содержание |
@@ -484,7 +487,7 @@ ID не удаляются и не перенумеровываются — он
 
 ### FR-NOTIF-03
 
-**Причина выноса:** In-app уведомления — Vision §7.1
+**Статус:** backlog — mark-as-read **не** входит в Frozen Target API contract.
 
 ### FR-NOTIF-03 — Отметка прочитанным
 | Поле | Содержание |
@@ -500,11 +503,11 @@ ID не удаляются и не перенумеровываются — он
 
 ---
 
-## Business Rules (backlog)
+## Business Rules (backlog / Target-active)
 
 ### BR-11
 
-**Причина выноса:** Уведомления — Vision §7.1
+**Статус:** Target-active — только in-app (email/push out of scope).
 
 ### BR-11 — Уведомления только in-app
 В MVP уведомления доставляются только внутри приложения. Email и push не используются.  
@@ -524,7 +527,7 @@ ID не удаляются и не перенумеровываются — он
 
 ### BR-23
 
-**Причина выноса:** События уведомлений — Vision §7.1
+**Статус:** Target-active — события создания уведомлений в runtime.
 
 ### BR-23 — Обязательные события уведомлений
 Система создаёт in-app уведомление как минимум при: назначении новой задачи согласующему; смене статуса заявки для инициатора (в т.ч. approve этапа / reject / return / approved / cancelled — по факту события).  
@@ -534,7 +537,7 @@ ID не удаляются и не перенумеровываются — он
 
 ### BR-27
 
-**Причина выноса:** Правило admin — Vision §7.1
+**Причина выноса:** Правило admin — Vision §7.1 (Admin UI — backlog)
 
 ### BR-27 — Admin не создаёт заявки от имени сотрудника
 В MVP администратор не создаёт и не отправляет заявки от имени сотрудника. Создание заявок — только роль `employee` (инициатор).  
@@ -544,7 +547,7 @@ ID не удаляются и не перенумеровываются — он
 
 ### BR-29
 
-**Причина выноса:** Атомарность уведомлений — Vision §7.1
+**Статус:** Target-active — уведомление в одной TX с бизнес-событием.
 
 ### BR-29 — Атомарность in-app уведомления
 Создание in-app уведомления выполняется **в одной транзакции** с соответствующим бизнес-событием. Если фиксация уведомления не удалась, откатывается и бизнес-изменение.  
@@ -552,7 +555,7 @@ ID не удаляются и не перенумеровываются — он
 
 ---
 
-## Acceptance Criteria (backlog)
+## Acceptance Criteria (backlog / Target-active)
 
 ### AC-ACC-04
 
@@ -600,7 +603,8 @@ And тип остаётся неактивным
 
 ### AC-AUTH-01
 
-**Причина выноса:** Login — Vision §7.1
+**Статус:** Target-active (login delivered).  
+**Legacy wording:** Given/Then про несколько ролей и ЛК. **Target wording:** одна `role_id`; после login — My Requests.
 
 ### AC-AUTH-01 — Login при нескольких ролях
 **Related:** FR-AUTH-01, BR-16
@@ -617,7 +621,7 @@ And отдельный выбор активной роли не предлаг�
 
 ### AC-NOTIF-01
 
-**Причина выноса:** Уведомления — Vision §7.1
+**Статус:** Target-active — создание уведомления в одной TX (FR-NOTIF-01 / BR-29).
 
 ### AC-NOTIF-01 — Уведомление в одной транзакции
 **Related:** FR-NOTIF-01, BR-29
@@ -630,7 +634,7 @@ Then откатывается и бизнес-изменение (заявка �
 
 ---
 
-## Non-Functional Requirements (backlog)
+## Non-Functional Requirements (backlog / Target-active)
 
 ### NFR-SCL-01
 
@@ -644,7 +648,7 @@ Multi-instance deployment **не входит в MVP**. Архитектура A
 
 ### NFR-SEC-01
 
-**Причина выноса:** JWT-аутентификация — Vision §7.1
+**Статус:** Target-active (Delivered) — JWT Bearer на защищённых операциях.
 
 ### NFR-SEC-01 — Аутентификация
 Доступ к защищённым операциям возможен только с валидным JWT. Невалидный/просроченный токен → HTTP 401.  
@@ -654,7 +658,7 @@ Multi-instance deployment **не входит в MVP**. Архитектура A
 
 ### NFR-SEC-03
 
-**Причина выноса:** Хранение паролей — Vision §7.1
+**Статус:** Target-active (Delivered) — bcrypt hash.
 
 ### NFR-SEC-03 — Хранение паролей
 Пароли хранятся только в виде безопасного password hash. Используется **bcrypt** или эквивалентный современный password hashing algorithm (например argon2). Plain-text запрещён.  
@@ -664,7 +668,7 @@ Multi-instance deployment **не входит в MVP**. Архитектура A
 
 ### NFR-SEC-04
 
-**Причина выноса:** TTL токена — Vision §7.1
+**Статус:** Target-active (Delivered) — TTL 8h; refresh отсутствует.
 
 ### NFR-SEC-04 — Срок жизни токена
 Access token TTL = **8 часов**. Refresh tokens в MVP отсутствуют (повторный login).  
@@ -687,7 +691,7 @@ Access token TTL = **8 часов**. Refresh tokens в MVP отсутствую�
 
 | ID | Bucket | Причина |
 | :--- | :--- | :--- |
-| UC-01 | backlog | Login/JWT — Vision §5, §7.1 |
+| UC-01 | Target-active | Login/JWT — Delivered; Legacy multi-role / ЛК в теле |
 | UC-02 | backlog | Профиль / ЛК — Vision §7.1 |
 | UC-03 | Baseline | Vision §8: каталог |
 | UC-04 | Baseline | Vision §8: создание и отправка |
@@ -699,7 +703,7 @@ Access token TTL = **8 часов**. Refresh tokens в MVP отсутствую�
 | UC-10 | Baseline | Vision §8: отмена |
 | UC-11 | backlog | Админ-настройка типов — Vision §7.1 |
 | UC-12 | backlog | Админ-настройка маршрутов — Vision §7.1 |
-| UC-13 | backlog | In-app уведомления — Vision §7.1 |
+| UC-13 | Target-active | List notifications Delivered; mark-as-read (FR-NOTIF-03) — backlog |
 | UC-14 | Baseline | История на карточке заявки (ядро) |
 | UC-15 | backlog | Админ-реестр — Vision §7.1 |
 | FR-ADMIN-01 | backlog | Админ-панель — Vision §7.1 |
@@ -719,18 +723,18 @@ Access token TTL = **8 часов**. Refresh tokens в MVP отсутствую�
 | FR-APP-07 | Baseline | Завершение маршрута — ядро |
 | FR-AUDIT-01 | Baseline | История на карточке — ядро |
 | FR-AUDIT-02 | Baseline | Фиксация событий истории — ядро |
-| FR-AUTH-01 | backlog | JWT/логин — Vision §7.1 |
-| FR-AUTH-02 | backlog | Сессия JWT — Vision §7.1 |
-| FR-AUTH-03 | backlog | AuthN через JWT — Vision §7.1 |
+| FR-AUTH-01 | Target-active | JWT/логин — Delivered; Legacy wording |
+| FR-AUTH-02 | Target-active | GET /me — Delivered; Legacy «роли» |
+| FR-AUTH-03 | Target-active | AuthZ + role_id — Delivered; Legacy union |
 | FR-CAB-01 | backlog | Профиль — Vision §7.1 |
 | FR-CAB-02 | Baseline | Список «Мои заявки» — Vision §8 |
 | FR-CAB-03 | backlog | Уведомления в кабинете — Vision §7.1 |
 | FR-CAT-01 | Baseline | Каталог — Vision §8 |
 | FR-CAT-02 | Baseline | Каталог — Vision §8 |
 | FR-CAT-03 | Baseline | Каталог / форма — Vision §8 |
-| FR-NOTIF-01 | backlog | In-app уведомления — Vision §7.1 |
-| FR-NOTIF-02 | backlog | In-app уведомления — Vision §7.1 |
-| FR-NOTIF-03 | backlog | In-app уведомления — Vision §7.1 |
+| FR-NOTIF-01 | Target-active | Создание in-app — Delivered |
+| FR-NOTIF-02 | Target-active | GET /notifications — Delivered |
+| FR-NOTIF-03 | backlog | Mark as read — не Target contract |
 | FR-REQ-01 | Baseline | Создание — Vision §8 |
 | FR-REQ-02 | Baseline | Заполнение / доработка — Vision §8 |
 | FR-REQ-03 | Baseline | Отправка — Vision §8 |
@@ -747,28 +751,28 @@ Access token TTL = **8 часов**. Refresh tokens в MVP отсутствую�
 | BR-05 | Baseline | Return — ядро |
 | BR-06 | Baseline | Resubmit с этапа — Vision §12 |
 | BR-07 | Baseline | Отмена draft/returned — Vision §12 |
-| BR-08 | Baseline | Snapshot маршрута — Vision §6 |
-| BR-09 | Baseline | Изоляция snapshot — Vision §6 |
+| BR-08 | Baseline | Submit читает live-маршрут (без RouteInstance) — ADR-LIVE-CFG-01 |
+| BR-09 | Baseline | Live config guard / in-flight caveat — ADR-LIVE-CFG-01 |
 | BR-10 | Baseline | Каталог активных типов — ядро |
-| BR-11 | backlog | Уведомления — Vision §7.1 |
+| BR-11 | Target-active | Уведомления — Target |
 | BR-12 | Baseline | Нет auto-routing — Vision §7 |
 | BR-13 | backlog | Реестр admin — Vision §7.1 |
 | BR-14 | Baseline | Видимость approver — ядро |
 | BR-15 | Baseline | Действие по своей задаче — ядро |
-| BR-16 | Baseline | Несколько ролей — Vision §5 |
+| BR-16 | Target | Одна роль на User (`role_id`); Legacy multi-role union — Previous |
 | BR-17 | Baseline | Финальный approve — ядро |
 | BR-18 | Baseline | Валидация маршрута при submit — ядро |
 | BR-19 | Baseline | Создание draft — ядро |
 | BR-20 | Baseline | Submit → in_approval — ядро |
 | BR-21 | Baseline | Запрет самосогласования — ядро |
-| BR-22 | Baseline | Resubmit snapshot — ядро |
-| BR-23 | backlog | События уведомлений — Vision §7.1 |
+| BR-22 | Baseline | Resubmit с первого live-этапа — ядро |
+| BR-23 | Target-active | События уведомлений — Target |
 | BR-24 | Baseline | История на карточке — ядро |
 | BR-25 | Baseline | Комментарий reject/return — ядро |
-| BR-26 | Baseline | Схема/snapshot полей — ядро |
+| BR-26 | Baseline | Live schema + working values — ядро |
 | BR-27 | backlog | Правило admin — Vision §7.1 |
 | BR-28 | Baseline | Свободные комментарии на карточке — ядро |
-| BR-29 | backlog | Атомарность уведомлений — Vision §7.1 |
+| BR-29 | Target-active | Атомарность уведомлений — Target |
 | AC-ACC-01 | Baseline | Доступ employee — ядро |
 | AC-ACC-02 | Baseline | Доступ approver — ядро |
 | AC-ACC-03 | Baseline | Самосогласование — ядро |
@@ -790,15 +794,15 @@ Access token TTL = **8 часов**. Refresh tokens в MVP отсутствую�
 | AC-APP-07b | Baseline | Return без комментария — ядро |
 | AC-APP-08 | Baseline | Resubmit — ядро |
 | AC-APP-09 | Baseline | First-approve wins — ядро |
-| AC-APP-10 | Baseline | Изоляция snapshot — ядро |
+| AC-APP-10 | Baseline | Live config in-flight caveat — ядро |
 | AC-APP-10b | Baseline | Новый submit / новая конфигурация — ядро |
-| AC-AUTH-01 | backlog | Login — Vision §7.1 |
+| AC-AUTH-01 | Target-active | Login Delivered; multi-role AC body — Legacy |
 | AC-CAT-01 | Baseline | Неактивный тип — ядро |
 | AC-CAT-01b | Baseline | Живые заявки после деактивации — ядро |
 | AC-CAT-02 | Baseline | Пустой каталог — ядро |
 | AC-DRAFT-01 | Baseline | Актуальная схема при edit — ядро |
-| AC-DRAFT-02 | Baseline | Snapshot схемы/значений — ядро |
-| AC-NOTIF-01 | backlog | Уведомления — Vision §7.1 |
+| AC-DRAFT-02 | Baseline | Working RequestFieldValue / live schema — ядро (snapshot wording deprecated) |
+| AC-NOTIF-01 | Target-active | TX уведомления — Delivered |
 | AC-REQ-06 | Baseline | Комментарий на карточке — ядро |
 | AC-REQ-07 | Baseline | Отмена — ядро |
 | NFR-AVL-01 | Baseline | Режим поставки — ядро |
@@ -818,13 +822,13 @@ Access token TTL = **8 часов**. Refresh tokens в MVP отсутствую�
 | NFR-PERF-04 | Baseline | Baseline объёма — ядро |
 | NFR-REL-01 | Baseline | Целостность статусов + история — ядро |
 | NFR-REL-02 | Baseline | Идемпотентность — ядро |
-| NFR-REL-03 | Baseline | Сохранность snapshot — ядро |
+| NFR-REL-03 | Baseline | Согласованность stage_id — ядро (snapshot wording deprecated) |
 | NFR-SCL-01 | backlog | Multi-instance вне MVP — отложено |
 | NFR-SCL-02 | Baseline | Рост числа типов — ядро |
-| NFR-SEC-01 | backlog | JWT-аутентификация — Vision §7.1 |
+| NFR-SEC-01 | Target-active | JWT-аутентификация — ADR-AUTH-JWT-01 |
 | NFR-SEC-02 | Baseline | Авторизация ролей/владения — ядро |
-| NFR-SEC-03 | backlog | Хранение паролей — Vision §7.1 |
-| NFR-SEC-04 | backlog | TTL токена — Vision §7.1 |
+| NFR-SEC-03 | Target-active | Хранение паролей — ADR-AUTH-JWT-01 |
+| NFR-SEC-04 | Target-active | TTL токена — ADR-AUTH-JWT-01 |
 | NFR-SEC-05 | Baseline | Скрытие чужих ресурсов — ядро |
 | NFR-SEC-06 | Baseline | HTTPS внешнего стенда — ядро |
 | NFR-USB-01 | Baseline | Понятность статусов — ядро |

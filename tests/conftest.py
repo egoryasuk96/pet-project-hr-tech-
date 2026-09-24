@@ -1,64 +1,111 @@
-"""Fixtures for Stage 5.3 API tests. Require an isolated PostgreSQL (TEST_DATABASE_URL)."""
+"""Fixtures for Target E2 API tests. Require isolated PostgreSQL (TEST_DATABASE_URL)."""
 
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 
 from app.core.config import get_settings
-from app.core.security import hash_password
 from app.db.base import Base
+from app.db.seed import seed
 from app.db.session import get_engine, get_session_factory, reset_engine
-from app.domain import (  # noqa: F401 — register tables
-    ApprovalRoute,
-    ApprovalStage,
-    AssignmentKind,
-    Dictionary,
-    DictionaryItem,
-    FieldDataType,
-    RequestFieldDefinition,
+from app.domain import (  # noqa: F401 — register Target tables
+    Action,
     RequestType,
     Role,
-    RoleCode,
-    StageAssignment,
+    Status,
     User,
-    UserRole,
 )
 
-TEST_PASSWORD = "test-pass-stage53"
-JWT_SECRET = "test-jwt-secret-stage53-not-for-production"
+TEST_PASSWORD = "test-pass-e31"
+JWT_SECRET = "test-jwt-secret-e31-not-for-production"
+
+VALID_VACATION_DATES = {"date_from": "2026-06-01", "date_to": "2026-06-14"}
+
+
+def set_request_field_values(request_id: int, values: dict[str, str | None]) -> None:
+    """Upsert RequestFieldValue rows for tests (no PATCH API yet)."""
+    from app.domain.request import RequestFieldValue
+
+    session = get_session_factory()()
+    try:
+        for field_code, value in values.items():
+            row = session.scalar(
+                select(RequestFieldValue).where(
+                    RequestFieldValue.request_id == request_id,
+                    RequestFieldValue.field_code == field_code,
+                )
+            )
+            if row is None:
+                session.add(
+                    RequestFieldValue(
+                        request_id=request_id,
+                        field_code=field_code,
+                        value=value,
+                    )
+                )
+            else:
+                row.value = value
+        session.commit()
+    finally:
+        session.close()
+
+
+def fill_valid_vacation_fields(request_id: int) -> None:
+    set_request_field_values(request_id, dict(VALID_VACATION_DATES))
 
 
 @dataclass
 class ApiDataset:
-    employee_a_login: str
-    employee_b_login: str
+    employee_login: str
     approver_login: str
-    vacation_type_id: UUID
-    certificate_type_id: UUID
-    inactive_type_id: UUID
-    catalog_item_id: UUID
+    admin_login: str
+    vacation_type_id: int
+    certificate_type_id: int
+    draft_status_id: int
+    in_approval_status_id: int
+    returned_status_id: int
+    submit_action_id: int
+    cancel_action_id: int
+    approve_action_id: int
+    reject_action_id: int
+    return_action_id: int
 
 
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     url = os.environ.get("TEST_DATABASE_URL")
     if not url:
-        pytest.skip("TEST_DATABASE_URL is required for Stage 5.3 API tests (see README)")
+        pytest.skip("TEST_DATABASE_URL is required for API tests (see README)")
 
     monkeypatch.setenv("DATABASE_URL", url)
     monkeypatch.setenv("JWT_SECRET", JWT_SECRET)
+    monkeypatch.setenv("DEMO_PASSWORD", TEST_PASSWORD)
     get_settings.cache_clear()
     reset_engine()
 
     engine = get_engine()
-    Base.metadata.drop_all(engine)
+    # Fresh schema avoids leftover indexes/enums between suites
+    from sqlalchemy import text
+
+    with engine.begin() as conn:
+        conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
     Base.metadata.create_all(engine)
+
+    session = get_session_factory()()
+    try:
+        seed(session)
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
     from app.main import app
 
@@ -80,133 +127,30 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 def dataset(client: TestClient) -> ApiDataset:
     session = get_session_factory()()
     try:
-        roles = {code: Role(code=code) for code in RoleCode}
-        for role in roles.values():
-            session.add(role)
-        session.flush()
-
-        password_hash = hash_password(TEST_PASSWORD)
-
-        def add_user(login: str, full_name: str, role_code: RoleCode) -> User:
-            user = User(
-                login=login,
-                password_hash=password_hash,
-                full_name=full_name,
-                email=f"{login}@example.local",
-                position="Test",
-                department="IT",
-                is_active=True,
-            )
-            session.add(user)
-            session.flush()
-            session.add(UserRole(user_id=user.id, role_id=roles[role_code].id))
-            return user
-
-        employee_a = add_user("employee.a", "Employee A", RoleCode.EMPLOYEE)
-        employee_b = add_user("employee.b", "Employee B", RoleCode.EMPLOYEE)
-        approver = add_user("approver.a", "Approver A", RoleCode.APPROVER)
-
-        dictionary = Dictionary(name="Виды справок")
-        session.add(dictionary)
-        session.flush()
-        catalog_item = DictionaryItem(
-            dictionary_id=dictionary.id,
-            code="employment",
-            name="Справка с места работы",
-            is_active=True,
-        )
-        session.add(catalog_item)
-        session.flush()
-
-        vacation = RequestType(
-            name="Отпуск",
-            description="Заявка на отпуск",
-            is_active=True,
-        )
-        session.add(vacation)
-        session.flush()
-        session.add(
-            RequestFieldDefinition(
-                request_type_id=vacation.id,
-                code="date_from",
-                name="Дата начала",
-                data_type=FieldDataType.DATE,
-                required=True,
-                order_no=1,
-            )
-        )
-        session.add(
-            RequestFieldDefinition(
-                request_type_id=vacation.id,
-                code="date_to",
-                name="Дата окончания",
-                data_type=FieldDataType.DATE,
-                required=True,
-                order_no=2,
-            )
-        )
-        session.add(
-            RequestFieldDefinition(
-                request_type_id=vacation.id,
-                code="comment",
-                name="Комментарий",
-                data_type=FieldDataType.TEXT,
-                required=False,
-                order_no=3,
-            )
-        )
-
-        certificate = RequestType(
-            name="Справка",
-            description="Кадровая справка",
-            is_active=True,
-        )
-        session.add(certificate)
-        session.flush()
-        session.add(
-            RequestFieldDefinition(
-                request_type_id=certificate.id,
-                code="certificate_kind",
-                name="Вид справки",
-                data_type=FieldDataType.CATALOG,
-                required=True,
-                order_no=1,
-                dictionary_id=dictionary.id,
-            )
-        )
-
-        inactive = RequestType(name="Inactive", description="Hidden", is_active=False)
-        session.add(inactive)
-        session.flush()
-
-        def add_route(request_type_id: UUID) -> None:
-            route = ApprovalRoute(request_type_id=request_type_id)
-            session.add(route)
-            session.flush()
-            stage = ApprovalStage(route_id=route.id, name="Согласование руководителем", sequence_no=1)
-            session.add(stage)
-            session.flush()
-            session.add(
-                StageAssignment(
-                    stage_id=stage.id,
-                    assignment_kind=AssignmentKind.USER,
-                    user_id=approver.id,
-                    role_id=None,
-                )
-            )
-
-        add_route(vacation.id)
-        add_route(certificate.id)
-
-        session.commit()
+        vacation = session.scalar(select(RequestType).where(RequestType.code == "vacation"))
+        certificate = session.scalar(select(RequestType).where(RequestType.code == "certificate"))
+        draft = session.scalar(select(Status).where(Status.code == "draft"))
+        in_approval = session.scalar(select(Status).where(Status.code == "in_approval"))
+        returned = session.scalar(select(Status).where(Status.code == "returned"))
+        actions = {
+            row.code: row.id
+            for row in session.scalars(select(Action)).all()
+        }
+        assert vacation and certificate and draft and in_approval and returned
         return ApiDataset(
-            employee_a_login=employee_a.login,
-            employee_b_login=employee_b.login,
-            approver_login=approver.login,
+            employee_login="employee.demo",
+            approver_login="approver.demo",
+            admin_login="admin.demo",
             vacation_type_id=vacation.id,
             certificate_type_id=certificate.id,
-            inactive_type_id=inactive.id,
-            catalog_item_id=catalog_item.id,
+            draft_status_id=draft.id,
+            in_approval_status_id=in_approval.id,
+            returned_status_id=returned.id,
+            submit_action_id=actions["submit"],
+            cancel_action_id=actions["cancel"],
+            approve_action_id=actions["approve"],
+            reject_action_id=actions["reject"],
+            return_action_id=actions["return"],
         )
     finally:
         session.close()

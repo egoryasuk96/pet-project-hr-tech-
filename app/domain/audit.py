@@ -6,12 +6,12 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.domain.enums import CommentKind
-from app.domain.mixins import CreatedAtMixin, UUIDPrimaryKeyMixin
+from app.domain.mixins import CreatedAtMixin, IntegerPrimaryKeyMixin
 from app.domain.sa_types import comment_kind_enum
 
 if TYPE_CHECKING:
@@ -20,22 +20,24 @@ if TYPE_CHECKING:
     from app.domain.request import Request
 
 
-class Comment(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+class Comment(IntegerPrimaryKeyMixin, CreatedAtMixin, Base):
     """Free or decision comment on a request (BR-25, BR-28)."""
 
     __tablename__ = "comments"
 
-    request_id: Mapped[uuid.UUID] = mapped_column(
+    request_id: Mapped[int] = mapped_column(
         ForeignKey("requests.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )
     author_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )
-    approval_task_id: Mapped[uuid.UUID | None] = mapped_column(
+    approval_task_id: Mapped[int | None] = mapped_column(
+        Integer,
         ForeignKey("approval_tasks.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
@@ -48,17 +50,18 @@ class Comment(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     approval_task: Mapped[ApprovalTask | None] = relationship(back_populates="comments")
 
 
-class HistoryEvent(UUIDPrimaryKeyMixin, Base):
-    """Append-only applied audit. No value_version_id (RR-HIST-01)."""
+class HistoryEvent(IntegerPrimaryKeyMixin, Base):
+    """Append-only applied audit. No value_version_id."""
 
     __tablename__ = "history_events"
 
-    request_id: Mapped[uuid.UUID] = mapped_column(
+    request_id: Mapped[int] = mapped_column(
         ForeignKey("requests.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )
     actor_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,

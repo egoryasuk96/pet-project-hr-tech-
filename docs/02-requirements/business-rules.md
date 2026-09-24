@@ -5,7 +5,7 @@
 **ID:** DOC-BR  
 **Версия:** 1.0  
 **Статус:** Baseline v1.0  
-**Связанные артефакты:** [Vision & Scope](../01-vision-and-scope/vision-scope.md), [Глоссарий](../01-vision-and-scope/glossary.md), [Snapshot Model](../03-diagrams/erd/snapshot-model.md), [Backlog](../backlog.md)
+**Связанные артефакты:** [Vision & Scope](../01-vision-and-scope/vision-scope.md), [Глоссарий](../01-vision-and-scope/glossary.md), [ADR-LIVE-CFG-01](../03-diagrams/architecture/adr-live-config.md), [Backlog](../backlog.md)
 
 ---
 
@@ -30,13 +30,18 @@
 Согласующий может выполнить approve / reject / return только по задаче, где он является assignee (лично или через роль, по которой задача создана для него), и только если задача в статусе открыта.  
 **Связи:** FR-APP-03, FR-APP-04, FR-APP-05, AC-ACC-02
 
-### BR-16 — Множественные роли (union permissions)
-Один пользователь может иметь несколько системных ролей одновременно (`employee`, `approver`, `admin`). После авторизации:
-1. отображается **личный кабинет (ЛК)**;
-2. доступна навигация ко **всем** разделам, разрешённым объединением permissions его ролей;
-3. отдельный выбор «активной роли» **не требуется**.
+### BR-16 — Одна роль на пользователя
+У каждого пользователя ровно одна системная роль (`users.role_id` → `employee` | `approver` | `admin`). Таблица M:N `UserRole` в Target **нет** ([ADR-ORG-01](../03-diagrams/architecture/adr-org-model.md)).
 
-**Связи:** union permissions; матрица RBAC; login/JWT — [docs/backlog.md](../backlog.md)
+1. После авторизации пользователь видит разделы и действия, разрешённые **его** ролью.
+2. Выбор «активной роли» не требуется.
+3. Администратор может изменить `role_id` пользователя в Admin UI.
+4. Роль участвует в выборе доступных `ProcessTransition` (Action Engine).
+5. Право выполнить approve/reject/return дополнительно требует быть assignee открытой `ApprovalTask` (BR-15), независимо от роли `approver`.
+
+**Legacy / Previous:** модель с несколькими ролями и union permissions (M:N UserRole) — не Target.
+
+**Связи:** матрица RBAC; ADR-ORG-01; login/JWT — [ADR-AUTH-JWT-01](../03-diagrams/architecture/adr-jwt-core-api.md)
 
 ---
 
@@ -59,7 +64,7 @@
 **Связи:** FR-REQ-08, FR-APP-05, UC-09, AC-APP-07
 
 ### BR-17 — Завершение маршрута
-Если выполнен `approve` на последнем этапе RouteInstance, заявка переходит в статус `approved`.  
+Если выполнен `approve` на последнем этапе live-маршрута, заявка переходит в статус `approved` (`status_id`).  
 **Связи:** FR-APP-07, AC-APP-05b
 
 ### BR-18 — Валидация маршрута при активации и при submit
@@ -80,7 +85,7 @@
 ## 4. Правила жизненного цикла заявки
 
 ### BR-06 — Повторная отправка после return
-После `return` инициатор может изменить значения полей заявки (в статусе `returned`) и повторно отправить её на согласование. Повторный submit возобновляет согласование **с первого этапа** экземпляра маршрута (RouteInstance не пересобирается; новая FieldValueVersion получает полный цикл решений). Решение: OQ-B — [Snapshot Model](../03-diagrams/erd/snapshot-model.md).  
+После `return` инициатор может изменить значения полей заявки (в статусе `returned`) и повторно отправить её на согласование. Повторный submit возобновляет согласование **с первого этапа** актуального (live) маршрута: `current_stage_id` → первый `ApprovalStage`, новые `ApprovalTask` по live assignments. Snapshot маршрута / версий значений **не** создаётся ([ADR-LIVE-CFG-01](../03-diagrams/architecture/adr-live-config.md)).  
 **Связи:** FR-REQ-09, UC-05, AC-APP-08
 
 ### BR-07 — Отмена только draft и returned
@@ -92,7 +97,7 @@
 **Связи:** FR-REQ-01, FR-REQ-02, UC-04
 
 ### BR-20 — Submit переводит в in_approval
-Успешный submit из `draft` или повторный submit из `returned` переводит заявку в `in_approval`, создаёт задачи **первого** этапа RouteInstance и фиксирует RouteInstance / FieldValueVersion согласно BR-08 / BR-22 / BR-26 (при resubmit — тоже этап 1, BR-06; [Snapshot Model](../03-diagrams/erd/snapshot-model.md)).  
+Успешный submit из `draft` или повторный submit из `returned` переводит заявку в статус «На согласовании» (`status_id`), выставляет `current_stage_id` на первый live stage и создаёт `ApprovalTask` по live `StageAssignment` (BR-08 / BR-06; [ADR-LIVE-CFG-01](../03-diagrams/architecture/adr-live-config.md)).  
 **Связи:** FR-REQ-03, UC-05, AC-APP-02, AC-APP-03
 
 ### BR-21 — Запрет самосогласования
@@ -103,40 +108,38 @@
 При `reject` и `return` комментарий **обязателен** (непустой текст). При `approve` комментарий **необязателен**.  
 **Связи:** FR-APP-03–05, UC-07–09, AC-APP-04, AC-APP-06, AC-APP-07, ERR_VALIDATION
 
-### BR-26 — Схема полей: актуальная при редактировании, версия значений после submit
-1. При **редактировании** заявки в статусах `draft` и `returned` используется **актуальная** схема полей соответствующего типа заявки.
-2. При сохранении полей и при submit выполняется валидация значений по этой актуальной схеме. Если схема изменилась и значения некорректны — операция отклоняется с ERR_VALIDATION.
-3. После **успешного submit** (первого из `draft` или повторного из `returned`) система создаёт **новую версию** схемы и значений полей (номер отправки). Согласующие на текущем проходе работают с **текущей** версией; решение привязано к версии. Предыдущие версии видны в истории (BR-24, UC-14).
-4. Экземпляр **маршрута** — отдельно: BR-08 / BR-09 / BR-22 (при resubmit не пересобирается). Полная механика: [Snapshot Model](../03-diagrams/erd/snapshot-model.md).
+### BR-26 — Схема полей: актуальная (live) при edit и согласовании
+1. При **редактировании** заявки в статусах `draft` и `returned` используется **актуальная** схема полей типа заявки.
+2. При сохранении полей и при submit выполняется валидация по этой схеме; при несоответствии — ошибка валидации.
+3. После successful submit согласующие читают текущие `RequestFieldValue`. Сущность **FieldValueVersion** **не** используется.
+4. Маршрут — live: BR-08 / BR-09 / BR-22 ([ADR-LIVE-CFG-01](../03-diagrams/architecture/adr-live-config.md)).
 
-**Связи:** FR-REQ-02, FR-REQ-03, FR-REQ-09, FR-CAT-03, UC-04, UC-05, AC-DRAFT-01, AC-DRAFT-02; схема admin — [docs/backlog.md](../backlog.md)
+**Связи:** FR-REQ-02, FR-REQ-03, FR-REQ-09, FR-CAT-03, UC-04, UC-05, AC-DRAFT-01, AC-DRAFT-02
 
 ### BR-28 — Свободные комментарии инициатора в in_approval
 Инициатор может оставлять свободные комментарии к своей заявке в статусе `in_approval` (в дополнение к комментариям решений согласующих). Комментарии других сотрудников к чужим заявкам запрещены.  
 **Связи:** FR-REQ-06, UC-06, AC-REQ-06
 
-## 5. Правила snapshot и каталога
+## 5. Правила конфигурации маршрута и каталога
 
-### BR-08 — Экземпляр маршрута при первом submit
-При первой отправке заявки из `draft` система фиксирует **экземпляр маршрута** заявки (набор этапов, порядок, назначения) один раз. При resubmit маршрут **не** пересобирается (BR-22).  
-В MVP маршрут во время работы заявки не меняется (admin UI нет); принцип фиксации сохранён для будущей админки — [docs/backlog.md](../backlog.md). Полная механика: [Snapshot Model](../03-diagrams/erd/snapshot-model.md).  
+### BR-08 — Submit использует live-маршрут
+При успешной отправке заявка читает **актуальный** `ApprovalRoute` типа (этапы и назначения), получает `current_stage_id` и `ApprovalTask` для assignees. **RouteInstance не создаётся** ([ADR-LIVE-CFG-01](../03-diagrams/architecture/adr-live-config.md)).  
 **Связи:** FR-REQ-03, AC-APP-10
 
-### BR-09 — Изоляция запущенных заявок от изменений конфигурации
-**Baseline:** изменение live-конфигурации типа заявки, маршрута, этапов или назначений не изменяет `RouteInstance` и `FieldValueVersion` уже отправленных заявок и не меняет их дальнейшее согласование. Принцип изоляции действует независимо от способа внесения изменений конфигурации; см. [Snapshot Model](../03-diagrams/erd/snapshot-model.md).  
-В Baseline правило проверяется через seed/test data или SQL/test script. **Backlog:** Admin UI как пользовательский способ изменения конфигурации — [docs/backlog.md](../backlog.md).  
-**Связи:** FR-REQ-03, UC-05, AC-APP-10, AC-APP-10b, AC-DRAFT-02; изменение конфигурации через Admin UI — [docs/backlog.md](../backlog.md)
+### BR-09 — Изменение live-конфигурации и незавершённые заявки
+Изменение live-конфигурации (тип, маршрут, этапы, назначения, ProcessTransition, схема полей) **может влиять** на ещё не завершённые заявки (snapshot нет).
 
-### BR-22 — Повторный submit: маршрут и версии значений
-При повторной отправке из `returned`:
-- экземпляр **маршрута** не пересобирается (BR-08);
-- создаётся **новая версия** схемы и значений полей (номер отправки); решение согласующего привязано к версии (BR-26).
+**Ограничение админки:** нельзя удалять / деактивировать этап, на который есть open `ApprovalTask` или заявки in_approval с этим `current_stage_id`.
 
-Полная механика: [Snapshot Model](../03-diagrams/erd/snapshot-model.md).  
-**Связи:** FR-REQ-09, BR-26, AC-APP-08, AC-DRAFT-02
+Версионирование процессов и snapshot — **out of scope**.  
+**Связи:** FR-REQ-03, UC-05, AC-APP-10; ADR-LIVE-CFG-01
+
+### BR-22 — Повторный submit: live-маршрут с первого этапа
+При повторной отправке из `returned`: берётся актуальный live-маршрут; `current_stage_id` → первый этап; создаются новые `ApprovalTask`; FieldValueVersion **не** создаётся.  
+**Связи:** FR-REQ-09, BR-06, BR-26, AC-APP-08, AC-DRAFT-02
 
 ### BR-10 — Неактивный тип скрыт в каталоге
-Тип заявки с `is_active = false` не отображается в каталоге сотрудника и недоступен для создания новой заявки. Уже созданные заявки этого типа продолжают обрабатываться.  
+Тип заявки с `active = false` не отображается в каталоге и недоступен для создания новой заявки. Уже созданные заявки продолжают обрабатываться (с учётом live config, BR-09).  
 **Связи:** FR-CAT-01, FR-REQ-01, AC-CAT-01
 
 ---
@@ -144,7 +147,7 @@
 ## 6. Правила аудита
 
 ### BR-24 — История обязательна для значимых событий
-По заявке фиксируется история как минимум для: создания; submit; решений approve/reject/return; перехода этапа; завершения маршрута; отмены; изменений полей при доработке (returned). Предыдущие **версии значений** полей (по номеру отправки) доступны в истории карточки (UC-14); см. [Snapshot Model](../03-diagrams/erd/snapshot-model.md).  
+По заявке фиксируется история как минимум для: создания; submit; решений approve/reject/return; перехода этапа; завершения маршрута; отмены; изменений полей при доработке (returned). Полный snapshot payload значений в HistoryEvent **не** обязателен.  
 **Связи:** FR-AUDIT-01, FR-AUDIT-02, UC-14
 
 ---
@@ -160,22 +163,22 @@
 | BR-05 | Return → returned |
 | BR-06 | После return — правка и повторный submit с первого этапа |
 | BR-07 | Отмена только draft/returned |
-| BR-08 | Экземпляр маршрута при первом submit |
-| BR-09 | Конфиг не влияет на запущенные заявки (принцип; admin — backlog) |
+| BR-08 | Submit читает live-маршрут; RouteInstance нет |
+| BR-09 | Live config может влиять на in-flight; ограничение удаления этапов |
 | BR-10 | Неактивный тип скрыт в каталоге |
 | BR-12 | Нет оргструктурного auto-routing |
 | BR-14 | Approver видит заявки со своими задачами |
 | BR-15 | Действие только по своей открытой задаче |
-| BR-16 | Множественные роли (union) |
+| BR-16 | Одна роль на User (`role_id`); Admin может менять роль |
 | BR-17 | Approve последнего этапа → approved |
 | BR-18 | Валидация маршрута при активации и при submit |
 | BR-19 | Создание → draft |
-| BR-20 | Submit → in_approval + задачи |
+| BR-20 | Submit → in_approval + tasks первого live stage |
 | BR-21 | Запрет самосогласования |
-| BR-22 | Resubmit: маршрут без rebuild; новая версия значений |
-| BR-24 | Минимальный набор audit-событий (+ версии значений в истории) |
+| BR-22 | Resubmit: live-маршрут с первого этапа; без FieldValueVersion |
+| BR-24 | Минимальный набор audit-событий |
 | BR-25 | Комментарий обязателен при reject/return; для approve нет |
-| BR-26 | Edit draft/returned — актуальная схема; после submit — версия схемы и значений |
+| BR-26 | Edit и согласование — актуальная live-схема; без версий значений |
 | BR-28 | Свободные комментарии инициатора в in_approval |
 
 **Количество BR (Baseline): 24**  
@@ -199,14 +202,14 @@ Backlog BR: см. [docs/backlog.md](../backlog.md).
 | OQ-BR-02 | Свободные комментарии инициатора в in_approval | BR-28 |
 | OQ-BR-03 | Остальные задачи этапа → `cancelled` | BR-03 |
 | OQ-FR-01 / OQ-AC-02 (бывш. OQ-UC) | Комментарий обязателен при reject/return; для approve нет | BR-25 |
-| OQ-FR-02 | Схема: актуальная при edit draft/returned; snapshot после submit | BR-26 |
-| OQ-FR-03 | Уведомление в одной транзакции с событием | [docs/backlog.md](../backlog.md) (уведомления) |
+| OQ-FR-02 | Схема: актуальная (live) при edit и согласовании; без FieldValueVersion | BR-26; ADR-LIVE-CFG-01 |
+| OQ-FR-03 | Уведомление в одной транзакции с событием | BR-29; Target notifications |
 | OQ-FR-04 | Валидация маршрута при активации и при submit | BR-18 |
-| OQ-HOME-01 | После login — ЛК + навигация по union roles | BR-16 (login UI — backlog) |
-| OQ-NFR-01 | JWT TTL = 8 часов | [docs/backlog.md](../backlog.md) (JWT/auth) |
+| OQ-HOME-01 | После login — разделы по единственной роли пользователя | BR-16 |
+| OQ-NFR-01 | JWT TTL = 8 часов | [ADR-AUTH-JWT-01](../03-diagrams/architecture/adr-jwt-core-api.md) |
 | OQ-NFR-02 / OQ-ERR-01 / OQ-AC-01 | Чужой скрываемый ресурс → 404 | NFR-SEC-05 |
 | OQ-NFR-03 | Perf baseline ≥ 1000 заявок / 5000 history | NFR-PERF-04 |
-| OQ-NFR-04 | Password hash: bcrypt или эквивалент | [docs/backlog.md](../backlog.md) (password hash) |
+| OQ-NFR-04 | Password hash: bcrypt или эквивалент | [ADR-AUTH-JWT-01](../03-diagrams/architecture/adr-jwt-core-api.md) / ADR-SEC-01 |
 | OQ-NFR-LOG | Retention техлогов = 14 дней | NFR-LOG-03 |
 | OQ-RBAC-01 | Admin не создаёт заявки от сотрудника | [docs/backlog.md](../backlog.md) (admin) |
 | OQ-RBAC-02 | Approver видит полную карточку по своей задаче | BR-14 |
@@ -215,8 +218,8 @@ Backlog BR: см. [docs/backlog.md](../backlog.md).
 | HTTPS внешний стенд | Обязателен | NFR-SEC-06 |
 | Multi-instance | Вне MVP | [docs/backlog.md](../backlog.md) (scalability) |
 | Retention истории заявок | 60 дней в MVP | NFR-LOG-03 |
-| Выбор активной роли | Не требуется; union permissions | BR-16 |
-| OQ-A / OQ-B | Resubmit после return — с **первого** этапа (OQ-B); RouteInstance без rebuild | BR-06; [Snapshot Model](../03-diagrams/erd/snapshot-model.md) |
+| Выбор активной роли | Не требуется; одна роль на User | BR-16 |
+| OQ-A / OQ-B | Resubmit после return — с **первого** этапа (OQ-B); live-маршрут без RouteInstance | BR-06; ADR-LIVE-CFG-01 |
 
 ---
 

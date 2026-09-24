@@ -1,775 +1,721 @@
 # API Contract Analysis
 
-**Продукт:** Employee Service
+**Продукт:** Employee Service  
+**Документ:** API Contract Analysis  
+**Статус:** **Frozen Target** (синхронизирован с runtime и Contract Freeze)  
+**Канон:** текущий runtime (`app/api`, `app/schemas`, `app/services`) + тесты; машинно-читаемый контракт — [`openapi.yaml`](./openapi.yaml); согласование — [`approval-api-contract.md`](./approval-api-contract.md).
 
-**Этап:** Stage 4.1
+---
 
-**Статус:** аналитический документ для подготовки API-контракта
+## 1. Назначение
 
-**Основание:** Baseline v1.0 требований и диаграмм
+Документ описывает **Frozen Target** REST-контракт MVP: операции, payload, RBAC, ошибки и переходы через Action Engine. Он не заменяет OpenAPI, а фиксирует аналитическую сводку в том же состоянии, что runtime и `openapi.yaml`.
 
-## 1. Scope
+### 1.1. Принципы Target
 
-Документ определяет предлагаемый REST-контракт MVP на уровне операций, payload, проверок, RBAC и ошибок. Он не является OpenAPI-спецификацией и не изменяет зафиксированную бизнес-логику.
+| Принцип | Зафиксировано |
+| :--- | :--- |
+| Аутентификация | JWT Bearer ([ADR-AUTH-JWT-01](../03-diagrams/architecture/adr-jwt-core-api.md)): `POST /auth/login`, `GET /me` |
+| Идентификаторы | `User.id` — UUID; бизнес-сущности (Request, Action, ApprovalTask, …) — integer ([ADR-ID-01](../03-diagrams/architecture/adr-id-strategy.md)); номер заявки в UI = `request.id` |
+| Ошибки | Nested envelope `{ error: { code, message, details } }` ([ADR-ERR-03](../03-diagrams/architecture/adr-error-envelope.md)); коды **без** префикса `ERR_` |
+| Конфиг | Live schema / route без snapshot-полей ([ADR-LIVE-CFG-01](../03-diagrams/architecture/adr-live-config.md)) |
+| Lifecycle | Action Engine: `GET .../available-actions` + `POST .../actions/{action_id}` ([ADR-ACTION-01](../03-diagrams/architecture/adr-configurable-actions.md)) |
+| Роль | Одна системная роль `role_id` → `roles: [employee\|approver\|admin]` (BR-16); union ролей нет |
+| Карточка | `RequestCard` **без** встроенных `schema` и `available_actions` |
+| Approver | Читает `GET /requests/{id}` (ACL BR-14) → available-actions → execute; **не** очередь `/approval-tasks/*` |
 
-### 1.1. В scope
+### 1.2. Классификация endpoints
 
-- каталог активных типов заявок;
-- создание, редактирование, submit/resubmit, просмотр и отмена своих заявок;
-- свободные комментарии инициатора;
-- очередь и карточка задач согласования;
-- approve, reject, return;
-- история заявки и версии значений;
-- RBAC ролей `employee` и `approver`, а также зафиксированное в RBAC исключение чтения каталога для `admin`;
-- snapshot- и lifecycle-ограничения.
+| Класс | Смысл |
+| :--- | :--- |
+| **Target active** | Нормативный контракт клиента |
+| **Deprecated thin alias** | Работает, делегирует в Action Engine; Target-клиент обязан использовать execute |
+| **Disabled stub** | Всегда `409 INVALID_STATE`; **не** thin alias |
+| **Deferred stub** | Всегда `409 INVALID_STATE`; отложено до следующего этапа API |
+| **Out of Target** | Не документируется как активный Target (change-password, `/users/me`, mark-read, path-approve/reject/return) |
 
-### 1.2. Вне scope Baseline
+### 1.3. Вне scope / Out of Target-active
 
-- login/password, JWT и профиль;
-- Admin API для типов, полей, маршрутов, назначений и справочников;
-- in-app уведомления;
-- admin-реестр заявок;
-- optimistic locking и `ERR_CONFLICT_VERSION`;
-- создание задач, RouteInstance, FieldValueVersion и HistoryEvent напрямую клиентом;
-- OpenAPI и backend-реализация.
+- Admin CRUD процессов и справочников (отдельный этап);
+- `POST /auth/change-password`;
+- `GET /users/me` (путь Target — **`GET /me`**);
+- `PATCH /notifications/{id}` (mark-read);
+- path-операции `.../approve|reject|return` на заявке или задаче как Target;
+- optimistic locking;
+- refresh-token.
 
-### 1.3. Общие соглашения анализа
+---
 
-- Пути предложены по REST-соглашению: существительные во множественном числе, действия — подресурсы.
-- Идентификаторы ресурсов имеют логический тип `UUID` согласно ERD Data Dictionary.
-- Текущий пользователь и его роли определяются техническим demo-header stub по ADR-AUTH-DEMO-01. Имена заголовков не зафиксированы — см. §10.
-- Права пользователя с несколькими ролями объединяются (BR-16).
-- Error Matrix рекомендует envelope `{ error_code, message, details }` только как ориентир для будущего контракта; обязательный формат ещё не зафиксирован — см. §10.
-- Списки заявок и задач поддерживают пагинацию; `page_size` имеет default 20 и максимум 100 (NFR-PERF-03). `page_size = 101` → `ERR_VALIDATION`.
-- Способ навигации между страницами и response envelope в существующих документах не зафиксированы — см. §10.
+## 2. Inventory endpoints
 
-## 2. Baseline API Operations
+| Method | Path | Класс | Roles | Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| POST | `/auth/login` | Target active | public | JWT + `CurrentUser` |
+| GET | `/me` | Target active | any authenticated | Текущий пользователь |
+| GET | `/request-types` | Target active | employee, admin | Каталог активных типов |
+| GET | `/request-types/{type_id}` | Target active | employee, admin | Описание активного типа |
+| GET | `/request-types/{type_id}/schema` | Target active | employee, admin | Live-схема формы |
+| POST | `/requests` | Target active | employee | Создать draft |
+| GET | `/requests` | Target active | employee | Список своих заявок |
+| GET | `/requests/{request_id}` | Target active | employee (own), approver (via task) | `RequestCard` |
+| GET | `/requests/{request_id}/available-actions` | Target active | employee, approver | `{ available_actions: [{id,code,name}] }` |
+| POST | `/requests/{request_id}/actions/{action_id}` | Target active | per ProcessTransition | Universal execute → `RequestCard` |
+| GET | `/requests/{request_id}/history` | Target active | employee, approver (ACL) | `{ items: [...] }` DESC |
+| GET | `/notifications` | Target active | employee, approver, admin | `{ items: [...] }` DESC |
+| POST | `/requests/{request_id}/submit` | Deprecated thin alias | employee | Alias Action Engine `submit` → `RequestCard` |
+| POST | `/requests/{request_id}/cancel` | Deprecated thin alias | employee | Alias Action Engine `cancel` → `RequestCard` |
+| PATCH | `/requests/{request_id}` | Deferred stub | employee | Всегда `409 INVALID_STATE` |
+| POST | `/requests/{request_id}/comments` | Deferred stub | employee | Всегда `409 INVALID_STATE` |
+| GET | `/approval-tasks` | Disabled stub | — | Всегда `409 INVALID_STATE` |
+| GET | `/approval-tasks/{task_id}` | Disabled stub | — | Всегда `409 INVALID_STATE` |
+| POST | `/approval-tasks/{task_id}/approve` | Disabled stub | — | Всегда `409 INVALID_STATE` |
+| POST | `/approval-tasks/{task_id}/reject` | Disabled stub | — | Всегда `409 INVALID_STATE` |
+| POST | `/approval-tasks/{task_id}/return` | Disabled stub | — | Всегда `409 INVALID_STATE` |
 
-| Method | Path | UC | FR | Roles | Purpose |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| GET | `/request-types` | UC-03 | FR-CAT-01 | employee, admin | Получить каталог активных типов |
-| GET | `/request-types/{type_id}` | UC-03 | FR-CAT-02 | employee, admin | Получить описание активного типа |
-| GET | `/request-types/{type_id}/schema` | UC-03, UC-04 | FR-CAT-03 | employee, admin | Получить актуальную схему формы |
-| POST | `/requests` | UC-04 | FR-REQ-01 | employee | Создать draft выбранного типа |
-| GET | `/requests` | UC-06 | FR-CAB-02, FR-REQ-05 | employee | Получить список своих заявок |
-| GET | `/requests/{request_id}` | UC-06 | FR-REQ-04, FR-REQ-05, FR-REQ-06 | employee (own) | Получить карточку своей заявки |
-| PATCH | `/requests/{request_id}` | UC-04, UC-09 | FR-REQ-02 | employee (initiator) | Сохранить working values по live-схеме |
-| POST | `/requests/{request_id}/submit` | UC-05 | FR-REQ-03, FR-REQ-09 | employee (initiator) | Выполнить submit или resubmit |
-| POST | `/requests/{request_id}/cancel` | UC-10 | FR-REQ-07 | employee (initiator) | Отменить draft/returned |
-| POST | `/requests/{request_id}/comments` | UC-06 | FR-REQ-06 | employee (initiator) | Добавить свободный комментарий |
-| GET | `/requests/{request_id}/history` | UC-14 | FR-AUDIT-01 | employee (own), approver (via own task) | Получить события и прошлые версии |
-| GET | `/approval-tasks` | UC-07 | FR-APP-01 | approver | Получить свои открытые задачи |
-| GET | `/approval-tasks/{task_id}` | UC-07 | FR-APP-02, FR-REQ-04, FR-REQ-05 | approver (assignee) | Получить задачу и полную карточку заявки |
-| POST | `/approval-tasks/{task_id}/approve` | UC-07 | FR-APP-03, FR-APP-06, FR-APP-07 | approver (assignee) | Согласовать текущий этап |
-| POST | `/approval-tasks/{task_id}/reject` | UC-08 | FR-APP-04 | approver (assignee) | Отклонить заявку |
-| POST | `/approval-tasks/{task_id}/return` | UC-09 | FR-APP-05, FR-REQ-08 | approver (assignee) | Вернуть заявку на доработку |
+**Не в inventory как Target-active:** `/auth/change-password`, `/users/me`, `PATCH /notifications/{id}`, `POST /requests/{id}/approve|reject|return`.
 
-**Количество Baseline operations: 16.**
+---
 
-FR-AUDIT-02, FR-APP-06, FR-APP-07 и FR-REQ-08 являются системными side effects, а не самостоятельными клиентскими операциями. Они выполняются атомарно внутри соответствующих submit/decision операций.
+## 3. Auth
 
-## 3. Request/Response Contracts
-
-Ниже перечислены поля аналитического уровня. Физические типы хранения и JSON Schema будут определены на этапе OpenAPI/реализации.
-
-### 3.1. GET `/request-types`
-
-**Request**
-
-- Body: отсутствует.
-- Query: отсутствует; операция всегда фильтрует `is_active = true`.
-
-**Response**
-
-- `200 OK`.
-- Body: массив `{ id, name, description }`.
-- При отсутствии активных типов: `200 OK` и `[]`.
-
-**Validation**
-
-- Возвращаются только активные типы (BR-10, AC-CAT-01).
-
-**Errors**
-
-- `ERR_FORBIDDEN` — роль не разрешает просмотр.
-- `ERR_INTERNAL` — непредвиденная ошибка.
-
-### 3.2. GET `/request-types/{type_id}`
+### 3.1. POST `/auth/login` — Target active
 
 **Request**
 
-- Path: `type_id: UUID`.
-- Body: отсутствует.
+```json
+{ "login": "employee1", "password": "********" }
+```
 
-**Response**
+Security: отсутствует (public).
 
-- `200 OK`.
-- Body: `{ id, name, description }`.
+**Response `200`**
 
-**Validation**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_in": 28800,
+  "user": {
+    "id": "33333333-3333-4333-8333-333333333333",
+    "login": "employee1",
+    "full_name": "Иван Петров",
+    "email": null,
+    "position": "Specialist",
+    "department": "HR",
+    "roles": ["employee"]
+  }
+}
+```
 
-- Тип должен существовать и быть активным.
-
-**Errors**
-
-- `ERR_NOT_FOUND` (`404`) — тип не существует.
-- `ERR_NOT_FOUND` (`404`) — тип неактивен; расхождение с формулировкой FR-CAT-02 вынесено в §10.
-- `ERR_FORBIDDEN` (`403`) — роль не разрешает просмотр.
-- `ERR_INTERNAL` (`500`).
-
-### 3.3. GET `/request-types/{type_id}/schema`
-
-**Request**
-
-- Path: `type_id: UUID`.
-- Body: отсутствует.
-
-**Response**
-
-- `200 OK`.
-- Body: `{ request_type_id, fields }`.
-- `fields[]`: `{ code, name, data_type, required, order_no, dictionary_id }`.
-- `data_type`: `text | date | number | catalog`.
-- Пустой `fields` допустим.
-
-**Validation**
-
-- Поля упорядочены по `order_no`.
-- Схема является live-конфигурацией на момент запроса.
-- Тип должен быть активным.
+`user` — схема `CurrentUser`. Refresh-token нет.
 
 **Errors**
 
-- `ERR_NOT_FOUND` (`404`) — тип не существует.
-- `ERR_NOT_FOUND` (`404`) — тип неактивен; расхождение с формулировкой FR-CAT-02 вынесено в §10.
-- `ERR_FORBIDDEN` (`403`).
-- `ERR_INTERNAL` (`500`).
+| HTTP | code | Условие |
+| :---: | :--- | :--- |
+| 401 | `INVALID_CREDENTIALS` | Неверный login/password |
+| 403 | `FORBIDDEN` | Пользователь inactive |
+| 422 | `VALIDATION` | Невалидное/пустое body |
+| 500 | `INTERNAL` | Непредвиденная ошибка |
 
-### 3.4. POST `/requests`
+Трассировка: UC-01; FR-AUTH-01.
 
-**Request**
+### 3.2. GET `/me` — Target active
 
-- Body: `{ request_type_id: UUID }`.
-- `initiator_id` клиент не передаёт: он определяется текущим пользователем.
+**Не** `/users/me`.
 
-**Response**
+**Response `200`:** `CurrentUser`.
 
-- `201 Created`.
-- Body: `{ id, request_type_id, initiator_id, status: "draft", current_stage_number: null, created_at, updated_at }`.
+```json
+{
+  "id": "33333333-3333-4333-8333-333333333333",
+  "login": "employee1",
+  "full_name": "Иван Петров",
+  "email": null,
+  "position": "Specialist",
+  "department": "HR",
+  "roles": ["employee"]
+}
+```
 
-**Validation**
+`roles` — ровно один элемент (отражение `User.role_id`).
 
-- Текущий пользователь имеет роль `employee`.
-- Тип существует и активен.
-- Создание RouteInstance и FieldValueVersion не выполняется.
-- Событие создания пишется атомарно с Request (FR-AUDIT-02, BR-24).
+**Errors:** `401 UNAUTHORIZED`, `500 INTERNAL`.
 
-**Errors**
+Трассировка: FR-AUTH-02.
 
-- `ERR_INACTIVE_TYPE` (`409`) — тип неактивен.
-- `ERR_NOT_FOUND` (`404`) — тип не существует.
-- `ERR_VALIDATION` (`422`) — некорректный `request_type_id`.
-- `ERR_FORBIDDEN` (`403`).
-- `ERR_INTERNAL` (`500`).
+### 3.3. CurrentUser (DTO)
 
-### 3.5. GET `/requests`
+| Поле | Тип | Обязательно |
+| :--- | :--- | :---: |
+| `id` | uuid | да |
+| `login` | string | да |
+| `full_name` | string | да |
+| `email` | string \| null | нет |
+| `position` | string \| null | нет |
+| `department` | string \| null | нет |
+| `roles` | `[RoleCode]` length 1 | да |
 
-**Request**
+`RoleCode`: `employee` \| `approver` \| `admin`.
 
-- Query: `status?` — одно из `draft | in_approval | returned | approved | rejected | cancelled`.
-- Query: `page_size?` — default 20, максимум 100.
-- Остальные параметры навигации по страницам не зафиксированы — см. §10.
-- Body: отсутствует.
+Все защищённые endpoints: `Authorization: Bearer <access_token>`.
 
-**Response**
+---
 
-- `200 OK`.
-- Body: пагинированное представление; envelope и метаданные навигации не зафиксированы — см. §10.
-- Каждый элемент списка содержит `{ id, request_type: { id, name }, status, current_stage, created_at, updated_at }`.
-- `current_stage`: `{ number, name } | null`; обязателен при `in_approval`.
-- Пустой список допустим.
+## 4. Каталог типов заявок
 
-**Validation**
+### 4.1. GET `/request-types` — Target active
 
-- Возвращаются только заявки, где текущий пользователь — `initiator_id` (BR-01).
-- Фильтр `status` не расширяет область видимости.
+Роли: `employee`, `admin`. Только `is_active = true`. Пустой каталог → `200` и `[]`.
 
-**Errors**
+**Response item (`RequestTypeSummary`):** `{ id, code, name, description? }`.
 
-- `ERR_VALIDATION` (`422`) — неизвестный status или невалидная пагинация.
-- `ERR_FORBIDDEN` (`403`) — нет роли `employee`.
-- `ERR_INTERNAL` (`500`).
+Errors: `403 FORBIDDEN`, `500 INTERNAL`.
 
-### 3.6. GET `/requests/{request_id}`
+### 4.2. GET `/request-types/{type_id}` — Target active
 
-**Request**
+Отсутствующий или неактивный тип → `404 NOT_FOUND` (interim; см. OPEN §11).
 
-- Path: `request_id: UUID`.
-- Body: отсутствует.
+### 4.3. GET `/request-types/{type_id}/schema` — Target active
 
-**Response**
-
-- `200 OK`.
-- Body:
-  - `{ id, request_type, initiator, status, current_stage, created_at, updated_at }`;
-  - `schema` и `values`;
-  - `value_source: "working" | "submitted_version"`;
-  - `submit_number` при snapshot-based отображении;
-  - `comments[]`: `{ id, kind, text, author, approval_task_id, created_at }`.
-
-**Validation**
-
-- Endpoint предназначен для своей заявки employee.
-- Для `draft`/`returned` показываются working values по live-схеме.
-- Для `in_approval`, `approved`, `rejected` показывается последняя FieldValueVersion.
-- Чужая заявка скрывается через `404`, без раскрытия факта существования.
-- Правило показа значений для `cancelled` после `returned` не определено — см. §10.
-
-**Errors**
-
-- `ERR_NOT_FOUND` (`404`) — заявка отсутствует или чужая.
-- `ERR_FORBIDDEN` (`403`) — роль не разрешает операцию.
-- `ERR_INTERNAL` (`500`).
-
-### 3.7. PATCH `/requests/{request_id}`
-
-**Request**
-
-- Path: `request_id: UUID`.
-- Body: `{ values: [{ field_code, value }] }`.
-- `value` — логический носитель значения; формат проверяется по `data_type`.
+Live-схема формы.
 
 **Response**
 
-- `200 OK`.
-- Body: `{ id, status, schema, values, updated_at }`, где `schema` — текущая live-схема.
+```json
+{
+  "request_type_id": 1,
+  "fields": [
+    {
+      "code": "start_date",
+      "name": "Дата начала",
+      "data_type": "date",
+      "required": true,
+      "order_no": 1,
+      "dictionary_id": null
+    }
+  ]
+}
+```
+
+`data_type`: `text` \| `date` \| `number` \| `catalog` \| `boolean`.  
+Вложение dictionary items в schema **не** зафиксировано (OPEN §11).
+
+Errors: `403 FORBIDDEN`, `404 NOT_FOUND` (нет / inactive), `500 INTERNAL`.
+
+---
+
+## 5. Requests lifecycle
+
+### 5.1. RequestCard — Target shape (freeze)
+
+Полная карточка заявки. **Нет** полей `schema`, `available_actions`, `value_source`, `submit_number`, `field_value_versions`. Схема — отдельно через schema endpoint; действия — через available-actions.
+
+```json
+{
+  "id": 10245,
+  "request_type": { "id": 1, "code": "annual_leave", "name": "Annual leave" },
+  "initiator_user_id": "33333333-3333-4333-8333-333333333333",
+  "initiator": { "id": "33333333-3333-4333-8333-333333333333", "full_name": "Иван Петров" },
+  "status_id": 2,
+  "status": { "id": 2, "code": "in_approval", "name": "На согласовании" },
+  "current_stage_id": 10,
+  "current_stage": { "id": 10, "name": "Line manager", "sequence_no": 1 },
+  "created_at": "2026-09-21T09:00:00Z",
+  "updated_at": "2026-09-21T09:10:00Z",
+  "values": [{ "field_code": "start_date", "value": "2026-10-01" }],
+  "approval_tasks": [
+    {
+      "id": 501,
+      "stage_id": 10,
+      "assignee_user_id": "77777777-7777-4777-8777-777777777777",
+      "status": "open",
+      "created_at": "2026-09-21T09:10:00Z",
+      "completed_at": null
+    }
+  ],
+  "comments": [
+    {
+      "id": 801,
+      "kind": "decision",
+      "text": "Недостаточно обоснования",
+      "author": { "id": "...", "full_name": "..." },
+      "approval_task_id": 501,
+      "created_at": "2026-09-21T10:00:00Z"
+    }
+  ]
+}
+```
+
+| Поле | Примечание |
+| :--- | :--- |
+| `request_type` | `{ id, code, name }` |
+| `initiator_user_id` / `initiator` | UUID + `{ id, full_name }` |
+| `status_id` / `status` | `{ id, code, name }` |
+| `current_stage_id` / `current_stage` | nullable; при `in_approval` обычно заданы |
+| `values` | working `RequestFieldValue`: `{ field_code, value }` |
+| `approval_tasks` | summary: `open` \| `completed` \| `cancelled` |
+| `comments` | `kind`: `free` \| `decision` |
+
+Тот же `RequestCard` возвращают: GET card, POST execute, thin aliases submit/cancel.
+
+### 5.2. POST `/requests` — Target active
+
+**Request:** `{ "request_type_id": 1 }`.  
+`initiator_user_id` клиент не передаёт.
+
+**Response `201` (`CreatedRequest`):**
+
+```json
+{
+  "id": 10245,
+  "request_type_id": 1,
+  "initiator_user_id": "33333333-3333-4333-8333-333333333333",
+  "status_id": 1,
+  "status": { "id": 1, "code": "draft", "name": "Черновик" },
+  "current_stage_id": null,
+  "created_at": "2026-09-21T09:00:00Z",
+  "updated_at": "2026-09-21T09:00:00Z"
+}
+```
+
+Атомарно создаётся HistoryEvent (`create` → `draft`). Snapshot RouteInstance / FieldValueVersion **не** создаются.
+
+| HTTP | code |
+| :---: | :--- |
+| 404 | `NOT_FOUND` — тип не существует |
+| 409 | `INACTIVE_TYPE` |
+| 422 | `VALIDATION` |
+| 403 | `FORBIDDEN` |
+| 500 | `INTERNAL` |
 
-**Validation**
+### 5.3. GET `/requests` — Target active
 
-- Только инициатор.
-- Только `draft` или `returned`.
-- Коды, типы значений и catalog values проверяются по live-схеме.
-- Частично заполненный draft допустим; обязательность полностью проверяется при submit.
-- FieldValueVersion не изменяется и не создаётся.
-- При изменении `returned` фиксируется HistoryEvent (BR-24).
+Только заявки текущего employee (`initiator_user_id`). Сортировка `created_at` DESC.
 
-**Errors**
+Query: `status?` (`draft` \| `in_approval` \| `returned` \| `approved` \| `rejected` \| `cancelled`), `page?` (default 1), `page_size?` (default 20, max 100).
 
-- `ERR_NOT_FOUND` (`404`) — заявка отсутствует или чужая.
-- `ERR_INVALID_STATE` (`409`) — статус не `draft`/`returned`.
-- `ERR_VALIDATION` (`422`) — неизвестный field code, неверный формат/тип/catalog value.
-- `ERR_FORBIDDEN` (`403`) — роль не разрешает операцию.
-- `ERR_INTERNAL` (`500`).
+**Response `200`:** массив `RequestListItem` (envelope пагинации не зафиксирован — OPEN §11):
 
-### 3.8. POST `/requests/{request_id}/submit`
+```json
+[
+  {
+    "id": 10245,
+    "request_type": { "id": 1, "code": "annual_leave", "name": "Annual leave" },
+    "status": { "id": 2, "code": "in_approval", "name": "На согласовании" },
+    "current_stage": { "id": 10, "name": "Line manager", "sequence_no": 1 },
+    "created_at": "2026-09-21T09:00:00Z",
+    "updated_at": "2026-09-21T09:10:00Z"
+  }
+]
+```
 
-**Request**
+### 5.4. GET `/requests/{request_id}` — Target active
 
-- Path: `request_id: UUID`.
-- Body: отсутствует.
+**ACL**
 
-**Response**
+- `employee` — своя заявка;
+- `approver` — заявка, по которой есть **любая** собственная ApprovalTask (любой статус задачи);
+- чужая / отсутствующая → `404 NOT_FOUND` (без раскрытия факта);
+- `admin` на этот endpoint **не** допускается (role gate → `403 FORBIDDEN`).
 
-- `200 OK`.
-- Body: `{ id, status: "in_approval", current_stage, submit_number, updated_at }`.
+**Response `200`:** `RequestCard` (см. §5.1).  
+`available_actions` и form schema **не** встроены.
 
-**Validation**
+Трассировка: UC-06, UC-07; FR-REQ-04; BR-14.
 
-- Только инициатор; исходный статус только `draft` или `returned`.
-- Тип активен.
-- Working values валидируются по live-схеме, включая обязательные поля.
-- Live-маршрут валидируется: минимум один этап и минимум одно explicit role/user assignment на каждом этапе (BR-12, BR-18).
-- Первый successful submit создаёт RouteInstance один раз.
-- Каждый successful submit создаёт новую append-only FieldValueVersion.
-- Resubmit не перестраивает RouteInstance, устанавливает этап 1 и создаёт новые задачи этапа 1.
-- Request, snapshots, задачи и HistoryEvent фиксируются атомарно.
+### 5.5. GET `/requests/{request_id}/available-actions` — Target active
 
-**Errors**
+Read-only. Тот же ACL видимости, что у GET card.
 
-- `ERR_NOT_FOUND` (`404`) — заявка отсутствует или чужая.
-- `ERR_INVALID_STATE` (`409`) — статус не `draft`/`returned`.
-- `ERR_INACTIVE_TYPE` (`409`) — тип неактивен.
-- `ERR_ROUTE_CONFIG` (`409`) — нет этапов или назначений.
-- `ERR_VALIDATION` (`422`) — значения не соответствуют live-схеме.
-- `ERR_FORBIDDEN` (`403`).
-- `ERR_INTERNAL` (`500`) — транзакция откатывается.
+Backend считает действия из live `ProcessTransition` по current `status_id` и user `role_id`. На этом endpoint **не** фильтруются assignee / self-approval (это на execute).
 
-### 3.9. POST `/requests/{request_id}/cancel`
+**Response `200`**
 
-**Request**
+```json
+{
+  "available_actions": [
+    { "id": 3, "code": "approve", "name": "Согласовать" },
+    { "id": 4, "code": "return", "name": "Вернуть" },
+    { "id": 5, "code": "reject", "name": "Отклонить" }
+  ]
+}
+```
 
-- Path: `request_id: UUID`.
-- Body: отсутствует.
+Каждый элемент — **только** `{ id, code, name }`. Нет `effect`, `target_status`.
 
-**Response**
+UI не выбирает кнопки по жёстким `if code == "approve"`.
 
-- `200 OK`.
-- Body: `{ id, status: "cancelled", updated_at }`.
+Roles: `employee`, `approver`.
 
-**Validation**
+### 5.6. POST `/requests/{request_id}/actions/{action_id}` — Target active
 
-- Только инициатор.
-- Только `draft` или `returned`.
-- Смена статуса и HistoryEvent атомарны.
+Единственный Target mutation для process transitions (submit / cancel / approve / reject / return и др. по каталогу Action + ProcessTransition).
 
-**Errors**
+**Path:** `request_id` (int), `action_id` (int) — из `available_actions[].id`.
 
-- `ERR_NOT_FOUND` (`404`) — заявка отсутствует или чужая.
-- `ERR_INVALID_STATE` (`409`) — иной статус.
-- `ERR_FORBIDDEN` (`403`).
-- `ERR_INTERNAL` (`500`).
+**Body (optional)**
 
-### 3.10. POST `/requests/{request_id}/comments`
+```json
+{ "comment": "Недостаточно обоснования" }
+```
 
-**Request**
+`comment` обязателен (non-empty после trim) для reject/return → иначе `422 VALIDATION`. Для остальных действий optional.
 
-- Path: `request_id: UUID`.
-- Body: `{ text: string }`.
-- `kind`, `author_id` и `approval_task_id` клиент не задаёт; создаётся `kind = "free"`.
+**Server re-check on execute**
 
-**Response**
+1. Action / transition существуют и активны;
+2. process + from_status + role;
+3. ownership / open assignee task / current stage / self-approval (BR-15, BR-21);
+4. effect (`status_only` \| `approve_advance` на live stage и т.п.).
 
-- `201 Created`.
-- Body: `{ id, request_id, author_id, kind: "free", text, created_at }`.
+**Response `200`:** полный обновлённый **`RequestCard`**.  
+Отдельного wrapper `ExecuteActionResult` **нет**. Клиент при необходимости перезапрашивает `GET .../available-actions`.
 
-**Validation**
+| HTTP | code | Условие |
+| :---: | :--- | :--- |
+| 403 | `FORBIDDEN` / `FORBIDDEN_APPROVAL` | Нет роли / self-approval / нет open assignee task |
+| 404 | `NOT_FOUND` | Заявка не видна |
+| 409 | `REQUEST_ACTION_NOT_ALLOWED` | Действие недоступно для статуса/роли |
+| 409 | `TASK_DONE` | Задача уже обработана |
+| 409 | `INACTIVE_TYPE` / `ROUTE_CONFIG` | Submit-сценарии |
+| 422 | `VALIDATION` | Нет comment (reject/return) или ошибки полей submit |
+| 500 | `INTERNAL` | Rollback мутаций |
 
-- Только инициатор своей заявки.
-- `text` после trim непустой.
-- Свободный комментарий явно допустим в `in_approval`; полный список допустимых статусов не зафиксирован — см. §10.
+Roles: `employee`, `approver`, `admin` (у admin обычно нет ProcessTransition).
 
-**Errors**
+### 5.7. POST `/requests/{request_id}/submit` — Deprecated thin alias
 
-- `ERR_NOT_FOUND` (`404`) — заявка отсутствует или чужая.
-- `ERR_VALIDATION` (`422`) — пустой текст.
-- `ERR_FORBIDDEN` (`403`) — роль не разрешает операцию.
-- `ERR_INTERNAL` (`500`).
+Делегирует в Action Engine (`submit`). Response = полный `RequestCard`.  
+Target-клиент **обязан** использовать `POST .../actions/{action_id}`.
 
-### 3.11. GET `/requests/{request_id}/history`
+Role: `employee`. Ошибки — как у execute (submit-ветка).
 
-**Request**
+### 5.8. POST `/requests/{request_id}/cancel` — Deprecated thin alias
 
-- Path: `request_id: UUID`.
-- Body: отсутствует.
+Делегирует в Action Engine (`cancel`). Response = полный `RequestCard`.
 
-**Response**
+Role: `employee`.
 
-- `200 OK`.
-- Body:
-  - `events[]`: `{ id, actor, action, from_state, to_state, comment, at, value_version_id? }`;
-  - `field_value_versions[]`: `{ id, submit_number, schema_document, values_document, created_at }`.
-- События выдаются в хронологическом порядке; прошлые решения трассируются к соответствующей версии.
+### 5.9. Deferred stubs (requests)
 
-**Validation**
+| Method | Path | Поведение |
+| :--- | :--- | :--- |
+| PATCH | `/requests/{request_id}` | `409 INVALID_STATE` — сохранение working values отложено |
+| POST | `/requests/{request_id}/comments` | `409 INVALID_STATE` — free comment отложен |
 
-- Employee — только собственная заявка.
-- Approver — заявка, по которой у него есть собственная задача любого статуса.
-- История read-only; HistoryEvent и FieldValueVersion не изменяются через API.
+Decision comments создаются через Action Engine (`ExecuteActionInput.comment` на reject/return), не через comments stub.
 
-**Errors**
+Body schemas (`UpdateValuesInput`, `CreateCommentInput`) сохранены в OpenAPI для будущего этапа, но endpoints **не** Target-active.
 
-- `ERR_NOT_FOUND` (`404`) — заявка отсутствует или не видна.
-- `ERR_FORBIDDEN` (`403`) — роль не разрешает чтение истории.
-- `ERR_INTERNAL` (`500`).
+---
 
-### 3.12. GET `/approval-tasks`
+## 6. History
 
-**Request**
+### 6.1. GET `/requests/{request_id}/history` — Target active
 
-- Query: `page_size?` — default 20, максимум 100.
-- Остальные параметры навигации по страницам не зафиксированы — см. §10.
-- Имплицитный фильтр: `assignee_id = current_user` и `status = open`.
-- Body: отсутствует.
+Тот же ACL видимости, что у GET card (`employee` own / `approver` via task).
 
-**Response**
+**Response `200`**
 
-- `200 OK`.
-- Body: пагинированное представление; envelope и метаданные навигации не зафиксированы — см. §10.
-- Каждый элемент списка содержит `{ id, request_id, request_type: { id, name }, stage: { number, name }, status: "open", created_at }`.
-- Пустая очередь допустима.
+```json
+{
+  "items": [
+    {
+      "id": 703,
+      "action": "approve",
+      "actor_id": "77777777-7777-4777-8777-777777777777",
+      "from_state": "in_approval",
+      "to_state": "approved",
+      "comment": null,
+      "at": "2026-09-21T10:00:00Z"
+    },
+    {
+      "id": 702,
+      "action": "submit",
+      "actor_id": "33333333-3333-4333-8333-333333333333",
+      "from_state": "draft",
+      "to_state": "in_approval",
+      "comment": null,
+      "at": "2026-09-21T09:10:00Z"
+    },
+    {
+      "id": 701,
+      "action": "create",
+      "actor_id": "33333333-3333-4333-8333-333333333333",
+      "from_state": null,
+      "to_state": "draft",
+      "comment": null,
+      "at": "2026-09-21T09:00:00Z"
+    }
+  ]
+}
+```
 
-**Validation**
+| Правило | Freeze |
+| :--- | :--- |
+| Envelope | `{ items: [...] }` |
+| Сортировка | `at` **DESC** (новые сверху) |
+| Actor | `actor_id` (uuid \| null) — **не** вложенный `actor` |
+| Snapshot values | **нет** `field_value_versions` |
+| Пагинация | не зафиксирована (OPEN §11); runtime отдаёт полный список |
 
-- Только роль `approver`.
-- Чужие и закрытые задачи не входят в очередь.
+History read-only. HistoryEvent не изменяется через API.
 
-**Errors**
+Errors: `401 UNAUTHORIZED`, `403 FORBIDDEN`, `404 NOT_FOUND`, `500 INTERNAL`.
 
-- `ERR_VALIDATION` (`422`) — невалидная пагинация.
-- `ERR_FORBIDDEN` (`403`).
-- `ERR_INTERNAL` (`500`).
+Трассировка: UC-14; FR-AUDIT-01.
 
-### 3.13. GET `/approval-tasks/{task_id}`
+---
 
-**Request**
+## 7. Notifications
 
-- Path: `task_id: UUID`.
-- Body: отсутствует.
+### 7.1. GET `/notifications` — Target active
 
-**Response**
+Только уведомления текущего пользователя (recipient = authenticated user).
 
-- `200 OK`.
-- Body:
-  - `task`: `{ id, request_id, stage_number, assignee_id, status, decision, value_version_id }`;
-  - `request`: полная карточка со snapshot-based `schema` и `values`, статусом, этапом, комментариями;
-  - `available_actions`: для `open` задачи; пустой список для completed/cancelled.
+**Response `200`**
 
-**Validation**
+```json
+{
+  "items": [
+    {
+      "id": 901,
+      "request_id": 10245,
+      "approval_task_id": 501,
+      "event_type": "request_submitted",
+      "text": "Новая заявка на согласование",
+      "read": false,
+      "created_at": "2026-09-21T09:10:00Z"
+    }
+  ]
+}
+```
 
-- Task принадлежит текущему approver.
-- Своя задача видима в любом статусе.
-- Карточка использует FieldValueVersion, к которой относится задача/решение; для открытой задачи — текущую версию.
+| Правило | Freeze |
+| :--- | :--- |
+| Envelope | `{ items: [...] }` |
+| Сортировка | `created_at` **DESC** |
+| Mark-read | **не** часть Target-active (`PATCH` mark-read отсутствует) |
+| Roles | `employee`, `approver`, `admin` |
 
-**Errors**
+`event_type` enum: `new_task` \| `status_change` \| `request_submitted` \| `request_approved` \| `request_rejected` \| `request_returned` \| `request_cancelled`.
 
-- `ERR_NOT_FOUND` (`404`) или `ERR_FORBIDDEN_APPROVAL` (`403`) для чужой задачи — неоднозначность, см. §10.
-- `ERR_FORBIDDEN` (`403`) — нет роли `approver`.
-- `ERR_INTERNAL` (`500`).
+`request_id` / `approval_task_id` — nullable.
 
-### 3.14. POST `/approval-tasks/{task_id}/approve`
+Трассировка: UC-13; FR-NOTIF-02.
 
-**Request**
+---
 
-- Path: `task_id: UUID`.
-- Body: `{ comment?: string }`.
+## 8. Disabled stubs: `/approval-tasks/*`
 
-**Response**
+Все маршруты `/approval-tasks/*` — **disabled compatibility stubs**. Они **не** являются thin aliases Action Engine.
 
-- `200 OK`.
-- Body: `{ task: { id, status: "completed", decision: "approve", value_version_id }, request: { id, status, current_stage } }`.
-- `request.status` остаётся `in_approval` при переходе на следующий этап либо становится `approved` на последнем этапе.
+| Method | Path | Ответ |
+| :--- | :--- | :--- |
+| GET | `/approval-tasks` | всегда `409 INVALID_STATE` |
+| GET | `/approval-tasks/{task_id}` | всегда `409 INVALID_STATE` |
+| POST | `/approval-tasks/{task_id}/approve` | всегда `409 INVALID_STATE` |
+| POST | `/approval-tasks/{task_id}/reject` | всегда `409 INVALID_STATE` |
+| POST | `/approval-tasks/{task_id}/return` | всегда `409 INVALID_STATE` |
 
-**Validation**
+Пример:
 
-- Только assignee своей открытой задачи.
-- Assignee не является инициатором.
-- Комментарий необязателен; переданный комментарий сохраняется как decision comment.
-- First-approve-wins: sibling open tasks этапа → `cancelled`.
-- Следующий этап и его задачи берутся только из RouteInstance.
-- Решение привязывается к FieldValueVersion задачи.
-- Решение, задачи, статус/этап и аудит изменяются атомарно.
+```json
+{
+  "error": {
+    "code": "INVALID_STATE",
+    "message": "Очередь согласования будет доступна после следующего этапа API",
+    "details": {}
+  }
+}
+```
 
-**Errors**
+**Target-flow согласующего**
 
-- `ERR_FORBIDDEN_APPROVAL` (`403`) — не assignee или самосогласование.
-- `ERR_TASK_DONE` (`409`) — задача уже завершена/cancelled.
-- `ERR_DUP_ACTION` (`409`) — повтор в гонке/ретрае.
-- `ERR_INVALID_STATE` (`409`) — состояние заявки/задачи не допускает approve.
-- `ERR_INTERNAL` (`500`).
+1. `GET /requests/{id}` (ACL BR-14 — любая своя ApprovalTask);
+2. `GET /requests/{id}/available-actions`;
+3. `POST /requests/{id}/actions/{action_id}`.
 
-### 3.15. POST `/approval-tasks/{task_id}/reject`
+Очередь задач как отдельный list endpoint в Target-active **не** реализована. Детали семантики approve_advance / first-approve-wins / decision comments — в [`approval-api-contract.md`](./approval-api-contract.md) в части, согласованной с Action Engine и OpenAPI.
 
-**Request**
+---
 
-- Path: `task_id: UUID`.
-- Body: `{ comment: string }`.
+## 9. RBAC summary (runtime `role_id`)
 
-**Response**
+У пользователя одна роль. Матрица ниже — поверх ownership / assignee / ProcessTransition.
 
-- `200 OK`.
-- Body: `{ task: { id, status: "completed", decision: "reject", value_version_id }, request: { id, status: "rejected", current_stage } }`.
-
-**Validation**
-
-- Только assignee своей открытой задачи; self-approval запрещён.
-- `comment` после trim обязателен.
-- Все открытые задачи текущего этапа закрываются; задачи следующих этапов не создаются.
-- Решение привязано к текущей FieldValueVersion.
-- Решение, задачи, статус и аудит изменяются атомарно.
-
-**Errors**
-
-- `ERR_FORBIDDEN_APPROVAL` (`403`).
-- `ERR_TASK_DONE` (`409`).
-- `ERR_DUP_ACTION` (`409`).
-- `ERR_INVALID_STATE` (`409`).
-- `ERR_VALIDATION` (`422`) — пустой/отсутствующий comment.
-- `ERR_INTERNAL` (`500`).
-
-### 3.16. POST `/approval-tasks/{task_id}/return`
-
-**Request**
-
-- Path: `task_id: UUID`.
-- Body: `{ comment: string }`.
-
-**Response**
-
-- `200 OK`.
-- Body: `{ task: { id, status: "completed", decision: "return", value_version_id }, request: { id, status: "returned", current_stage } }`.
-- `current_stage` сохраняет этап возврата для аудита.
-
-**Validation**
-
-- Только assignee своей открытой задачи; self-approval запрещён.
-- `comment` после trim обязателен.
-- Все открытые задачи текущего этапа закрываются.
-- RouteInstance и существующие FieldValueVersion не меняются.
-- Решение, задачи, статус и аудит изменяются атомарно.
-
-**Errors**
-
-- `ERR_FORBIDDEN_APPROVAL` (`403`).
-- `ERR_TASK_DONE` (`409`).
-- `ERR_DUP_ACTION` (`409`).
-- `ERR_INVALID_STATE` (`409`).
-- `ERR_VALIDATION` (`422`) — пустой/отсутствующий comment.
-- `ERR_INTERNAL` (`500`).
-
-## 4. RBAC Matrix
-
-`R` — read, `C` — create, `U` — update, `A` — action, `—` — нет доступа. Ограничения ownership/assignee обязательны поверх роли.
-
-| Operation | Employee | Approver | Admin |
+| Operation | employee | approver | admin |
 | :--- | :---: | :---: | :---: |
-| GET `/request-types` | R | — | R |
-| GET `/request-types/{type_id}` | R | — | R |
-| GET `/request-types/{type_id}/schema` | R | — | R |
+| POST `/auth/login` | public | public | public |
+| GET `/me` | R | R | R |
+| GET `/request-types*` | R | — | R |
 | POST `/requests` | C | — | — |
 | GET `/requests` | R (own) | — | — |
-| GET `/requests/{request_id}` | R (own) | — | — |
-| PATCH `/requests/{request_id}` | U (own draft/returned) | — | — |
-| POST `/requests/{request_id}/submit` | A (own) | — | — |
-| POST `/requests/{request_id}/cancel` | A (own) | — | — |
-| POST `/requests/{request_id}/comments` | C (own) | — | — |
-| GET `/requests/{request_id}/history` | R (own) | R (via own task) | — |
-| GET `/approval-tasks` | — | R (own open) | — |
-| GET `/approval-tasks/{task_id}` | — | R (own, any status) | — |
-| POST `/approval-tasks/{task_id}/approve` | — | A (own open) | — |
-| POST `/approval-tasks/{task_id}/reject` | — | A (own open) | — |
-| POST `/approval-tasks/{task_id}/return` | — | A (own open) | — |
+| GET `/requests/{id}` | R (own) | R (via any own task) | — (role gate) |
+| GET `.../available-actions` | R (ACL) | R (ACL) | — |
+| POST `.../actions/{action_id}` | A (transition) | A (transition) | A (обычно нет transition) |
+| POST `.../submit` \| `.../cancel` | A (own, alias) | — | — |
+| GET `.../history` | R (own) | R (via task) | — |
+| GET `/notifications` | R (own) | R (own) | R (own) |
+| PATCH values / POST comments | deferred stub | — | — |
+| `/approval-tasks/*` | disabled stub | disabled stub | disabled stub |
 
 Примечания:
 
-1. Admin-доступ к каталогу указан в исходной RBAC Matrix как удобство проверки, но Admin API и полноценная admin-модель остаются backlog.
-   Он распространяется на чтение списка активных типов, описания выбранного активного типа и схемы формы; создавать заявки `admin` не может.
-2. `approver` без `employee` не получает employee permissions.
-3. Пользователь с обеими ролями получает union permissions, но self-approval всё равно запрещён.
-4. Employee-запрос чужой заявки возвращает `404 ERR_NOT_FOUND` (ACL-01).
-5. Decision по чужой задаче или собственной заявке возвращает `403 ERR_FORBIDDEN_APPROVAL` (ACL-02/03).
+1. `approver` без `employee` не получает employee permissions каталога/создания заявок.
+2. Self-approval запрещён (BR-21) → `FORBIDDEN_APPROVAL` на execute.
+3. Employee к чужой заявке → `404 NOT_FOUND`.
+4. Admin читает каталог/схему; Admin CRUD / реестр — вне Target-active.
 
-## 5. Error Mapping
+---
 
-| Endpoint | Error ID | HTTP status | Condition |
-| :--- | :--- | :---: | :--- |
-| Все защищённые Baseline endpoints | ERR_FORBIDDEN | 403 | Роль не позволяет операцию |
-| Все Baseline endpoints | ERR_INTERNAL | 500 | Непредвиденная ошибка; для mutation — rollback |
-| GET `/request-types/{type_id}` | ERR_NOT_FOUND | 404 | Тип не существует |
-| GET `/request-types/{type_id}` | ERR_NOT_FOUND | 404 | Тип неактивен; до разрешения расхождения FR-CAT-02/Error Matrix |
-| GET `/request-types/{type_id}/schema` | ERR_NOT_FOUND | 404 | Тип не существует |
-| GET `/request-types/{type_id}/schema` | ERR_NOT_FOUND | 404 | Тип неактивен; до разрешения расхождения FR-CAT-02/Error Matrix |
-| POST `/requests` | ERR_NOT_FOUND | 404 | Тип не существует |
-| POST `/requests` | ERR_INACTIVE_TYPE | 409 | Тип неактивен |
-| POST `/requests` | ERR_VALIDATION | 422 | Некорректный body |
-| GET `/requests` | ERR_VALIDATION | 422 | Некорректный status или page_size |
-| GET `/requests/{request_id}` | ERR_NOT_FOUND | 404 | Нет заявки или она чужая |
-| PATCH `/requests/{request_id}` | ERR_NOT_FOUND | 404 | Нет заявки или она чужая |
-| PATCH `/requests/{request_id}` | ERR_INVALID_STATE | 409 | Не draft/returned |
-| PATCH `/requests/{request_id}` | ERR_VALIDATION | 422 | Значения не соответствуют live-схеме |
-| POST `/requests/{request_id}/submit` | ERR_NOT_FOUND | 404 | Нет заявки или она чужая |
-| POST `/requests/{request_id}/submit` | ERR_INVALID_STATE | 409 | Не draft/returned |
-| POST `/requests/{request_id}/submit` | ERR_INACTIVE_TYPE | 409 | Тип неактивен |
-| POST `/requests/{request_id}/submit` | ERR_ROUTE_CONFIG | 409 | Маршрут без этапов/назначений |
-| POST `/requests/{request_id}/submit` | ERR_VALIDATION | 422 | Working values не проходят live-схему |
-| POST `/requests/{request_id}/cancel` | ERR_NOT_FOUND | 404 | Нет заявки или она чужая |
-| POST `/requests/{request_id}/cancel` | ERR_INVALID_STATE | 409 | Не draft/returned |
-| POST `/requests/{request_id}/comments` | ERR_NOT_FOUND | 404 | Нет заявки или она чужая |
-| POST `/requests/{request_id}/comments` | ERR_VALIDATION | 422 | Пустой comment |
-| GET `/requests/{request_id}/history` | ERR_NOT_FOUND | 404 | Нет права видеть заявку |
-| GET `/approval-tasks` | ERR_VALIDATION | 422 | Некорректный page_size |
-| GET `/approval-tasks/{task_id}` | ERR_NOT_FOUND | 404 | Нет задачи/связи с текущим approver |
-| GET `/approval-tasks/{task_id}` | ERR_FORBIDDEN_APPROVAL | 403 | Альтернативный вариант для чужой задачи; требует решения |
-| POST decision endpoints | ERR_FORBIDDEN_APPROVAL | 403 | Не assignee или self-approval |
-| POST decision endpoints | ERR_TASK_DONE | 409 | Задача completed/cancelled |
-| POST decision endpoints | ERR_DUP_ACTION | 409 | Повтор бизнес-действия в гонке/ретрае |
-| POST decision endpoints | ERR_INVALID_STATE | 409 | Состояние не допускает решение |
-| POST `/approval-tasks/{task_id}/reject` | ERR_VALIDATION | 422 | Нет непустого comment |
-| POST `/approval-tasks/{task_id}/return` | ERR_VALIDATION | 422 | Нет непустого comment |
+## 10. Errors (ADR-ERR-03)
 
-`ERR_CONFLICT_VERSION` не используется в Baseline. `ERR_INVALID_CREDENTIALS` и `ERR_UNAUTHORIZED` относятся к backlog auth.
+### 10.1. Envelope
 
-## 6. Snapshot / Lifecycle Constraints
+```json
+{
+  "error": {
+    "code": "REQUEST_ACTION_NOT_ALLOWED",
+    "message": "Действие недоступно для заявки в текущем статусе или роли",
+    "details": {}
+  }
+}
+```
 
-### 6.1. Lifecycle coverage
+Коды **без** префикса `ERR_`. Плоский `{ error_code: "ERR_…" }` — не Target.
 
-| From | Operation | To | Guard / effect |
+### 10.2. Коды Target
+
+| code | Типичный HTTP | Смысл |
+| :--- | :---: | :--- |
+| `UNAUTHORIZED` | 401 | Нет / невалидный JWT |
+| `INVALID_CREDENTIALS` | 401 | Неверный login/password |
+| `FORBIDDEN` | 403 | Роль / inactive user |
+| `FORBIDDEN_APPROVAL` | 403 | Self-approval или нет open assignee task |
+| `NOT_FOUND` | 404 | Объект отсутствует или невидим |
+| `VALIDATION` | 422 | Body / schema / обязательный comment |
+| `INACTIVE_TYPE` | 409 | Тип заявки неактивен |
+| `INVALID_STATE` | 409 | Disabled/deferred stub или недопустимое состояние |
+| `REQUEST_ACTION_NOT_ALLOWED` | 409 | Action Engine: transition недоступен |
+| `TASK_DONE` | 409 | Задача уже completed/cancelled |
+| `ROUTE_CONFIG` | 409 | Маршрут без этапов/назначений |
+| `INTERNAL` | 500 | Непредвиденная ошибка; mutation rollback |
+
+`CONFLICT_VERSION` / `DUP_ACTION` / `PASSWORD_MISMATCH` в Frozen Target-active **не** используются как primary коды текущего runtime.
+
+---
+
+## 11. State / transitions (Action Engine)
+
+| From | Action code (типично) | To | Guard / effect |
 | :--- | :--- | :--- | :--- |
-| initial | POST `/requests` | `draft` | Тип активен; initiator = current user |
-| `draft` | POST `.../submit` | `in_approval` | Live validation; RouteInstance; FieldValueVersion #1; stage-1 tasks |
-| `returned` | POST `.../submit` | `in_approval` | RouteInstance unchanged; новая FieldValueVersion; stage → 1 |
-| `draft` / `returned` | POST `.../cancel` | `cancelled` | Только initiator |
-| `in_approval` | POST `.../approve` | `in_approval` | Не последний этап; first-approve-wins; next-stage tasks |
-| `in_approval` | POST `.../approve` | `approved` | Последний этап |
-| `in_approval` | POST `.../reject` | `rejected` | Непустой comment; закрытие задач |
-| `in_approval` | POST `.../return` | `returned` | Непустой comment; этап возврата сохраняется |
+| — | create (`POST /requests`) | `draft` | Тип активен; initiator = current user |
+| `draft` / `returned` | `submit` | `in_approval` | Live validation; stage 1; ApprovalTask из live assignments |
+| `draft` / `returned` | `cancel` | `cancelled` | Initiator; alias `.../cancel` |
+| `in_approval` | `approve` | `in_approval` | Не последний этап; first-approve-wins; next-stage tasks |
+| `in_approval` | `approve` | `approved` | Последний этап |
+| `in_approval` | `reject` | `rejected` | Comment required |
+| `in_approval` | `return` | `returned` | Comment required; `current_stage_id` сохранён для аудита |
 
-`approved`, `rejected`, `cancelled` — терминальные статусы. Cancel из `in_approval` запрещён.
+Терминальные: `approved`, `rejected`, `cancelled`. Cancel из `in_approval` через ProcessTransition обычно недоступен.
 
-### 6.2. Live и snapshot-based данные
+**Клиентский путь**
 
-| Data | Live / working | Snapshot-based |
-| :--- | :--- | :--- |
-| Request type name/description | Каталог и draft edit читают live RequestType | Источники не требуют отдельного snapshot типа |
-| Form schema | Draft/returned edit и submit validation используют live RequestFieldDefinition | Каждый successful submit копирует схему в FieldValueVersion |
-| Field values | RequestFieldValue изменяется в draft/returned | Каждый successful submit копирует значения в FieldValueVersion |
-| Approval route | Live ApprovalRoute проверяется и копируется при первом submit | RouteInstance используется для всех in-flight решений и resubmit |
-| Assignments | Только explicit role/user StageAssignment; no organization auto-routing | RouteInstanceAssignment определяет assignees и задачи |
-| Decision | Не читает live field values/route | Привязано к FieldValueVersion и этапу RouteInstance |
-| History | Новые HistoryEvent добавляются при значимых действиях | Старые events и FieldValueVersion read-only |
+```
+available-actions → POST /requests/{id}/actions/{action_id} → RequestCard
+```
 
-### 6.3. Неизменяемость и запрет прямых мутаций
+Thin aliases `submit` / `cancel` дают тот же эффект и тот же `RequestCard`, но помечены deprecated.
 
-- После первого successful submit RouteInstance, его этапы и назначения write-once.
-- Resubmit не пересобирает RouteInstance.
-- FieldValueVersion append-only; существующие версии нельзя patch/delete.
-- В `in_approval`, `approved`, `rejected`, `cancelled` endpoint редактирования working values недоступен.
-- В `returned` разрешено менять только working values; последняя submitted version остаётся неизменной до создания новой версии.
-- `request_type_id`, `initiator_id`, status и `current_stage_number` нельзя задавать через PATCH.
-- ApprovalTask, decision, HistoryEvent, RouteInstance и FieldValueVersion нельзя создавать/изменять напрямую клиентом.
-- Изменения live schema/route/assignments не влияют на существующий RouteInstance и прошлые FieldValueVersion.
+### 11.1. Live configuration
 
-### 6.4. Проверка обязательных правил
-
-| Rule | API enforcement |
+| Данные | Поведение |
 | :--- | :--- |
-| Self-approval forbidden | Все decision endpoints сравнивают initiator и assignee; `ERR_FORBIDDEN_APPROVAL` |
-| Comments required for reject/return | Required non-empty `comment`; `ERR_VALIDATION` |
-| First-approve-wins | Approve атомарно completes winner и cancels sibling tasks |
-| RouteInstance on successful submit | Создаётся только при first submit после всех validation checks |
-| FieldValueVersion on submit/resubmit | Новая версия при каждом successful submit |
-| Live config does not alter in-flight | Decisions и next stage читают RouteInstance/current FieldValueVersion |
-| Explicit user/role assignment | Submit принимает только snapshot валидных StageAssignment |
-| No organization auto-routing | Department/position не используются для назначения |
+| Form schema | Live RequestFieldDefinition (`GET .../schema`) |
+| Field values | RequestFieldValue на карточке (`values`) |
+| Approval route | Live ApprovalRoute / Stage / Assignment при submit / approve_advance |
+| available_actions | Отдельный GET; `{ id, code, name }` |
+| History | HistoryEvent append-only |
+| In-flight | Admin-правки live config **могут** затронуть in-flight ([ADR-LIVE-CFG-01](../03-diagrams/architecture/adr-live-config.md)) |
 
-## 7. Future / Backlog API
+### 11.2. Запреты прямых мутаций клиентом
 
-Ниже приведены candidate operations для уже зафиксированных backlog UC/FR. Они не входят в Baseline и не детализируются до уровня контракта на этом этапе.
+- Status / `current_stage_id` / `initiator_user_id` / `request_type_id` не задаются через PATCH (PATCH — deferred stub).
+- ApprovalTask и HistoryEvent не создаются/меняются клиентом напрямую.
+- `/approval-tasks/*` decision stubs не выполняют бизнес-эффект.
 
-| # | Method | Candidate path | UC / FR | Purpose |
-| ---: | :--- | :--- | :--- | :--- |
-| 1 | POST | `/auth/sessions` | UC-01; FR-AUTH-01 | Login и выпуск JWT |
-| 2 | GET | `/users/me` | UC-01, UC-02; FR-AUTH-02, FR-CAB-01 | Текущий пользователь и профиль |
-| 3 | GET | `/admin/request-types` | UC-11; FR-ADMIN-01 | Список типов для admin |
-| 4 | POST | `/admin/request-types` | UC-11; FR-ADMIN-01 | Создать тип |
-| 5 | PATCH | `/admin/request-types/{type_id}` | UC-11; FR-ADMIN-01 | Изменить/активировать тип |
-| 6 | DELETE | `/admin/request-types/{type_id}` | UC-11; FR-ADMIN-01 | Удалить тип в рамках CRUD |
-| 7 | PUT | `/admin/request-types/{type_id}/fields` | UC-11; FR-ADMIN-02 | Заменить конфигурацию полей |
-| 8 | GET | `/admin/request-types/{type_id}/route` | UC-12; FR-ADMIN-03–05 | Прочитать route aggregate |
-| 9 | PUT | `/admin/request-types/{type_id}/route` | UC-12; FR-ADMIN-03–05 | Сохранить этапы и explicit assignments |
-| 10 | GET | `/admin/dictionaries` | UC-11; FR-ADMIN-06 | Список справочников |
-| 11 | POST | `/admin/dictionaries` | UC-11; FR-ADMIN-06 | Создать справочник |
-| 12 | PATCH | `/admin/dictionaries/{dictionary_id}` | UC-11; FR-ADMIN-06 | Изменить справочник |
-| 13 | DELETE | `/admin/dictionaries/{dictionary_id}` | UC-11; FR-ADMIN-06 | Удалить справочник |
-| 14 | PUT | `/admin/dictionaries/{dictionary_id}/items` | UC-11; FR-ADMIN-06 | Сохранить элементы справочника |
-| 15 | GET | `/admin/requests` | UC-15; FR-ADMIN-07 | Реестр всех заявок с фильтрами |
-| 16 | GET | `/admin/requests/{request_id}` | UC-15; FR-ADMIN-07, FR-REQ-04 | Карточка любой заявки |
-| 17 | GET | `/admin/requests/{request_id}/history` | UC-14, UC-15; FR-ADMIN-08 | История любой заявки |
-| 18 | GET | `/notifications` | UC-13; FR-CAB-03, FR-NOTIF-02 | Свои уведомления |
-| 19 | PATCH | `/notifications/{notification_id}` | UC-13; FR-NOTIF-03 | Установить `read = true` |
+---
 
-**Количество Future / Backlog candidate operations: 19.**
+## 12. Traceability (сжато)
 
-FR-AUTH-03 и FR-NOTIF-01 являются cross-cutting/system behavior, а не самостоятельными клиентскими endpoints.
-
-## 8. Traceability
-
-### 8.1. UC → API
-
-| UC | Covered by |
+| UC / FR | Target coverage |
 | :--- | :--- |
-| UC-03 | GET `/request-types`; GET `/request-types/{type_id}`; GET `.../schema` |
-| UC-04 | GET `.../schema`; POST `/requests`; PATCH `/requests/{request_id}` |
-| UC-05 | POST `/requests/{request_id}/submit` |
-| UC-06 | GET `/requests`; GET `/requests/{request_id}`; POST `.../comments` |
-| UC-07 | GET `/approval-tasks`; GET `/approval-tasks/{task_id}`; POST `.../approve` |
-| UC-08 | GET `/approval-tasks/{task_id}`; POST `.../reject` |
-| UC-09 | POST `.../return`; PATCH `/requests/{request_id}`; POST `.../submit` |
-| UC-10 | POST `/requests/{request_id}/cancel` |
-| UC-14 | GET `/requests/{request_id}/history` |
+| UC-01 / FR-AUTH-01 | POST `/auth/login` |
+| FR-AUTH-02 | GET `/me` |
+| UC-03 / FR-CAT-01…03 | GET `/request-types*` |
+| UC-04 / FR-REQ-01 | POST `/requests` |
+| UC-05 / FR-REQ-03 | `actions/{id}` (submit); alias `.../submit` |
+| UC-06 / FR-REQ-04…05, FR-CAB-02 | GET `/requests`, GET card |
+| UC-07…09 / FR-APP-* | GET card (approver ACL) + available-actions + execute |
+| UC-10 / FR-REQ-07 | execute cancel; alias `.../cancel` |
+| UC-13 / FR-NOTIF-02 | GET `/notifications` |
+| UC-14 / FR-AUDIT-01 | GET `.../history` |
+| FR-AUDIT-02 | side effect значимых мутаций |
 
-### 8.2. FR → API
+Admin UC-11/12/15 и mark-read FR-NOTIF-03 — вне Target-active inventory.
 
-| FR | Covered by |
+---
+
+## 13. OPEN / CLOSED review items
+
+Согласовано с `x-requires-review` в [`openapi.yaml`](./openapi.yaml).
+
+| # | Тема | Status | Решение / остаток |
+| ---: | :--- | :--- | :--- |
+| 1 | Authentication | **CLOSED** | JWT; `POST /auth/login` + `GET /me` |
+| 2 | Inactive type read | **OPEN** | Interim: GET detail/schema → `404 NOT_FOUND` |
+| 3 | Dictionary items | **OPEN** | Embed в schema vs отдельный read endpoint не зафиксирован |
+| 4 | ApprovalTask queue date | **CLOSED** | `/approval-tasks/*` disabled; queue вне Target-active |
+| 5 | Approver card route | **CLOSED** | Approver читает `GET /requests/{id}` (BR-14); task card stub |
+| 6 | Task visibility error | **CLOSED** | Superseded: stubs всегда `409 INVALID_STATE` |
+| 7 | Cancelled card values | **OPEN** | Презентация values после cancel из `returned` отдельно не зафиксирована сверх `RequestCard.values` |
+| 8 | Free comment states | **CLOSED** | `POST .../comments` — deferred stub |
+| 9 | History pagination | **OPEN** | Runtime — полный `items`; нужна ли пагинация — не зафиксировано |
+| 10 | List pagination envelope | **OPEN** | Есть `page` / `page_size`; envelope навигации не зафиксирован |
+| 11 | Error envelope | **CLOSED** | ADR-ERR-03 nested; без `ERR_` |
+| 12 | OpenAPI x-requirement | **OPEN** | Проект использует UC/FR/AC, не US-XXX |
+
+**Истинно открытые для Target:** dictionary embed, pagination envelopes, inactive-type read code, cancelled values nuance, x-requirement convention.
+
+---
+
+## 14. Sibling references
+
+| Документ | Роль |
 | :--- | :--- |
-| FR-CAB-02 | GET `/requests` |
-| FR-CAT-01 | GET `/request-types` |
-| FR-CAT-02 | GET `/request-types/{type_id}` |
-| FR-CAT-03 | GET `/request-types/{type_id}/schema` |
-| FR-REQ-01 | POST `/requests` |
-| FR-REQ-02 | PATCH `/requests/{request_id}` |
-| FR-REQ-03, FR-REQ-09 | POST `/requests/{request_id}/submit` |
-| FR-REQ-04, FR-REQ-05 | GET `/requests/{request_id}`; GET `/approval-tasks/{task_id}` |
-| FR-REQ-06 | GET request/task card; POST `/requests/{request_id}/comments`; decision bodies |
-| FR-REQ-07 | POST `/requests/{request_id}/cancel` |
-| FR-REQ-08 | Side effect of POST `.../return` |
-| FR-APP-01 | GET `/approval-tasks` |
-| FR-APP-02 | GET `/approval-tasks/{task_id}` |
-| FR-APP-03 | POST `.../approve` |
-| FR-APP-04 | POST `.../reject` |
-| FR-APP-05 | POST `.../return` |
-| FR-APP-06, FR-APP-07 | Side effects of POST `.../approve` |
-| FR-AUDIT-01 | GET `/requests/{request_id}/history` |
-| FR-AUDIT-02 | Atomic side effect of all significant mutations |
+| [`openapi.yaml`](./openapi.yaml) | Frozen Target OpenAPI 3.0.3 — source of truth для схем и paths |
+| [`approval-api-contract.md`](./approval-api-contract.md) | Аналитика согласования / Action Engine (должна быть согласована с freeze) |
+| [ADR-AUTH-JWT-01](../03-diagrams/architecture/adr-jwt-core-api.md) | JWT |
+| [ADR-ACTION-01](../03-diagrams/architecture/adr-configurable-actions.md) | Configurable actions |
+| [ADR-ERR-03](../03-diagrams/architecture/adr-error-envelope.md) | Error envelope |
+| [ADR-LIVE-CFG-01](../03-diagrams/architecture/adr-live-config.md) | Live config |
+| [ADR-ID-01](../03-diagrams/architecture/adr-id-strategy.md) | ID strategy |
+| [error-matrix.md](../02-requirements/error-matrix.md) | Матрица кодов |
 
-### 8.3. AC → API
+---
 
-| AC | Covered by |
-| :--- | :--- |
-| AC-APP-01 | POST `/requests` |
-| AC-APP-02, AC-APP-02b, AC-APP-03 | POST `.../submit`; GET `/approval-tasks` |
-| AC-APP-04, AC-APP-04b | POST `.../approve` |
-| AC-APP-05, AC-APP-05b, AC-APP-09 | POST `.../approve`; GET `/approval-tasks` |
-| AC-APP-06, AC-APP-06b | POST `.../reject` |
-| AC-APP-07, AC-APP-07b | POST `.../return`; PATCH request |
-| AC-APP-08 | PATCH request; POST `.../submit`; GET history |
-| AC-APP-10, AC-APP-10b | POST `.../submit`; all decision endpoints |
-| AC-ACC-01 | GET/PATCH/action endpoints for request ownership |
-| AC-ACC-02, AC-ACC-03 | All decision endpoints |
-| AC-ACC-06 | GET `/approval-tasks/{task_id}` |
-| AC-CAT-01, AC-CAT-02 | GET `/request-types`; POST `/requests` |
-| AC-CAT-01b | GET request/task card; decision endpoints read snapshots |
-| AC-DRAFT-01 | GET `.../schema`; PATCH request; POST `.../submit` |
-| AC-DRAFT-02 | GET request/task card; POST `.../submit`; GET history |
-| AC-REQ-06 | POST `.../comments`; GET request card |
-| AC-REQ-07 | POST `.../cancel` |
+## 15. Self-check (не является текущим Target)
 
-Все 9 Baseline UC, 22 Baseline FR и 27 Baseline AC имеют API coverage либо явно являются системным side effect.
+Следующие формулировки **не** должны читаться как актуальный Frozen Target:
 
-## 9. Gap Analysis
-
-| Check | Result | Gap / disposition |
-| :--- | :--- | :--- |
-| Requirement без API operation | Нет непокрытых Baseline FR | FR-AUDIT-02, FR-REQ-08, FR-APP-06/07 корректно покрываются side effects |
-| API operation без requirement | Не найдено | Все 16 Baseline operations трассируются к UC/FR |
-| UC без API coverage | Не найдено | Все 9 Baseline UC покрыты |
-| AC без API coverage | Не найдено | Все 27 Baseline AC покрыты operation или side effect |
-| Error без endpoint | Есть ожидаемые | `ERR_CONFLICT_VERSION` — Future/Reserved; `ERR_INVALID_CREDENTIALS`, `ERR_UNAUTHORIZED` — auth backlog |
-| Endpoint без понятного RBAC | Не найдено | Для всех Baseline operations определены role + ownership/assignee |
-| Admin RBAC | Расхождений не найдено | `admin` имеет только чтение каталога/схемы в Baseline RBAC; остальные admin-функции остаются backlog |
-| Несогласованная UC-трассировка | Найдено | FR-CAT-03 в собственной карточке связан с UC-04, но UC-03 также прямо включает запрос схемы; контракт ссылается на оба |
-| Неактивный type detail/schema | Найдено | FR-CAT-02 допускает `ERR_NOT_FOUND / ERR_INACTIVE_TYPE`, но Error Matrix ограничивает `ERR_INACTIVE_TYPE` операциями create/submit; до review в GET используется `ERR_NOT_FOUND` |
-| Dictionary data для catalog field | Найдено | FR-CAT-03 требует ссылку на справочник, но read operation для его активных items в Baseline не определена |
-| Дата задачи в очереди | Найдено | FR-APP-01 требует дату в элементе очереди, но у ApprovalTask в Data Dictionary отсутствует поле создания/даты |
-| Card values после cancel из returned | Найдено | Не определено, показывать последние working values или последнюю submitted FieldValueVersion |
-| Free comment statuses | Найдено | FR-REQ-06 говорит «в статусах, включая in_approval», но не перечисляет полный допустимый набор |
-| Task detail visibility error | Найдено | FR-APP-02 допускает `ERR_NOT_FOUND / ERR_FORBIDDEN_APPROVAL`, без однозначного условия выбора |
-| Demo identity contract | Найдено | ADR фиксирует HTTP header stub, но не имена/формат role и user headers |
-| Error response envelope | Найдено | Error Matrix содержит только рекомендуемый ориентир `{ error_code, message, details }`, а не утверждённый обязательный контракт |
-| Pagination contract | Найдено | Зафиксированы `page_size`, default 20 и max 100, но не способ навигации и не response envelope |
-
-## 10. REQUIRES REVIEW
-
-Следующие пункты должны быть решены перед фиксацией OpenAPI. В этом документе новые требования и error IDs не создаются.
-
-1. **Demo headers.** Определить точные имена, обязательность и формат заголовков demo user/roles. Также выбрать существующую ошибку для отсутствующего/некорректного header либо дополнить Error Matrix отдельным решением.
-2. **Inactive type read.** Устранить расхождение FR-CAT-02 и Error Matrix. До отдельного решения GET type detail/schema использует `ERR_NOT_FOUND`, поскольку `ERR_INACTIVE_TYPE` в Error Matrix определён только для create/submit.
-3. **Dictionary items.** Определить, включаются ли активные items в response `/request-types/{type_id}/schema` или требуется отдельный Baseline read endpoint. Без этого поле `catalog` нельзя полностью отрисовать по API.
-4. **ApprovalTask date.** Определить источник даты для очереди FR-APP-01: добавить поле времени создания в модель на отдельном согласованном этапе либо исключить его из contract response. Сейчас поле требуется FR, но отсутствует в Data Dictionary.
-5. **Approver card route.** Подтвердить, что полная карточка approver возвращается aggregate-ответом `GET /approval-tasks/{task_id}`, а не через отдельный доступ approver к `GET /requests/{request_id}`.
-6. **Task visibility error.** Выбрать `ERR_NOT_FOUND` или `ERR_FORBIDDEN_APPROVAL` для чтения чужой/несуществующей задачи. Для decision endpoints остаётся `ERR_FORBIDDEN_APPROVAL`.
-7. **Cancelled card data.** Определить источник `schema/values` для заявки, отменённой из `returned`: последние working values либо последняя FieldValueVersion.
-8. **Free comment states.** Зафиксировать полный набор статусов заявки, в которых инициатор может добавлять свободный комментарий. Требования явно гарантируют `in_approval`, но формулировка шире одного статуса.
-9. **History pagination.** Определить, нужна ли пагинация истории. NFR-PERF-03 требует её только для списков заявок и задач.
-10. **Pagination contract.** Для списков заявок и задач зафиксированы только `page_size`, default 20 и max 100. Нужно определить page/cursor-механизм и response envelope; до решения они не считаются частью Baseline-контракта.
-11. **Error response envelope.** Подтвердить рекомендуемый Error Matrix формат `{ error_code, message, details }` как обязательный либо определить другой формат на этапе контракта. Сейчас зафиксированы error IDs и HTTP statuses, но не обязательная JSON-схема envelope.
-12. **Traceability convention for OpenAPI.** Правило `.cursor/rules/20-api.mdc` ожидает `x-requirement: US-XXX`, но проект использует UC/FR/AC ID и не содержит User Story ID. До OpenAPI нужно согласовать фактический формат ссылок.
+- «until E2» / «Pre-E2 runtime» как описание текущего контракта;
+- `/approval-tasks/*` как thin aliases;
+- `available_actions` / `schema` внутри `RequestCard`;
+- активный `GET /users/me` вместо `GET /me`;
+- response execute как `ExecuteActionResult`;
+- `field_value_versions` в history;
+- primary error codes с префиксом `ERR_`;
+- JWT login / notifications как «future backlog» (они Target-active);
+- `POST /auth/change-password`, mark-read, path `approve|reject|return` как Target-active.

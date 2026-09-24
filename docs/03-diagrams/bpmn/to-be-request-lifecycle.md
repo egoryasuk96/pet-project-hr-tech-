@@ -4,7 +4,7 @@
 **ID:** BPMN-01  
 **Версия:** 1.0  
 **Статус:** Baseline v1.0  
-**Связанные документы:** [bpmn-description.md](./bpmn-description.md), [Snapshot Model](../erd/snapshot-model.md), [UML-SM-01](../uml/state-request.md)
+**Связанные документы:** [bpmn-description.md](./bpmn-description.md), [ADR-LIVE-CFG-01](../architecture/adr-live-config.md), [UML-SM-01](../uml/state-request.md)
 
 ---
 
@@ -27,14 +27,14 @@ RBAC: создание / edit / submit / cancel — только инициат�
 
 ---
 
-## 3. Snapshot (кратко)
+## 3. Live route (кратко)
 
-Канон: [Snapshot Model](../erd/snapshot-model.md) (вариант B).
+Канон: [ADR-LIVE-CFG-01](../architecture/adr-live-config.md).
 
 | Вид | BPMN-отражение | Правило |
 | :--- | :--- | :--- |
-| **RouteInstance** | ST-04 | Создаётся только при первом submit (BR-08); при resubmit не rebuild (BR-22) |
-| **FieldValueVersion** | ST-05 | Новая версия на каждый successful submit (BR-26) |
+| **current_stage_id** | ST-04 | Устанавливается на первый live ApprovalStage при submit (BR-08, BR-20) |
+| **ApprovalTask** | ST-05 | Задачи из live StageAssignment текущего этапа (BR-08) |
 
 ---
 
@@ -67,10 +67,10 @@ RBAC: создание / edit / submit / cancel — только инициат�
 | ST-01 | Система | Валидировать поля по актуальной схеме | Проверка значений перед submit (BR-26) |
 | ST-02 | Система | Проверить маршрут и активность типа | Валидность маршрута (BR-18); тип активен |
 | ST-03 | Система | Определить вид submit | Первый (`draft`) или повторный (`returned`) |
-| ST-04 | Система | Создать RouteInstance | **Только** при первом submit (BR-08); см. [Snapshot Model](../erd/snapshot-model.md) |
-| ST-05 | Система | Создать FieldValueVersion | При **каждом** успешном submit (BR-26) |
+| ST-04 | Система | Установить current_stage_id | Первый live ApprovalStage (BR-08, BR-20) |
+| ST-05 | Система | Создать ApprovalTask | Из live StageAssignment этапа 1 (BR-08) |
 | ST-06 | Система | Установить статус in_approval | BR-20 |
-| ST-07 | Система | Создать задачи текущего этапа | Всегда задачи этапа 1 при (re)submit: первый submit или resubmit после return (BR-06, BR-22); RouteInstance без rebuild |
+| ST-07 | Система | Подтвердить задачи этапа 1 | При resubmit — снова этап 1 (BR-06, BR-22) |
 | ST-08 | Система | Записать событие в историю | BR-24 |
 | ST-09 | Система | Создать in-app уведомления | **Future / backlog** (BR-23, BR-29); в одной транзакции с бизнес-событием, когда модуль в scope |
 | ST-10 | Система | Установить статус cancelled | После успешного cancel (BR-07) |
@@ -88,7 +88,7 @@ RBAC: создание / edit / submit / cancel — только инициат�
 | GW-01 | Система | Submit допустим? | Да → ST-01; Нет (неверный статус) → EE-04 |
 | GW-02 | Система | Валидация полей OK? | Да → ST-02; Нет → EE-04 |
 | GW-03 | Система | Маршрут валиден и тип активен? | Да → ST-03; Нет → EE-04 |
-| GW-04 | Система | Первый submit? | Да (`draft`) → ST-04 затем ST-05; Нет (`returned`) → **пропуск ST-04**, сразу ST-05 |
+| GW-04 | Система | Resubmit? | Да (`returned`) → ST-04 (current_stage_id → stage 1) затем ST-05; Нет (`draft`) → ST-04 затем ST-05 |
 | GW-05 | Инициатор | Действие в draft/returned | Submit → UT-03; Cancel → UT-04; Edit → UT-02 |
 | GW-06 | Система | Результат этапа (после CA-01) | Approved → EE-01; Rejected → EE-02; Returned → UT-05; Next stage → CA-01 (повтор) |
 | GW-07 | Система | Cancel допустим? | Да (`draft`/`returned`) → ST-10; Нет → EE-04 (статус без изменений) |
@@ -115,9 +115,9 @@ RBAC: создание / edit / submit / cancel — только инициат�
 | SF-14 | GW-03 → ST-03 | Маршрут OK, тип активен |
 | SF-15 | GW-03 → EE-04 | ERR_ROUTE_CONFIG / ERR_INACTIVE_TYPE |
 | SF-16 | ST-03 → GW-04 | — |
-| SF-17 | GW-04 → ST-04 | Первый submit: создать **RouteInstance** |
-| SF-18 | ST-04 → ST-05 | Затем **FieldValueVersion** |
-| SF-19 | GW-04 → ST-05 | Resubmit: RouteInstance **не трогать**; новая FieldValueVersion |
+| SF-17 | GW-04 → ST-04 | Установить **current_stage_id** на первый live-этап |
+| SF-18 | ST-04 → ST-05 | Создать **ApprovalTask** из live assignments |
+| SF-19 | GW-04 → ST-04 | Resubmit: current_stage_id → stage 1, затем ST-05 |
 | SF-20 | ST-05 → ST-06 | — |
 | SF-21 | ST-06 → ST-07 | — |
 | SF-22 | ST-07 → ST-08 | История submit / resubmit |
@@ -156,9 +156,7 @@ RBAC: создание / edit / submit / cancel — только инициат�
 2. **UT-02** — заполнение полей по актуальной схеме.
 3. **GW-05** — submit (**UT-03**), cancel (**UT-04**) или продолжение edit.
 4. При **submit**: проверки (**ST-01…ST-02**, шлюзы GW-01…GW-03).
-5. **GW-04**:
-   - первый submit → **ST-04 RouteInstance** → **ST-05 FieldValueVersion**;
-   - resubmit → только **ST-05** (RouteInstance без изменений; [Snapshot Model](../erd/snapshot-model.md)).
+5. **GW-04 / ST-04 / ST-05**: `current_stage_id` → первый live-этап; **ApprovalTask** из live StageAssignment ([ADR-LIVE-CFG-01](../architecture/adr-live-config.md)).
 6. **ST-06…ST-09** — `in_approval`, задачи **этапа 1**, история; уведомления (ST-09) — **Future / backlog**, если в scope.
 7. **CA-01** — BPMN-02 до исхода: следующий этап / approved / rejected / returned.
 8. При **returned** — **UT-05/UT-02**, затем снова submit (с первого этапа, BR-06) или cancel.

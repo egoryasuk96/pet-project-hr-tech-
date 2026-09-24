@@ -3,18 +3,28 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Uuid, func, text
+from sqlalchemy import DateTime, Identity, Integer, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 
 class UUIDPrimaryKeyMixin:
-    """UUID primary key (logical ERD id)."""
+    """UUID primary key — User only (ADR-ID-01)."""
 
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
         server_default=text("gen_random_uuid()"),
+    )
+
+
+class IntegerPrimaryKeyMixin:
+    """Integer primary key for all non-User business entities (ADR-ID-01)."""
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        Identity(),
+        primary_key=True,
     )
 
 

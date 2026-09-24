@@ -1,7 +1,7 @@
-"""Idempotent demo seed for local development (NFR-DEP-02).
+"""Idempotent Target E2 demo seed for local development (NFR-DEP-02).
 
-Creates roles, demo users, two active request types with fields and a valid
-approval route. Does not insert requests, tasks, comments, history, or notifications.
+Ensures org, RBAC, process/status/action/transition matrix, catalog and live
+routing for the MVP vertical slice. Does not insert runtime requests/tasks.
 
 Usage:
     python -m app.db.seed
@@ -18,119 +18,310 @@ from app.core.config import get_settings
 from app.core.security import hash_password
 from app.db.session import get_session_factory
 from app.domain import (
+    Action,
     ApprovalRoute,
     ApprovalStage,
     AssignmentKind,
+    Company,
+    Department,
     Dictionary,
     DictionaryItem,
+    Employee,
     FieldDataType,
+    Process,
+    ProcessTransition,
+    ProcessTransitionEffect,
     RequestFieldDefinition,
     RequestType,
     Role,
     RoleCode,
     StageAssignment,
+    Status,
     User,
-    UserRole,
 )
+
+PROCESS_CODE = "employee_requests"
+PROCESS_NAME = "Employee requests"
+
+ROLE_SPECS: tuple[tuple[RoleCode, str], ...] = (
+    (RoleCode.EMPLOYEE, "Employee"),
+    (RoleCode.APPROVER, "Approver"),
+    (RoleCode.ADMIN, "Administrator"),
+)
+
+STATUS_SPECS: tuple[tuple[str, str], ...] = (
+    ("draft", "Draft"),
+    ("in_approval", "In approval"),
+    ("returned", "Returned"),
+    ("approved", "Approved"),
+    ("rejected", "Rejected"),
+    ("cancelled", "Cancelled"),
+)
+
+ACTION_SPECS: tuple[tuple[str, str], ...] = (
+    ("submit", "Submit"),
+    ("cancel", "Cancel"),
+    ("approve", "Approve"),
+    ("reject", "Reject"),
+    ("return", "Return"),
+)
+
+# (sort_order, action_code, from_status, to_status, effect, role_code)
+TRANSITION_SPECS: tuple[
+    tuple[int, str, str, str, ProcessTransitionEffect, RoleCode],
+    ...,
+] = (
+    (10, "submit", "draft", "in_approval", ProcessTransitionEffect.STATUS_ONLY, RoleCode.EMPLOYEE),
+    (20, "submit", "returned", "in_approval", ProcessTransitionEffect.STATUS_ONLY, RoleCode.EMPLOYEE),
+    (30, "cancel", "draft", "cancelled", ProcessTransitionEffect.STATUS_ONLY, RoleCode.EMPLOYEE),
+    (40, "cancel", "returned", "cancelled", ProcessTransitionEffect.STATUS_ONLY, RoleCode.EMPLOYEE),
+    (50, "approve", "in_approval", "approved", ProcessTransitionEffect.APPROVE_ADVANCE, RoleCode.APPROVER),
+    (60, "reject", "in_approval", "rejected", ProcessTransitionEffect.STATUS_ONLY, RoleCode.APPROVER),
+    (70, "return", "in_approval", "returned", ProcessTransitionEffect.STATUS_ONLY, RoleCode.APPROVER),
+)
+
+COMPANY_NAME = "Demo Company"
+STAGE_NAME = "Согласование руководителем"
+CERTIFICATE_DICTIONARY_NAME = "Виды справок"
 
 
 @dataclass(frozen=True)
-class DemoUser:
+class DemoPerson:
     login: str
-    full_name: str
-    email: str
-    position: str
-    department: str
     role: RoleCode
+    employee_number: str
+    first_name: str
+    last_name: str
+    department_name: str
+    position: str
 
 
-DEMO_USERS = (
-    DemoUser(
+DEMO_PEOPLE = (
+    DemoPerson(
         login="employee.demo",
-        full_name="Иван Сотрудников",
-        email="employee.demo@example.local",
-        position="Аналитик",
-        department="IT",
         role=RoleCode.EMPLOYEE,
+        employee_number="EMP-employee.demo",
+        first_name="Иван",
+        last_name="Сотрудников",
+        department_name="IT",
+        position="Аналитик",
     ),
-    DemoUser(
+    DemoPerson(
         login="approver.demo",
-        full_name="Мария Руководителева",
-        email="approver.demo@example.local",
-        position="Руководитель",
-        department="IT",
         role=RoleCode.APPROVER,
+        employee_number="EMP-approver.demo",
+        first_name="Мария",
+        last_name="Руководителева",
+        department_name="IT",
+        position="Руководитель",
     ),
-    DemoUser(
+    DemoPerson(
         login="admin.demo",
-        full_name="Пётр Админов",
-        email="admin.demo@example.local",
-        position="HR-администратор",
-        department="HR",
         role=RoleCode.ADMIN,
+        employee_number="EMP-admin.demo",
+        first_name="Пётр",
+        last_name="Админов",
+        department_name="HR",
+        position="HR-администратор",
     ),
 )
 
-VACATION_TYPE_NAME = "Отпуск"
-CERTIFICATE_TYPE_NAME = "Справка"
-CERTIFICATE_DICTIONARY_NAME = "Виды справок"
-STAGE_NAME = "Согласование руководителем"
-
-
-def _get_or_create_role(session: Session, code: RoleCode) -> Role:
-    role = session.scalar(select(Role).where(Role.code == code))
-    if role is None:
-        role = Role(code=code)
-        session.add(role)
-        session.flush()
-    return role
-
 
 def _demo_password_hash() -> str | None:
-    """Hash DEMO_PASSWORD from the environment. None if the variable is unset."""
     password = get_settings().demo_password
     if password is None or password == "":
         return None
     return hash_password(password)
 
 
-def _get_or_create_user(session: Session, spec: DemoUser, password_hash: str | None) -> User:
-    user = session.scalar(select(User).where(User.login == spec.login))
+def _ensure_role(session: Session, code: RoleCode, name: str) -> Role:
+    role = session.scalar(select(Role).where(Role.code == code))
+    if role is None:
+        role = Role(code=code, name=name)
+        session.add(role)
+        session.flush()
+    else:
+        role.name = name
+    return role
+
+
+def _ensure_company(session: Session) -> Company:
+    company = session.scalar(select(Company).where(Company.name == COMPANY_NAME))
+    if company is None:
+        company = Company(name=COMPANY_NAME, active=True)
+        session.add(company)
+        session.flush()
+    else:
+        company.active = True
+    return company
+
+
+def _ensure_department(session: Session, company: Company, name: str) -> Department:
+    department = session.scalar(
+        select(Department).where(
+            Department.company_id == company.id,
+            Department.name == name,
+        )
+    )
+    if department is None:
+        department = Department(company_id=company.id, name=name, active=True)
+        session.add(department)
+        session.flush()
+    else:
+        department.active = True
+    return department
+
+
+def _ensure_employee(
+    session: Session,
+    *,
+    department: Department,
+    person: DemoPerson,
+) -> Employee:
+    employee = session.scalar(
+        select(Employee).where(Employee.employee_number == person.employee_number)
+    )
+    if employee is None:
+        employee = Employee(
+            employee_number=person.employee_number,
+            first_name=person.first_name,
+            last_name=person.last_name,
+            middle_name=None,
+            department_id=department.id,
+            manager_employee_id=None,
+            position=person.position,
+            active=True,
+        )
+        session.add(employee)
+        session.flush()
+    else:
+        employee.first_name = person.first_name
+        employee.last_name = person.last_name
+        employee.department_id = department.id
+        employee.position = person.position
+        employee.active = True
+    return employee
+
+
+def _ensure_user(
+    session: Session,
+    *,
+    person: DemoPerson,
+    role: Role,
+    employee: Employee,
+    password_hash: str | None,
+) -> User:
+    user = session.scalar(select(User).where(User.login == person.login))
     if user is None:
-        user = User(login=spec.login, password_hash=password_hash)
+        user = User(
+            login=person.login,
+            password_hash=password_hash,
+            is_active=True,
+            role_id=role.id,
+            employee_id=employee.id,
+        )
         session.add(user)
-    elif password_hash is not None:
-        user.password_hash = password_hash
-    user.full_name = spec.full_name
-    user.email = spec.email
-    user.position = spec.position
-    user.department = spec.department
-    user.is_active = True
-    session.flush()
+        session.flush()
+    else:
+        user.role_id = role.id
+        user.employee_id = employee.id
+        user.is_active = True
+        if password_hash is not None:
+            user.password_hash = password_hash
     return user
 
 
-def _ensure_user_role(session: Session, user: User, role: Role) -> None:
-    existing = session.scalar(
-        select(UserRole).where(UserRole.user_id == user.id, UserRole.role_id == role.id)
-    )
-    if existing is None:
-        session.add(UserRole(user_id=user.id, role_id=role.id))
+def _ensure_process(session: Session) -> Process:
+    process = session.scalar(select(Process).where(Process.code == PROCESS_CODE))
+    if process is None:
+        process = Process(
+            code=PROCESS_CODE,
+            name=PROCESS_NAME,
+            description="Default process for employee service request types",
+            active=True,
+        )
+        session.add(process)
         session.flush()
+    else:
+        process.name = PROCESS_NAME
+        process.active = True
+    return process
 
 
-def _get_or_create_dictionary(session: Session, name: str) -> Dictionary:
+def _ensure_status(session: Session, code: str, name: str) -> Status:
+    status = session.scalar(select(Status).where(Status.code == code))
+    if status is None:
+        status = Status(code=code, name=name, description=None, active=True)
+        session.add(status)
+        session.flush()
+    else:
+        status.name = name
+        status.active = True
+    return status
+
+
+def _ensure_action(session: Session, code: str, name: str) -> Action:
+    action = session.scalar(select(Action).where(Action.code == code))
+    if action is None:
+        action = Action(code=code, name=name, description=None, active=True)
+        session.add(action)
+        session.flush()
+    else:
+        action.name = name
+        action.active = True
+    return action
+
+
+def _ensure_transition(
+    session: Session,
+    *,
+    process: Process,
+    action: Action,
+    from_status: Status,
+    to_status: Status,
+    role: Role,
+    effect: ProcessTransitionEffect,
+    sort_order: int,
+) -> ProcessTransition:
+    transition = session.scalar(
+        select(ProcessTransition).where(
+            ProcessTransition.process_id == process.id,
+            ProcessTransition.action_id == action.id,
+            ProcessTransition.from_status_id == from_status.id,
+            ProcessTransition.to_status_id == to_status.id,
+            ProcessTransition.role_id == role.id,
+        )
+    )
+    if transition is None:
+        transition = ProcessTransition(
+            process_id=process.id,
+            action_id=action.id,
+            from_status_id=from_status.id,
+            to_status_id=to_status.id,
+            role_id=role.id,
+            effect=effect,
+            is_active=True,
+            sort_order=sort_order,
+        )
+        session.add(transition)
+        session.flush()
+    else:
+        transition.effect = effect
+        transition.is_active = True
+        transition.sort_order = sort_order
+    return transition
+
+
+def _ensure_dictionary(session: Session, name: str) -> Dictionary:
     dictionary = session.scalar(select(Dictionary).where(Dictionary.name == name))
     if dictionary is None:
         dictionary = Dictionary(name=name)
         session.add(dictionary)
         session.flush()
-    else:
-        dictionary.name = name
     return dictionary
 
 
-def _get_or_create_dictionary_item(
+def _ensure_dictionary_item(
     session: Session,
     dictionary: Dictionary,
     code: str,
@@ -143,30 +334,48 @@ def _get_or_create_dictionary_item(
         )
     )
     if item is None:
-        item = DictionaryItem(dictionary_id=dictionary.id, code=code)
+        item = DictionaryItem(
+            dictionary_id=dictionary.id,
+            code=code,
+            name=name,
+            active=True,
+        )
         session.add(item)
-    item.name = name
-    item.is_active = True
-    session.flush()
+        session.flush()
+    else:
+        item.name = name
+        item.active = True
     return item
 
 
-def _get_or_create_request_type(
+def _ensure_request_type(
     session: Session,
+    *,
+    process: Process,
+    code: str,
     name: str,
     description: str,
 ) -> RequestType:
-    request_type = session.scalar(select(RequestType).where(RequestType.name == name))
+    request_type = session.scalar(select(RequestType).where(RequestType.code == code))
     if request_type is None:
-        request_type = RequestType(name=name)
+        request_type = RequestType(
+            process_id=process.id,
+            code=code,
+            name=name,
+            description=description,
+            active=True,
+        )
         session.add(request_type)
-    request_type.description = description
-    request_type.is_active = True
-    session.flush()
+        session.flush()
+    else:
+        request_type.process_id = process.id
+        request_type.name = name
+        request_type.description = description
+        request_type.active = True
     return request_type
 
 
-def _get_or_create_field(
+def _ensure_field(
     session: Session,
     request_type: RequestType,
     *,
@@ -184,14 +393,23 @@ def _get_or_create_field(
         )
     )
     if field is None:
-        field = RequestFieldDefinition(request_type_id=request_type.id, code=code)
+        field = RequestFieldDefinition(
+            request_type_id=request_type.id,
+            code=code,
+            name=name,
+            data_type=data_type,
+            required=required,
+            order_no=order_no,
+            dictionary_id=dictionary.id if dictionary is not None else None,
+        )
         session.add(field)
-    field.name = name
-    field.data_type = data_type
-    field.required = required
-    field.order_no = order_no
-    field.dictionary_id = dictionary.id if dictionary is not None else None
-    session.flush()
+        session.flush()
+    else:
+        field.name = name
+        field.data_type = data_type
+        field.required = required
+        field.order_no = order_no
+        field.dictionary_id = dictionary.id if dictionary is not None else None
     return field
 
 
@@ -215,46 +433,90 @@ def _ensure_route_with_approver(
         )
     )
     if stage is None:
-        stage = ApprovalStage(route_id=route.id, sequence_no=1)
+        stage = ApprovalStage(route_id=route.id, name=STAGE_NAME, sequence_no=1)
         session.add(stage)
-    stage.name = STAGE_NAME
-    session.flush()
+        session.flush()
+    else:
+        stage.name = STAGE_NAME
 
     assignment = session.scalar(
         select(StageAssignment).where(StageAssignment.stage_id == stage.id)
     )
     if assignment is None:
-        assignment = StageAssignment(stage_id=stage.id)
+        assignment = StageAssignment(
+            stage_id=stage.id,
+            assignment_kind=AssignmentKind.USER,
+            role_id=None,
+            user_id=approver.id,
+        )
         session.add(assignment)
-    assignment.assignment_kind = AssignmentKind.USER
-    assignment.role_id = None
-    assignment.user_id = approver.id
-    session.flush()
+        session.flush()
+    else:
+        assignment.assignment_kind = AssignmentKind.USER
+        assignment.role_id = None
+        assignment.user_id = approver.id
 
 
 def seed(session: Session) -> None:
-    """Upsert the minimal demo dataset. Safe to run repeatedly."""
-    roles = {code: _get_or_create_role(session, code) for code in RoleCode}
+    """Upsert Target E2 demo configuration. Safe to run repeatedly."""
+    roles = {
+        code: _ensure_role(session, code, name) for code, name in ROLE_SPECS
+    }
+
+    company = _ensure_company(session)
+    departments = {
+        name: _ensure_department(session, company, name) for name in ("IT", "HR")
+    }
 
     password_hash = _demo_password_hash()
     users_by_login: dict[str, User] = {}
-    for spec in DEMO_USERS:
-        user = _get_or_create_user(session, spec, password_hash)
-        _ensure_user_role(session, user, roles[spec.role])
-        users_by_login[spec.login] = user
+    for person in DEMO_PEOPLE:
+        employee = _ensure_employee(
+            session,
+            department=departments[person.department_name],
+            person=person,
+        )
+        user = _ensure_user(
+            session,
+            person=person,
+            role=roles[person.role],
+            employee=employee,
+            password_hash=password_hash,
+        )
+        users_by_login[person.login] = user
 
-    approver = users_by_login["approver.demo"]
+    process = _ensure_process(session)
+    statuses = {
+        code: _ensure_status(session, code, name) for code, name in STATUS_SPECS
+    }
+    actions = {
+        code: _ensure_action(session, code, name) for code, name in ACTION_SPECS
+    }
 
-    dictionary = _get_or_create_dictionary(session, CERTIFICATE_DICTIONARY_NAME)
-    _get_or_create_dictionary_item(session, dictionary, "employment", "Справка с места работы")
-    _get_or_create_dictionary_item(session, dictionary, "income", "Справка о доходах")
+    for sort_order, action_code, from_code, to_code, effect, role_code in TRANSITION_SPECS:
+        _ensure_transition(
+            session,
+            process=process,
+            action=actions[action_code],
+            from_status=statuses[from_code],
+            to_status=statuses[to_code],
+            role=roles[role_code],
+            effect=effect,
+            sort_order=sort_order,
+        )
 
-    vacation = _get_or_create_request_type(
+    dictionary = _ensure_dictionary(session, CERTIFICATE_DICTIONARY_NAME)
+    _ensure_dictionary_item(session, dictionary, "employment", "Справка с места работы")
+    _ensure_dictionary_item(session, dictionary, "income", "Справка о доходах")
+
+    vacation = _ensure_request_type(
         session,
-        VACATION_TYPE_NAME,
-        "Заявка на ежегодный оплачиваемый отпуск",
+        process=process,
+        code="vacation",
+        name="Отпуск",
+        description="Заявка на ежегодный оплачиваемый отпуск",
     )
-    _get_or_create_field(
+    _ensure_field(
         session,
         vacation,
         code="date_from",
@@ -263,7 +525,7 @@ def seed(session: Session) -> None:
         required=True,
         order_no=1,
     )
-    _get_or_create_field(
+    _ensure_field(
         session,
         vacation,
         code="date_to",
@@ -272,7 +534,7 @@ def seed(session: Session) -> None:
         required=True,
         order_no=2,
     )
-    _get_or_create_field(
+    _ensure_field(
         session,
         vacation,
         code="comment",
@@ -281,14 +543,15 @@ def seed(session: Session) -> None:
         required=False,
         order_no=3,
     )
-    _ensure_route_with_approver(session, vacation, approver)
 
-    certificate = _get_or_create_request_type(
+    certificate = _ensure_request_type(
         session,
-        CERTIFICATE_TYPE_NAME,
-        "Заявка на кадровую справку",
+        process=process,
+        code="certificate",
+        name="Справка",
+        description="Заявка на кадровую справку",
     )
-    _get_or_create_field(
+    _ensure_field(
         session,
         certificate,
         code="certificate_kind",
@@ -298,7 +561,7 @@ def seed(session: Session) -> None:
         order_no=1,
         dictionary=dictionary,
     )
-    _get_or_create_field(
+    _ensure_field(
         session,
         certificate,
         code="note",
@@ -307,17 +570,29 @@ def seed(session: Session) -> None:
         required=False,
         order_no=2,
     )
+
+    approver = users_by_login["approver.demo"]
+    _ensure_route_with_approver(session, vacation, approver)
     _ensure_route_with_approver(session, certificate, approver)
 
 
 def _print_summary(session: Session) -> None:
-    role_count = len(session.scalars(select(Role)).all())
-    user_count = len(session.scalars(select(User)).all())
-    type_count = len(session.scalars(select(RequestType)).all())
+    counts = {
+        "roles": len(session.scalars(select(Role)).all()),
+        "users": len(session.scalars(select(User)).all()),
+        "employees": len(session.scalars(select(Employee)).all()),
+        "processes": len(session.scalars(select(Process)).all()),
+        "statuses": len(session.scalars(select(Status)).all()),
+        "actions": len(session.scalars(select(Action)).all()),
+        "transitions": len(session.scalars(select(ProcessTransition)).all()),
+        "request_types": len(session.scalars(select(RequestType)).all()),
+    }
     print(
         "Seed complete: "
-        f"{role_count} roles, {user_count} users, {type_count} request types "
-        f"({VACATION_TYPE_NAME}, {CERTIFICATE_TYPE_NAME})."
+        f"{counts['roles']} roles, {counts['users']} users, "
+        f"{counts['employees']} employees, {counts['processes']} processes, "
+        f"{counts['statuses']} statuses, {counts['actions']} actions, "
+        f"{counts['transitions']} transitions, {counts['request_types']} request types."
     )
 
 

@@ -25,7 +25,7 @@
 | **Администратор** | `admin` | Типы, поля, маршрут, назначения, справочники; реестр — Future / backlog |
 | **Аутентифицированный пользователь** | — | Обобщение для входа и уведомлений (Future / backlog); конкретные роли — specialization |
 
-Один пользователь может иметь несколько ролей одновременно (BR-16, union permissions). Выбор «активной роли» не требуется.
+Один пользователь имеет **одну** системную роль (BR-16, ADR-ORG-01). Выбор «активной роли» не требуется.
 
 ---
 
@@ -114,7 +114,7 @@ flowchart LR
   UC_08 -.->|constraint: комментарий обязателен BR-25| NoteReject[BR-25]
   UC_09 -.->|constraint: комментарий обязателен BR-25| NoteReturn[BR-25]
   UC_07 -.->|constraint: не инициатор BR-21; first-approve BR-03| NoteApr[BR-21 BR-03]
-  UC_05 -.->|RouteInstance BR-08 / BR-22| NoteSnap[BR-08 BR-22]
+  UC_05 -.->|live ApprovalRoute / Stage BR-08 BR-22| NoteLive[BR-08 BR-22]
 ```
 
 Примечания к связям:
@@ -128,11 +128,11 @@ flowchart LR
 
 | UC | Правило | Смысл |
 | :--- | :--- | :--- |
-| UC-05 | BR-08, BR-22, BR-26 | Первый submit → RouteInstance; каждый submit → FieldValueVersion (append-only); resubmit не трогает RouteInstance |
+| UC-05 | BR-08, BR-22, BR-26 | Submit → live route; `current_stage_id` + ApprovalTask; resubmit с первого live-этапа; без snapshot |
 | UC-07 | BR-03, BR-21, BR-25 | First-approve wins; запрет самосогласования; комментарий при approve необязателен |
 | UC-08, UC-09 | BR-21, BR-25 | Запрет самосогласования; комментарий обязателен |
 | UC-10 | BR-07 | Отмена только `draft` / `returned` |
-| UC-11, UC-12 | BR-09, BR-18, BR-27 | Изоляция snapshot; валидация маршрута при активации; admin не создаёт заявки от сотрудника |
+| UC-11, UC-12 | BR-09, BR-18 | Live config caveat (ADR-LIVE-CFG-01); валидация маршрута; admin не создаёт заявки от сотрудника |
 
 ---
 

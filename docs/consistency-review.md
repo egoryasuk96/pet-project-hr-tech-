@@ -11,7 +11,8 @@
 
 Связанные артефакты:
 
-- Канон snapshot: [Snapshot Model](./03-diagrams/erd/snapshot-model.md), [ADR-SNAP-01](./03-diagrams/architecture/adr-snapshot-submit-versions.md)
+- Канон live config: [ADR-LIVE-CFG-01](./03-diagrams/architecture/adr-live-config.md), [erd-domain-model.md](./03-diagrams/erd/erd-domain-model.md)
+- Deprecated snapshot: [Snapshot Model](./03-diagrams/erd/snapshot-model.md), [ADR-SNAP-01](./03-diagrams/architecture/adr-snapshot-submit-versions.md) (Superseded)
 - API-специфичные open questions (не редактировались в этом проходе): [api-contract-analysis.md §10](./04-api/api-contract-analysis.md)
 
 ---
@@ -37,6 +38,13 @@
 | SF-15 | UML-CL-01 + ARCH-CMP §6: **RequestFieldValue** (working values) — sync с ERD/Snapshot | Snapshot §3, DD §4.2, ERD | `class-domain-model.md`, `component-diagram.md` |
 | SF-16 | Backlog: пустые orphan-секции свёрнуты; AC-ACC-04 ACL-пометка | план cleanup | `backlog.md` |
 | SF-17 | UML-CL-01: устаревшая рамка «ERD позже» → ERD уже Baseline | `erd/` | `class-domain-model.md` |
+| SF-18 | E0–E1 docs: snapshot → live config; RouteInstance/FieldValueVersion deprecated | ADR-LIVE-CFG-01, erd-domain-model v2 | glossary, ERD-DD, UML, BPMN, Architecture, FR/AC/UC/NFR, API analysis, openapi descriptions, README |
+| SF-20 | Docs-pass: ADR-ERR-03 envelope; ADR-ID-01 Target OpenAPI; BR-16 one role; Target API без snapshot fields | ADR-ERR-03, ADR-ID-01, ADR-ORG-01, ADR-LIVE-CFG-01 | error-matrix, api-contract-analysis, approval-api-contract, openapi.yaml, Vision, RBAC, context |
+| SF-21 | Architecture Frozen Target sync: JWT CURRENT; demo-header Superseded; Action Engine primary mutation; Notification Target | ADR-AUTH-JWT-01, ADR-ACTION-01, ADR-LIVE-CFG-01 | ARCH-*, Vision §7.1/§10, README, backlog auth/notif status |
+
+**Примечание SF-18 (HISTORICAL):** на момент E0–E1 docs описывали target при возможном lag кода до E2. После E2+ / Frozen Target runtime docs и target совпадают; snapshot-сущности в CURRENT не утверждаются.
+
+**Примечание SF-01…07:** rename к RouteInstance/FieldValueVersion — **historical audit trail** (pre-live-config); не CURRENT wording.
 
 ---
 
@@ -54,8 +62,8 @@
 | RR-COMMENT-01 | Free comment — полный набор статусов | FR-REQ-06 («включая `in_approval`») vs BR-28 / AC-REQ-06 / RBAC (явно `in_approval`); api §10.8 | Разрешены ли free comments вне `in_approval` | OPEN |
 | RR-CAT-01 | FR-CAT-02 dual error | FR-CAT-02: `ERR_NOT_FOUND` / `ERR_INACTIVE_TYPE`; Error Matrix ограничивает `ERR_INACTIVE_TYPE` create/submit; api §10.2 | Какой код для GET неактивного типа | OPEN |
 | RR-TASK-02 | ApprovalTask `created_at` / дата очереди | FR-APP-01 требует дату в очереди; DD/ERD ApprovalTask без `created_at`; api §10.4 | Добавить поле в модель или убрать из контракта | OPEN |
-| RR-HIST-01 | HistoryEvent ↔ FieldValueVersion | Snapshot Model §6 требует трассировку; DD HistoryEvent без `value_version_id`; api предлагает optional field | FK / поле / только UI-join | OPEN |
-| RR-FK-01 | DD nullable vs ERD required `value_version_id` на ApprovalTask | DD §6.1 Nullable=yes vs ERD `}|--||` | Обязательность FK для open tasks | OPEN |
+| RR-HIST-01 | HistoryEvent ↔ FieldValueVersion | Target: FieldValueVersion удалён; HistoryEvent без FK на версии | — | **Closed (target)** |
+| RR-FK-01 | value_version_id на ApprovalTask | Target: поле удалено ([ADR-LIVE-CFG-01](./03-diagrams/architecture/adr-live-config.md)) | — | **Closed (target)** |
 
 ### 2.2. Прочие OPEN (полный inventory)
 
@@ -63,10 +71,10 @@
 | :--- | :--- | :--- | :--- | :--- |
 | RR-ACL-01 | Семантика ACL-04 / ACL-09 | backlog AC-ACC-04; BPMN-03; sequence-admin; architecture-traceability | ID ссылаются, определений в Baseline rbac-matrix нет (stub xref = SF-09; семантика — open) | OPEN |
 | RR-ROUTE-01 | BR-18 dual error на активации типа | BR-18: `ERR_ROUTE_CONFIG` или `ERR_VALIDATION`; submit уже `ERR_ROUTE_CONFIG` | Единый код для activate | OPEN |
-| RR-API-01 | Demo headers | api-analysis §10.1 | Имена/формат/ошибка header | OPEN |
+| RR-API-01 | Demo headers | api-analysis §10.1 | HISTORICAL: demo-header Superseded; AuthN = JWT ([ADR-AUTH-JWT-01](./03-diagrams/architecture/adr-jwt-core-api.md)) | **Closed (target)** |
 | RR-API-02 | Dictionary items в schema response | api-analysis §10.3 | Встроить items или отдельный endpoint | OPEN |
 | RR-API-03 | Approver card route | api-analysis §10.5 | Только `GET /approval-tasks/{id}` vs ещё `GET /requests/{id}` | OPEN |
-| RR-API-04 | Cancelled-from-returned card values | api-analysis §10.7 | Working values vs last FieldValueVersion | OPEN |
+| RR-API-04 | Cancelled-from-returned card values | api-analysis §10.7 | Target: working RequestFieldValue; FieldValueVersion удалён | **Closed (target)** |
 | RR-API-05 | History pagination | api-analysis §10.9 | Нужна ли пагинация истории | OPEN |
 | RR-API-06 | Pagination envelope | api-analysis §10.10 | page/cursor + response shape | OPEN |
 | RR-API-07 | Error JSON envelope | api-analysis §10.11 | Рекомендация Error Matrix vs обязательный контракт | OPEN |

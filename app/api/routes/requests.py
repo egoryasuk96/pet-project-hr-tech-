@@ -1,36 +1,37 @@
-"""Employee request lifecycle: draft, list, card, edit, submit, cancel, comments, history."""
+"""Employee request lifecycle: Target read API + Legacy write wrappers."""
 
 from __future__ import annotations
 
-from uuid import UUID
-
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Body, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_roles
 from app.db.session import get_db
-from app.domain.enums import RequestStatus, RoleCode
+from app.domain.enums import RoleCode
 from app.domain.identity import User
 from app.schemas.common import DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, ErrorResponse
+from app.schemas.history import HistoryEventListResponse
 from app.schemas.request import (
-    CancelRequestResult,
+    ActionExecuteInput,
+    AvailableActionsResponse,
     CreateCommentInput,
     CreateRequestInput,
     CreatedComment,
     CreatedRequest,
     RequestCard,
-    RequestHistory,
     RequestListItem,
-    SubmitRequestResult,
     UpdateValuesInput,
     UpdatedRequestValues,
 )
-from app.services import request_service, submit_service
+from app.services import action_engine, available_actions_service, history_service, request_service, submit_service
 
 router = APIRouter(prefix="/requests", tags=["Requests"])
 
 _employee = require_roles(RoleCode.EMPLOYEE)
+_request_reader = require_roles(RoleCode.EMPLOYEE, RoleCode.APPROVER)
 _history_reader = require_roles(RoleCode.EMPLOYEE, RoleCode.APPROVER)
+_actions_reader = require_roles(RoleCode.EMPLOYEE, RoleCode.APPROVER)
+_action_executor = require_roles(RoleCode.EMPLOYEE, RoleCode.APPROVER, RoleCode.ADMIN)
 
 
 @router.post(
@@ -40,12 +41,12 @@ _history_reader = require_roles(RoleCode.EMPLOYEE, RoleCode.APPROVER)
     summary="Create a draft request",
     description="UC-04 / FR-REQ-01. Initiator is the current user. Fields are saved later via PATCH.",
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        403: {"model": ErrorResponse, "description": "ERR_FORBIDDEN"},
-        404: {"model": ErrorResponse, "description": "ERR_NOT_FOUND — request type does not exist"},
-        409: {"model": ErrorResponse, "description": "ERR_INACTIVE_TYPE"},
-        422: {"model": ErrorResponse, "description": "ERR_VALIDATION"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN"},
+        404: {"model": ErrorResponse, "description": "NOT_FOUND — request type does not exist"},
+        409: {"model": ErrorResponse, "description": "INACTIVE_TYPE"},
+        422: {"model": ErrorResponse, "description": "VALIDATION"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def create_request(
@@ -63,16 +64,16 @@ def create_request(
     summary="List the current employee's requests",
     description="UC-06 / FR-CAB-02. Own requests only. Sorted by created_at descending.",
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        403: {"model": ErrorResponse, "description": "ERR_FORBIDDEN"},
-        422: {"model": ErrorResponse, "description": "ERR_VALIDATION"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN"},
+        422: {"model": ErrorResponse, "description": "VALIDATION"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def list_requests(
     session: Session = Depends(get_db),
     user: User = Depends(_employee),
-    status_filter: RequestStatus | None = Query(default=None, alias="status"),
+    status_filter: str | None = Query(default=None, alias="status"),
     page: int = Query(default=DEFAULT_PAGE, ge=1),
     page_size: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
 ) -> list[RequestListItem]:
@@ -86,24 +87,86 @@ def list_requests(
 
 
 @router.get(
+    "/{request_id}/available-actions",
+    response_model=AvailableActionsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List available actions for a request (read-only)",
+    description=(
+        "E3.1 / ADR-ACTION-01. Computes actions from live ProcessTransition "
+        "for the current request status and user role. Does not execute transitions."
+    ),
+    responses={
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN"},
+        404: {"model": ErrorResponse, "description": "NOT_FOUND"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
+    },
+)
+def get_available_actions(
+    request_id: int,
+    session: Session = Depends(get_db),
+    user: User = Depends(_actions_reader),
+) -> AvailableActionsResponse:
+    return available_actions_service.list_available_actions(session, user, request_id)
+
+
+@router.post(
+    "/{request_id}/actions/{action_id}",
+    response_model=RequestCard,
+    status_code=status.HTTP_200_OK,
+    summary="Execute a configured action on a request",
+    description=(
+        "E3.2 / ADR-ACTION-01. Single Target execute endpoint. "
+        "Permission and target status come from live ProcessTransition."
+    ),
+    responses={
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN_APPROVAL"},
+        404: {"model": ErrorResponse, "description": "NOT_FOUND"},
+        409: {"model": ErrorResponse, "description": "REQUEST_ACTION_NOT_ALLOWED / ROUTE_CONFIG"},
+        422: {"model": ErrorResponse, "description": "VALIDATION"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
+    },
+)
+def execute_request_action(
+    request_id: int,
+    action_id: int,
+    session: Session = Depends(get_db),
+    user: User = Depends(_action_executor),
+    body: ActionExecuteInput = Body(default_factory=ActionExecuteInput),
+) -> RequestCard:
+    return action_engine.execute_action(
+        session,
+        user,
+        request_id,
+        action_id,
+        comment=body.comment,
+    )
+
+
+@router.get(
     "/{request_id}",
     response_model=RequestCard,
     status_code=status.HTTP_200_OK,
-    summary="Get the current employee's request card",
-    description="UC-06 / FR-REQ-04. A foreign request is hidden with 404 ERR_NOT_FOUND.",
+    summary="Get a visible request card",
+    description=(
+        "UC-06 / UC-07 / FR-REQ-04. Employee: own request. "
+        "Approver: request with own ApprovalTask (BR-14). "
+        "Invisible requests return 404 NOT_FOUND."
+    ),
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        403: {"model": ErrorResponse, "description": "ERR_FORBIDDEN"},
-        404: {"model": ErrorResponse, "description": "ERR_NOT_FOUND"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN"},
+        404: {"model": ErrorResponse, "description": "NOT_FOUND"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def get_request(
-    request_id: UUID,
+    request_id: int,
     session: Session = Depends(get_db),
-    user: User = Depends(_employee),
+    user: User = Depends(_request_reader),
 ) -> RequestCard:
-    return request_service.get_own_request(session, user, request_id)
+    return request_service.get_visible_request_card(session, user, request_id)
 
 
 @router.patch(
@@ -111,18 +174,18 @@ def get_request(
     response_model=UpdatedRequestValues,
     status_code=status.HTTP_200_OK,
     summary="Save working field values",
-    description="UC-04 / FR-REQ-02. Draft or returned only. Partial values allowed; required fields are checked on submit.",
+    description="UC-04 / FR-REQ-02. Deferred until later API stage.",
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        403: {"model": ErrorResponse, "description": "ERR_FORBIDDEN"},
-        404: {"model": ErrorResponse, "description": "ERR_NOT_FOUND"},
-        409: {"model": ErrorResponse, "description": "ERR_INVALID_STATE"},
-        422: {"model": ErrorResponse, "description": "ERR_VALIDATION"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN"},
+        404: {"model": ErrorResponse, "description": "NOT_FOUND"},
+        409: {"model": ErrorResponse, "description": "INVALID_STATE"},
+        422: {"model": ErrorResponse, "description": "VALIDATION"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def patch_request(
-    request_id: UUID,
+    request_id: int,
     body: UpdateValuesInput,
     session: Session = Depends(get_db),
     user: User = Depends(_employee),
@@ -132,55 +195,47 @@ def patch_request(
 
 @router.post(
     "/{request_id}/submit",
-    response_model=SubmitRequestResult,
+    response_model=RequestCard,
     status_code=status.HTTP_200_OK,
-    summary="Submit a draft (or resubmit a returned request)",
-    description=(
-        "UC-05 / FR-REQ-03. Validates live schema and route (BR-18). "
-        "Creates RouteInstance, FieldValueVersion, stage-1 tasks, and HistoryEvent."
-    ),
+    summary="Submit a draft (Legacy thin alias)",
+    description="Legacy wrapper around POST .../actions/{submit_action_id}.",
+    deprecated=True,
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        403: {"model": ErrorResponse, "description": "ERR_FORBIDDEN"},
-        404: {"model": ErrorResponse, "description": "ERR_NOT_FOUND"},
-        409: {
-            "model": ErrorResponse,
-            "description": "ERR_INVALID_STATE / ERR_INACTIVE_TYPE / ERR_ROUTE_CONFIG",
-        },
-        422: {"model": ErrorResponse, "description": "ERR_VALIDATION"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN"},
+        404: {"model": ErrorResponse, "description": "NOT_FOUND"},
+        409: {"model": ErrorResponse, "description": "REQUEST_ACTION_NOT_ALLOWED"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def submit_request(
-    request_id: UUID,
+    request_id: int,
     session: Session = Depends(get_db),
     user: User = Depends(_employee),
-) -> SubmitRequestResult:
+) -> RequestCard:
     return submit_service.submit_request(session, user, request_id)
 
 
 @router.post(
     "/{request_id}/cancel",
-    response_model=CancelRequestResult,
+    response_model=RequestCard,
     status_code=status.HTTP_200_OK,
-    summary="Cancel a request",
-    description=(
-        "UC-10 / FR-REQ-07 / BR-07. Cancels an own draft or returned request. "
-        "Status change and HistoryEvent are atomic."
-    ),
+    summary="Cancel a request (Legacy thin alias)",
+    description="Legacy wrapper around POST .../actions/{cancel_action_id}.",
+    deprecated=True,
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        403: {"model": ErrorResponse, "description": "ERR_FORBIDDEN"},
-        404: {"model": ErrorResponse, "description": "ERR_NOT_FOUND"},
-        409: {"model": ErrorResponse, "description": "ERR_INVALID_STATE"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN"},
+        404: {"model": ErrorResponse, "description": "NOT_FOUND"},
+        409: {"model": ErrorResponse, "description": "REQUEST_ACTION_NOT_ALLOWED"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def cancel_request(
-    request_id: UUID,
+    request_id: int,
     session: Session = Depends(get_db),
     user: User = Depends(_employee),
-) -> CancelRequestResult:
+) -> RequestCard:
     return request_service.cancel_request(session, user, request_id)
 
 
@@ -189,21 +244,18 @@ def cancel_request(
     response_model=CreatedComment,
     status_code=status.HTTP_201_CREATED,
     summary="Add a free initiator comment",
-    description=(
-        "UC-06 / FR-REQ-06 / BR-28. Adds a free comment to an own request in in_approval. "
-        "kind, author_id, and approval_task_id are set by the server."
-    ),
+    description="Deferred until later API stage.",
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        403: {"model": ErrorResponse, "description": "ERR_FORBIDDEN"},
-        404: {"model": ErrorResponse, "description": "ERR_NOT_FOUND"},
-        409: {"model": ErrorResponse, "description": "ERR_INVALID_STATE"},
-        422: {"model": ErrorResponse, "description": "ERR_VALIDATION"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN"},
+        404: {"model": ErrorResponse, "description": "NOT_FOUND"},
+        409: {"model": ErrorResponse, "description": "INVALID_STATE"},
+        422: {"model": ErrorResponse, "description": "VALIDATION"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def add_comment(
-    request_id: UUID,
+    request_id: int,
     body: CreateCommentInput,
     session: Session = Depends(get_db),
     user: User = Depends(_employee),
@@ -213,23 +265,23 @@ def add_comment(
 
 @router.get(
     "/{request_id}/history",
-    response_model=RequestHistory,
+    response_model=HistoryEventListResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get request history and submitted value versions",
+    summary="Get request history",
     description=(
-        "UC-14 / FR-AUDIT-01. Chronological HistoryEvent list and FieldValueVersion snapshots. "
-        "Employee: own request. Approver: request with an assigned task of any status."
+        "E5.1 / UC-14 / FR-AUDIT-01. Returns HistoryEvent rows for a visible request, "
+        "sorted by at descending. Employee: own requests. Approver: requests with own task."
     ),
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        403: {"model": ErrorResponse, "description": "ERR_FORBIDDEN"},
-        404: {"model": ErrorResponse, "description": "ERR_NOT_FOUND"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN"},
+        404: {"model": ErrorResponse, "description": "NOT_FOUND"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def get_history(
-    request_id: UUID,
+    request_id: int,
     session: Session = Depends(get_db),
     user: User = Depends(_history_reader),
-) -> RequestHistory:
-    return request_service.get_request_history(session, user, request_id)
+) -> HistoryEventListResponse:
+    return history_service.list_request_history(session, user, request_id)

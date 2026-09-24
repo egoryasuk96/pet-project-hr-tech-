@@ -2,17 +2,17 @@
 
 **Продукт:** Employee Service  
 **ID:** ERD-00-INDEX  
-**Версия:** 1.0  
-**Статус:** Baseline v1.0  
-**Связанные документы:** [Vision](../../01-vision-and-scope/vision-scope.md), [Business Rules](../../02-requirements/business-rules.md), [Snapshot Model](./snapshot-model.md), [Architecture](../architecture/architecture-description.md)
+**Версия:** 2.0  
+**Статус:** Target architecture (docs E0–E1)  
+**Связанные документы:** [Vision](../../01-vision-and-scope/vision-scope.md), [Business Rules](../../02-requirements/business-rules.md), [ADR-LIVE-CFG-01](../architecture/adr-live-config.md), [Architecture](../architecture/architecture-description.md)
 
 ---
 
 ## 1. Назначение
 
-Аналитическая модель данных Employee Service: сущности, атрибуты, связи, кардинальности, инварианты RouteInstance / FieldValueVersion, data dictionary и трассировка к требованиям.
+Аналитическая модель данных Employee Service: сущности, атрибуты, связи, инварианты **live configuration**, data dictionary и трассировка.
 
-Это **не** физическая схема PostgreSQL, **не** SQL-миграции и **не** OpenAPI.
+Это **не** физическая схема PostgreSQL, **не** SQL-миграции и **не** runtime-код.
 
 ---
 
@@ -20,9 +20,9 @@
 
 | ID | Файл | Кратко |
 | :--- | :--- | :--- |
-| ERD-00 | [erd-description.md](./erd-description.md) | Индекс раздела, уровни модели, классификация сущностей |
-| ERD-DM | [erd-domain-model.md](./erd-domain-model.md) | Mermaid ER-диаграмма, кардинальности |
-| ERD-SNAP | [snapshot-model.md](./snapshot-model.md) | **Канон:** RouteInstance + FieldValueVersion (вариант B) |
+| ERD-00 | [erd-description.md](./erd-description.md) | Индекс раздела, классификация сущностей |
+| ERD-DM | [erd-domain-model.md](./erd-domain-model.md) | Mermaid ER — **актуальная** модель |
+| ERD-SNAP | [snapshot-model.md](./snapshot-model.md) | **Deprecated** — историческая справка |
 | ERD-DD | [data-dictionary.md](./data-dictionary.md) | Словарь сущностей и полей |
 | ERD-MAP | [erd-traceability.md](./erd-traceability.md) | Трассировка → сущности |
 
@@ -32,41 +32,33 @@
 
 | Тема | Правило |
 | :--- | :--- |
-| **Формат** | Markdown = source of truth; визуал — Mermaid `erDiagram` |
-| **Язык** | Русский (имена сущностей — English PascalCase) |
-| **Уровень** | Conceptual + logical; без PostgreSQL DDL |
-| **Новые BR** | Не вводятся |
-| **Snapshot** | Полная механика **только** в [snapshot-model.md](./snapshot-model.md) |
+| **Формат** | Markdown = source of truth; Mermaid `erDiagram` |
+| **Конфиг** | Live: ApprovalRoute* + ProcessTransition ([ADR-LIVE-CFG-01](../architecture/adr-live-config.md)) |
+| **Snapshot** | Не используется; ERD-SNAP только deprecated |
+| **ID** | Целевые типы — [ADR-ID-01](../architecture/adr-id-strategy.md) |
 
 ---
 
-## 4. Snapshot (кратко)
+## 4. Live config (кратко)
 
-| Механизм | Когда | При resubmit |
-| :--- | :--- | :--- |
-| **RouteInstance** | Первый successful submit | Без изменений |
-| **FieldValueVersion** | Каждый successful submit (номер отправки) | Новая версия; прошлые в истории |
+| Механизм | Поведение |
+| :--- | :--- |
+| ApprovalRoute / Stage / Assignment | Читаются при submit и approve_advance |
+| ProcessTransition | Читаются при `available_actions` и execute action |
+| Request.current_stage_id | FK на live ApprovalStage |
+| ApprovalTask.stage_id | FK на live ApprovalStage |
 
-Детали (в т.ч. resubmit с первого этапа, OQ-B): [snapshot-model.md](./snapshot-model.md).
-
----
-
-## 5. Связанные артефакты
-
-- [Vision & Scope](../../01-vision-and-scope/vision-scope.md)
-- [Глоссарий](../../01-vision-and-scope/glossary.md)
-- [business-rules.md](../../02-requirements/business-rules.md)
-- [Architecture](../architecture/architecture-description.md)
-- [ADR-SNAP-01](../architecture/adr-snapshot-submit-versions.md)
+Изменение активной конфигурации может затронуть незавершённые заявки. Process versioning / snapshot — **out of scope**.
 
 ---
 
-## 6. Критерии готовности (DoD)
+## 5. Связанные ADR
 
-1. Каталог содержит ERD-00…ERD-MAP.
-2. Snapshot Model документирует вариант B.
-3. Data Dictionary на логическом уровне с ссылками на FR/BR.
-4. Нет SQL, миграций, OpenAPI, кода.
+- [ADR-LIVE-CFG-01](../architecture/adr-live-config.md)
+- [ADR-ACTION-01](../architecture/adr-configurable-actions.md)
+- [ADR-ORG-01](../architecture/adr-org-model.md)
+- [ADR-ID-01](../architecture/adr-id-strategy.md)
+- [ADR-SNAP-01](../architecture/adr-snapshot-submit-versions.md) — Superseded
 
 ---
 
@@ -74,5 +66,5 @@
 
 | Версия | Дата | Описание |
 | :--- | :--- | :--- |
-| 1.0 | 2026-09-19 | Первая версия ERD + Data Dictionary |
-| 1.1 | 2026-09-20 | Вариант B; краткая сводка вместо dual snapshot essay |
+| 1.1 | 2026-09-20 | Вариант B snapshot |
+| 2.0 | 2026-09-23 | Live config; snapshot deprecated |

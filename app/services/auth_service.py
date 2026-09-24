@@ -1,4 +1,4 @@
-"""Authentication: login and current-user mapping."""
+"""Authentication: login and current-user mapping (Target User.role_id)."""
 
 from __future__ import annotations
 
@@ -8,12 +8,16 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.config import Settings
 from app.core.errors import forbidden, invalid_credentials
 from app.core.security import create_access_token, verify_password
-from app.domain.identity import User, UserRole
+from app.domain.identity import User
+from app.domain.org import Employee
 from app.schemas.auth import CurrentUser, LoginResponse
 
 
 def _user_options() -> tuple:
-    return (selectinload(User.user_roles).selectinload(UserRole.role),)
+    return (
+        selectinload(User.role),
+        selectinload(User.employee).selectinload(Employee.department),
+    )
 
 
 def load_user_by_login(session: Session, login: str) -> User | None:
@@ -22,16 +26,27 @@ def load_user_by_login(session: Session, login: str) -> User | None:
     )
 
 
+def _employee_full_name(employee: Employee | None) -> str:
+    if employee is None:
+        return ""
+    parts = [employee.first_name, employee.middle_name, employee.last_name]
+    return " ".join(part for part in parts if part)
+
+
 def to_current_user(user: User) -> CurrentUser:
-    roles = sorted({item.role.code for item in user.user_roles}, key=lambda code: code.value)
+    employee = user.employee
+    department_name = None
+    if employee is not None and employee.department is not None:
+        department_name = employee.department.name
+    role_codes = [user.role.code] if user.role is not None else []
     return CurrentUser(
         id=user.id,
         login=user.login,
-        full_name=user.full_name,
-        email=user.email,
-        position=user.position,
-        department=user.department,
-        roles=list(roles),
+        full_name=_employee_full_name(employee),
+        email=None,
+        position=employee.position if employee is not None else None,
+        department=department_name,
+        roles=role_codes,
     )
 
 

@@ -9,9 +9,11 @@
 **Обозначения:**  
 `C` — create · `R` — read · `U` — update · `D` — delete · `A` — action · `—` — нет доступа
 
-Права пользователя с несколькими ролями объединяются (**union**, BR-16).
+Права определяются **единственной** ролью пользователя (`role_id`, BR-16 / [ADR-ORG-01](../03-diagrams/architecture/adr-org-model.md)). Union нескольких ролей в Target **не** используется.
 
-Ядро Baseline: роли `employee` / `approver`. Отложенные функции и ACL admin/login — см. [backlog.md](../backlog.md).
+Ядро: роли `employee` / `approver` / `admin`. Admin CRUD и смена роли пользователя — в scope целевой модели (реализация — после E1).
+
+**Legacy:** multi-role + union permissions — Previous model.
 
 ---
 
@@ -35,11 +37,13 @@
 | История заявки по своей задаче | — | R | — |
 | Выполнение approve/reject/return без задачи | — | — | — |
 
-Примечания к ячейкам (Baseline):
-- `approver` без роли `employee` не создаёт заявки.
+Примечания к ячейкам:
+- Учётка с ролью `approver` не создаёт заявки (нужна роль `employee` на отдельной учётке).
 - Для reject/return комментарий обязателен (BR-25); для approve — нет.
 - Инициатор может оставлять свободные комментарии в `in_approval` (BR-28).
-- Login / профиль / in-app уведомления / CRUD админки — [backlog.md](../backlog.md).
+- Admin может менять `role_id` пользователя; роль влияет на доступные ProcessTransition.
+- Право decision по задаче = роль, допускающая transition, **и** assignee open task (BR-15).
+- Login JWT — [ADR-AUTH-JWT-01](../03-diagrams/architecture/adr-jwt-core-api.md).
 
 ---
 
@@ -67,9 +71,11 @@ Submit/cancel/edit/approve и т.д. вне допустимых статусо�
 ### ACL-07 — Завершённая / cancelled задача
 Повторное действие по завершённой или `cancelled` задаче запрещено (NFR-REL-02, BR-03). → `ERR_TASK_DONE` / `ERR_DUP_ACTION`.
 
-### ACL-08 — Множественные роли
-Пользователь с несколькими ролями получает объединение permissions (BR-16). Отдельный выбор активной роли не требуется.  
-(Полный сценарий login/JWT — backlog.)
+### ACL-08 — Одна роль на пользователя
+Пользователь имеет ровно одну роль (`role_id`, BR-16). Admin может изменить роль. Выбор «активной роли» не требуется.  
+Auth: JWT ([ADR-AUTH-JWT-01](../03-diagrams/architecture/adr-jwt-core-api.md)).
+
+**Legacy:** multi-role union — Previous model.
 
 ---
 

@@ -19,12 +19,12 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
     response_model=LoginResponse,
     status_code=status.HTTP_200_OK,
     summary="Authenticate and issue a JWT access token",
-    description="UC-01 / FR-AUTH-01. No refresh token. Inactive users receive ERR_FORBIDDEN.",
+    description="UC-01 / FR-AUTH-01. No refresh token. Inactive users receive FORBIDDEN.",
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_INVALID_CREDENTIALS"},
-        403: {"model": ErrorResponse, "description": "ERR_FORBIDDEN — inactive user"},
-        422: {"model": ErrorResponse, "description": "ERR_VALIDATION"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "INVALID_CREDENTIALS"},
+        403: {"model": ErrorResponse, "description": "FORBIDDEN — inactive user"},
+        422: {"model": ErrorResponse, "description": "VALIDATION"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def login(body: LoginRequest, session: Session = Depends(get_db)) -> LoginResponse:

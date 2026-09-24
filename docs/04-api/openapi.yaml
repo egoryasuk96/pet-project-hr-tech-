@@ -1,83 +1,177 @@
 openapi: 3.0.3
 info:
   title: Employee Service API
-  version: 1.0.0
+  version: 1.1.0
   description: |
-    Baseline MVP contract formalized from Stage 4.1
-    (`docs/04-api/api-contract-analysis.md`).
+    **Frozen Target API contract** — source of truth is the current runtime
+    (`app/api`, `app/schemas`, `app/services`) and tests. Sibling docs:
+    `api-contract-analysis.md`, `approval-api-contract.md`.
 
-    This specification does not resolve the 12 REQUIRES REVIEW items from
-    Stage 4.1 §10. They remain OPEN and are recorded in `x-requires-review`.
+    **Target:** JWT Bearer (ADR-AUTH-JWT-01), integer business IDs + UUID User
+    (ADR-ID-01), nested error envelope (ADR-ERR-03), live config without
+    snapshot fields (ADR-LIVE-CFG-01), Action Engine via
+    `GET .../available-actions` + `POST .../actions/{action_id}` (ADR-ACTION-01).
 
-    Demo identity is supplied through an HTTP-header stub, but header names,
-    formats, requiredness, and related error handling are not fixed.
-    Consequently, no OpenAPI security scheme is declared.
+    Approver flow: `GET /requests/{id}` → `GET /requests/{id}/available-actions`
+    → `POST /requests/{id}/actions/{action_id}`.
+
+    `/approval-tasks/*` routes are **disabled compatibility stubs** (`409 INVALID_STATE`).
+    Legacy `POST .../submit` and `POST .../cancel` are **deprecated thin aliases**
+    of Action Engine (response = `RequestCard`).
 
 x-requires-review:
   - number: 1
-    title: Demo headers
-    status: OPEN
-    description: Exact demo user/role header names, requiredness, formats, and error handling are not fixed.
+    title: Authentication
+    status: CLOSED
+    description: Target = JWT Bearer; POST /auth/login + GET /me.
   - number: 2
     title: Inactive type read
     status: OPEN
-    description: The documented interim behavior is 404 ERR_NOT_FOUND for inactive type detail/schema reads.
+    description: Interim behavior is 404 NOT_FOUND for inactive type detail/schema reads.
   - number: 3
     title: Dictionary items
     status: OPEN
-    description: Whether active items are embedded in the schema response or exposed by a separate Baseline read endpoint is not fixed.
+    description: Whether active items are embedded in schema or a separate read endpoint is not fixed.
   - number: 4
     title: ApprovalTask date
-    status: OPEN
-    description: The source of the queue item created_at value is not fixed.
+    status: CLOSED
+    description: /approval-tasks/* are disabled stubs; queue created_at is out of Target-active scope.
   - number: 5
     title: Approver card route
-    status: OPEN
-    description: The aggregate task-card route is analyzed, but the route decision remains under review.
+    status: CLOSED
+    description: Approver reads GET /requests/{id} under BR-14 ACL; /approval-tasks/{id} is a disabled stub.
   - number: 6
     title: Task visibility error
-    status: OPEN
-    description: ERR_NOT_FOUND versus ERR_FORBIDDEN_APPROVAL for a foreign or nonexistent task read is not fixed.
+    status: CLOSED
+    description: Superseded — /approval-tasks/* always return 409 INVALID_STATE.
   - number: 7
     title: Cancelled card data
     status: OPEN
-    description: The schema/value source after cancellation from returned is not fixed.
+    description: Value presentation after cancel from returned is not separately fixed beyond RequestCard.values.
   - number: 8
     title: Free comment states
-    status: OPEN
-    description: The complete set of states permitting a free initiator comment is not fixed.
+    status: CLOSED
+    description: POST .../comments is a deferred stub (409 INVALID_STATE) in current runtime.
   - number: 9
     title: History pagination
     status: OPEN
-    description: Whether request history requires pagination is not fixed.
+    description: Whether request history requires pagination is not fixed; runtime returns full items list.
   - number: 10
     title: Pagination contract
     status: OPEN
-    description: Page/cursor navigation and the response envelope are not fixed.
+    description: Page/cursor navigation and list envelopes beyond item arrays are not fixed.
   - number: 11
     title: Error response envelope
-    status: OPEN
-    description: The ErrorResponse structure is recommended, not mandatory.
+    status: CLOSED
+    description: "Target = ADR-ERR-03 nested { error: { code, message, details } }; codes without ERR_ prefix."
   - number: 12
     title: Traceability convention for OpenAPI
     status: OPEN
-    description: The project has UC/FR/AC identifiers but no US identifiers; no x-requirement value is declared.
+    description: Project has UC/FR/AC identifiers but no US identifiers; no x-requirement value is declared.
+
+security:
+  - bearerAuth: []
 
 tags:
+  - name: Auth
+    description: Login and current user (Target JWT).
   - name: RequestTypes
     description: Active request type catalog and live form schema.
   - name: Requests
-    description: Employee requests, working values, comments, lifecycle actions, and history.
+    description: Request lifecycle via Action Engine; history; legacy submit/cancel aliases.
+  - name: Notifications
+    description: In-app notification list for the current user.
   - name: ApprovalTasks
-    description: Approver queue, task card, and decisions.
+    description: Disabled compatibility stubs (409 INVALID_STATE). Not Target-active.
 
 paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate and issue a JWT access token
+      description: |
+        Issues a JWT access token. No refresh token. Inactive users receive
+        `403 FORBIDDEN`. Traceability: UC-01; FR-AUTH-01.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            example:
+              login: employee1
+              password: "********"
+      responses:
+        "200":
+          description: Authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+              example:
+                access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                token_type: bearer
+                expires_in: 28800
+                user:
+                  id: 33333333-3333-4333-8333-333333333333
+                  login: employee1
+                  full_name: Иван Петров
+                  email: null
+                  position: Specialist
+                  department: HR
+                  roles: [employee]
+        "401":
+          description: "`INVALID_CREDENTIALS` — wrong login or password."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: INVALID_CREDENTIALS
+                  message: Неверный логин или пароль
+                  details: {}
+        "403":
+          description: "`FORBIDDEN` — user is inactive."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: "`VALIDATION` — missing or invalid body fields."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /me:
+    get:
+      tags: [Auth]
+      summary: Get the current authenticated user
+      description: |
+        Returns the current user profile and single system role as a one-element
+        `roles` list. Path is `/me` (not `/users/me`). Traceability: FR-AUTH-02.
+      responses:
+        "200":
+          description: Current user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /request-types:
     get:
       tags: [RequestTypes]
       summary: Get active request types
       description: |
-        Returns only active request types. An empty catalog returns `200` and `[]`.
+        Returns only active request types. Empty catalog → `200` and `[]`.
         Roles: `employee`, `admin`. Traceability: UC-03; FR-CAT-01.
       responses:
         "200":
@@ -88,10 +182,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/RequestTypeSummary"
-              example:
-                - id: 11111111-1111-4111-8111-111111111111
-                  name: Annual leave
-                  description: Annual leave request
         "403":
           $ref: "#/components/responses/Forbidden"
         "500":
@@ -102,9 +192,7 @@ paths:
       tags: [RequestTypes]
       summary: Get an active request type
       description: |
-        Returns an existing active request type.
-        An absent or inactive type returns `404 ERR_NOT_FOUND`; the inactive-type
-        inconsistency remains OPEN in Stage 4.1 §10.2.
+        Absent or inactive type → `404 NOT_FOUND`.
         Roles: `employee`, `admin`. Traceability: UC-03; FR-CAT-02.
       parameters:
         - $ref: "#/components/parameters/TypeId"
@@ -115,22 +203,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RequestTypeSummary"
-              example:
-                id: 11111111-1111-4111-8111-111111111111
-                name: Annual leave
-                description: Annual leave request
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
-          description: "`ERR_NOT_FOUND` — the type does not exist or is inactive."
+          description: "`NOT_FOUND` — type does not exist or is inactive."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example:
-                error_code: ERR_NOT_FOUND
-                message: Объект не найден
-                details: {}
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -139,10 +219,7 @@ paths:
       tags: [RequestTypes]
       summary: Get the live request form schema
       description: |
-        Returns the active type's live form schema. Fields are ordered by
-        `order_no`; an empty `fields` array is valid. Dictionary item delivery
-        remains OPEN in Stage 4.1 §10.3.
-        An absent or inactive type returns `404 ERR_NOT_FOUND`.
+        Live form schema for an active type. Absent/inactive → `404 NOT_FOUND`.
         Roles: `employee`, `admin`. Traceability: UC-03, UC-04; FR-CAT-03.
       parameters:
         - $ref: "#/components/parameters/TypeId"
@@ -153,27 +230,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RequestTypeSchema"
-              example:
-                request_type_id: 11111111-1111-4111-8111-111111111111
-                fields:
-                  - code: start_date
-                    name: Start date
-                    data_type: date
-                    required: true
-                    order_no: 1
-                    dictionary_id: null
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
-          description: "`ERR_NOT_FOUND` — the type does not exist or is inactive."
+          description: "`NOT_FOUND` — type does not exist or is inactive."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example:
-                error_code: ERR_NOT_FOUND
-                message: Объект не найден
-                details: {}
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -182,9 +246,8 @@ paths:
       tags: [Requests]
       summary: Create a draft request
       description: |
-        Creates a draft for an active request type. The initiator is derived
-        from the current demo user. RouteInstance and FieldValueVersion are not
-        created. Request creation and its history event are atomic.
+        Creates a draft for an active request type. Initiator = current user.
+        Creates a HistoryEvent (`create` → draft) atomically.
         Role: `employee`. Traceability: UC-04; FR-REQ-01.
       requestBody:
         required: true
@@ -193,7 +256,7 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateRequestInput"
             example:
-              request_type_id: 11111111-1111-4111-8111-111111111111
+              request_type_id: 1
       responses:
         "201":
           description: Draft request created.
@@ -201,30 +264,22 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CreatedRequest"
-              example:
-                id: 22222222-2222-4222-8222-222222222222
-                request_type_id: 11111111-1111-4111-8111-111111111111
-                initiator_id: 33333333-3333-4333-8333-333333333333
-                status: draft
-                current_stage_number: null
-                created_at: "2026-09-21T09:00:00Z"
-                updated_at: "2026-09-21T09:00:00Z"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
-          description: "`ERR_NOT_FOUND` — request type does not exist."
+          description: "`NOT_FOUND` — request type does not exist."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: "`ERR_INACTIVE_TYPE` — request type is inactive."
+          description: "`INACTIVE_TYPE` — request type is inactive."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "422":
-          description: "`ERR_VALIDATION` — invalid request_type_id."
+          description: "`VALIDATION` — invalid request_type_id."
           content:
             application/json:
               schema:
@@ -233,40 +288,27 @@ paths:
           $ref: "#/components/responses/InternalError"
     get:
       tags: [Requests]
-      summary: Get the current employee's requests
+      summary: List the current employee's requests
       description: |
-        Returns only requests initiated by the current user. The status filter
-        does not expand visibility. Envelope/navigation format is not fixed;
-        see Stage 4.1 §10.10. The response is represented as an item array
-        without adding page, cursor, total, or another envelope.
-        Role: `employee`. Traceability: UC-06; FR-CAB-02, FR-REQ-05.
+        Own requests only. Sorted by `created_at` descending.
+        Role: `employee`. Traceability: UC-06; FR-CAB-02.
       parameters:
         - $ref: "#/components/parameters/RequestStatusFilter"
+        - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
       responses:
         "200":
-          description: Request list items; the pagination envelope remains OPEN.
+          description: Request list items (array; pagination envelope not fixed).
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: "#/components/schemas/RequestListItem"
-              example:
-                - id: 22222222-2222-4222-8222-222222222222
-                  request_type:
-                    id: 11111111-1111-4111-8111-111111111111
-                    name: Annual leave
-                  status: in_approval
-                  current_stage:
-                    number: 1
-                    name: Line manager
-                  created_at: "2026-09-21T09:00:00Z"
-                  updated_at: "2026-09-21T09:10:00Z"
         "403":
           $ref: "#/components/responses/Forbidden"
         "422":
-          description: "`ERR_VALIDATION` — unknown status or invalid page_size."
+          description: "`VALIDATION` — unknown status or invalid page/page_size."
           content:
             application/json:
               schema:
@@ -277,14 +319,17 @@ paths:
   /requests/{request_id}:
     get:
       tags: [Requests]
-      summary: Get the current employee's request card
+      summary: Get a visible request card
       description: |
-        Returns the current employee's own request card. Draft/returned cards
-        use working values and the live schema; in_approval/approved/rejected
-        cards use the latest FieldValueVersion. The source after cancellation
-        from returned remains OPEN in Stage 4.1 §10.7. A foreign request is
-        hidden with `404 ERR_NOT_FOUND`.
-        Role: `employee` (own). Traceability: UC-06; FR-REQ-04, FR-REQ-05, FR-REQ-06.
+        Returns `RequestCard` when visible under ACL:
+        - `employee` — own request;
+        - `approver` — request with any own ApprovalTask (any task status).
+        Invisible or missing request → `404 NOT_FOUND`.
+        Role `admin` is not permitted on this endpoint (role gate).
+        `available_actions` are **not** embedded; use
+        `GET /requests/{request_id}/available-actions`.
+        Form schema is **not** embedded; use `/request-types/{type_id}/schema`.
+        Traceability: UC-06, UC-07; FR-REQ-04; BR-14.
       parameters:
         - $ref: "#/components/parameters/RequestId"
       responses:
@@ -295,22 +340,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/RequestCard"
               example:
-                id: 22222222-2222-4222-8222-222222222222
+                id: 10245
                 request_type:
-                  id: 11111111-1111-4111-8111-111111111111
+                  id: 1
+                  code: annual_leave
                   name: Annual leave
+                initiator_user_id: 33333333-3333-4333-8333-333333333333
                 initiator:
                   id: 33333333-3333-4333-8333-333333333333
-                status: draft
-                current_stage: null
+                  full_name: Иван Петров
+                status_id: 2
+                status:
+                  id: 2
+                  code: in_approval
+                  name: На согласовании
+                current_stage_id: 10
+                current_stage:
+                  id: 10
+                  name: Line manager
+                  sequence_no: 1
                 created_at: "2026-09-21T09:00:00Z"
-                updated_at: "2026-09-21T09:00:00Z"
-                schema:
-                  request_type_id: 11111111-1111-4111-8111-111111111111
-                  fields: []
+                updated_at: "2026-09-21T09:10:00Z"
                 values: []
-                value_source: working
+                approval_tasks:
+                  - id: 501
+                    stage_id: 10
+                    assignee_user_id: 77777777-7777-4777-8777-777777777777
+                    status: open
+                    created_at: "2026-09-21T09:10:00Z"
+                    completed_at: null
                 comments: []
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -319,13 +380,11 @@ paths:
           $ref: "#/components/responses/InternalError"
     patch:
       tags: [Requests]
-      summary: Save working values
+      summary: Save working values (deferred stub)
       description: |
-        Saves the initiator's working values against the live schema only in
-        draft or returned. Partial draft data is allowed; complete required
-        field validation occurs on submit. Existing FieldValueVersion records
-        are not changed or created.
-        Role: `employee` (initiator). Traceability: UC-04, UC-09; FR-REQ-02.
+        **Deferred stub in current runtime.** Always returns `409 INVALID_STATE`
+        («сохранение полей будет доступно после следующего этапа API»).
+        Not Target-active. Role gate: `employee`.
       parameters:
         - $ref: "#/components/parameters/RequestId"
       requestBody:
@@ -334,39 +393,122 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/UpdateValuesInput"
-            example:
-              values:
-                - field_code: start_date
-                  value: "2026-10-01"
       responses:
-        "200":
-          description: Updated working values and current live schema.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UpdatedRequestValues"
-              example:
-                id: 22222222-2222-4222-8222-222222222222
-                status: draft
-                schema:
-                  request_type_id: 11111111-1111-4111-8111-111111111111
-                  fields: []
-                values:
-                  - field_code: start_date
-                    value: "2026-10-01"
-                updated_at: "2026-09-21T09:05:00Z"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/RequestNotFound"
         "409":
-          description: "`ERR_INVALID_STATE` — request is not draft or returned."
+          description: "`INVALID_STATE` — deferred stub."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /requests/{request_id}/available-actions:
+    get:
+      tags: [Requests]
+      summary: List available actions for a request
+      description: |
+        **Target (ADR-ACTION-01).** Read-only. Computes actions from live
+        `ProcessTransition` for current request status and user `role_id`.
+        Same visibility ACL as `GET /requests/{request_id}`.
+        Does **not** filter by assignee or self-approval (enforced on execute).
+        Each item is `{ id, code, name }` only — no `effect`, `target_status`.
+        Roles: `employee`, `approver`.
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          description: Available actions for the current user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailableActionsResponse"
+              example:
+                available_actions:
+                  - id: 3
+                    code: approve
+                    name: Согласовать
+                  - id: 4
+                    code: return
+                    name: Вернуть
+                  - id: 5
+                    code: reject
+                    name: Отклонить
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/RequestNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /requests/{request_id}/actions/{action_id}:
+    post:
+      tags: [Requests]
+      summary: Execute a configured process action
+      description: |
+        **Target (ADR-ACTION-01).** Single mutation endpoint for process
+        transitions. Permission and effects come from live `ProcessTransition`.
+        Optional body `comment`; reject/return require non-empty trimmed comment
+        → otherwise `422 VALIDATION`.
+        Success returns the full updated **`RequestCard`** (not a wrapper).
+        Client may re-fetch `GET .../available-actions` after success.
+        Roles: `employee`, `approver`, `admin` (admin typically has no transitions).
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+        - name: action_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: Action catalog id from available_actions[].id
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecuteActionInput"
+            example:
+              comment: Недостаточно обоснования
+      responses:
+        "200":
+          description: Action applied; updated request card.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestCard"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: "`FORBIDDEN` / `FORBIDDEN_APPROVAL` (self-approval or no open assignee task)."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/RequestNotFound"
+        "409":
+          description: |
+            `REQUEST_ACTION_NOT_ALLOWED` — action not allowed for status/role;
+            `TASK_DONE` — task already processed;
+            `INACTIVE_TYPE`; `ROUTE_CONFIG`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: REQUEST_ACTION_NOT_ALLOWED
+                  message: Действие недоступно для заявки в текущем статусе или роли
+                  details: {}
         "422":
-          description: "`ERR_VALIDATION` — unknown field code or invalid value/type/catalog value."
+          description: "`VALIDATION` — missing required comment or submit field errors."
           content:
             application/json:
               schema:
@@ -376,47 +518,37 @@ paths:
 
   /requests/{request_id}/submit:
     post:
+      deprecated: true
       tags: [Requests]
-      summary: Submit or resubmit a request
+      summary: "[Legacy] Submit or resubmit a request"
       description: |
-        Submits an own draft/returned request after live schema and route
-        validation. First submit creates RouteInstance once; every successful
-        submit appends FieldValueVersion. Resubmit preserves RouteInstance,
-        returns to stage 1, and creates stage-1 tasks. Request, snapshots,
-        tasks, and history are atomic.
-        Role: `employee` (initiator). Traceability: UC-05; FR-REQ-03, FR-REQ-09.
+        **Deprecated thin alias** of Action Engine (`submit` action code).
+        Target clients MUST use `POST /requests/{id}/actions/{action_id}`.
+        Response = full `RequestCard` (same as execute).
+        Role: `employee`. Traceability: UC-05; FR-REQ-03.
       parameters:
         - $ref: "#/components/parameters/RequestId"
       responses:
         "200":
-          description: Request submitted or resubmitted.
+          description: Request submitted; updated card.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubmitRequestResult"
-              example:
-                id: 22222222-2222-4222-8222-222222222222
-                status: in_approval
-                current_stage:
-                  number: 1
-                  name: Line manager
-                submit_number: 1
-                updated_at: "2026-09-21T09:10:00Z"
+                $ref: "#/components/schemas/RequestCard"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/RequestNotFound"
         "409":
-          description: |
-            `ERR_INVALID_STATE` — not draft/returned;
-            `ERR_INACTIVE_TYPE` — type inactive;
-            `ERR_ROUTE_CONFIG` — route has no stages or assignments.
+          description: "`REQUEST_ACTION_NOT_ALLOWED` / `INACTIVE_TYPE` / `ROUTE_CONFIG`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "422":
-          description: "`ERR_VALIDATION` — working values do not satisfy the live schema."
+          description: "`VALIDATION` — working values do not satisfy the live schema."
           content:
             application/json:
               schema:
@@ -426,31 +558,31 @@ paths:
 
   /requests/{request_id}/cancel:
     post:
+      deprecated: true
       tags: [Requests]
-      summary: Cancel a request
+      summary: "[Legacy] Cancel a request"
       description: |
-        Cancels an own draft or returned request. Status change and history
-        event are atomic.
-        Role: `employee` (initiator). Traceability: UC-10; FR-REQ-07.
+        **Deprecated thin alias** of Action Engine (`cancel` action code).
+        Target clients MUST use `POST /requests/{id}/actions/{action_id}`.
+        Response = full `RequestCard`.
+        Role: `employee`. Traceability: UC-10; FR-REQ-07.
       parameters:
         - $ref: "#/components/parameters/RequestId"
       responses:
         "200":
-          description: Request cancelled.
+          description: Request cancelled; updated card.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CancelRequestResult"
-              example:
-                id: 22222222-2222-4222-8222-222222222222
-                status: cancelled
-                updated_at: "2026-09-21T09:05:00Z"
+                $ref: "#/components/schemas/RequestCard"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/RequestNotFound"
         "409":
-          description: "`ERR_INVALID_STATE` — request is not draft or returned."
+          description: "`REQUEST_ACTION_NOT_ALLOWED`."
           content:
             application/json:
               schema:
@@ -461,12 +593,11 @@ paths:
   /requests/{request_id}/comments:
     post:
       tags: [Requests]
-      summary: Add a free initiator comment
+      summary: Add a free initiator comment (deferred stub)
       description: |
-        Adds an own-request free comment. The server supplies kind, author_id,
-        and approval_task_id. The complete allowed state set remains OPEN in
-        Stage 4.1 §10.8; in_approval is explicitly allowed.
-        Role: `employee` (initiator). Traceability: UC-06; FR-REQ-06.
+        **Deferred stub in current runtime.** Always returns `409 INVALID_STATE`.
+        Decision comments are created via Action Engine on reject/return
+        (`ExecuteActionInput.comment`), not this endpoint.
       parameters:
         - $ref: "#/components/parameters/RequestId"
       requestBody:
@@ -475,382 +606,300 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/CreateCommentInput"
-            example:
-              text: Please review this request.
       responses:
-        "201":
-          description: Free comment created.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CreatedComment"
-              example:
-                id: 44444444-4444-4444-8444-444444444444
-                request_id: 22222222-2222-4222-8222-222222222222
-                author_id: 33333333-3333-4333-8333-333333333333
-                kind: free
-                text: Please review this request.
-                created_at: "2026-09-21T09:15:00Z"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/RequestNotFound"
-        "422":
-          description: "`ERR_VALIDATION` — text is empty after trim."
+        "409":
+          description: "`INVALID_STATE` — deferred stub."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
 
   /requests/{request_id}/history:
     get:
       tags: [Requests]
-      summary: Get request history and submitted value versions
+      summary: Get request history
       description: |
-        Returns chronological history events and append-only submitted value
-        versions. History pagination remains OPEN in Stage 4.1 §10.9.
-        Roles: `employee` (own), `approver` (via own task).
-        Traceability: UC-14; FR-AUDIT-01.
+        Returns HistoryEvent rows for a visible request (same ACL as request card).
+        Envelope `{ "items": [...] }`, sorted by `at` **descending**.
+        Item fields: `id`, `action`, `actor_id`, `from_state`, `to_state`, `comment`, `at`.
+        Roles: `employee`, `approver`. Traceability: UC-14; FR-AUDIT-01.
       parameters:
         - $ref: "#/components/parameters/RequestId"
       responses:
         "200":
-          description: Request history.
+          description: History events (newest first).
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RequestHistory"
+                $ref: "#/components/schemas/HistoryEventListResponse"
               example:
-                events:
-                  - id: 55555555-5555-4555-8555-555555555555
-                    actor:
-                      id: 33333333-3333-4333-8333-333333333333
-                    action: request_created
+                items:
+                  - id: 703
+                    action: approve
+                    actor_id: 77777777-7777-4777-8777-777777777777
+                    from_state: in_approval
+                    to_state: approved
+                    comment: null
+                    at: "2026-09-21T10:00:00Z"
+                  - id: 702
+                    action: submit
+                    actor_id: 33333333-3333-4333-8333-333333333333
+                    from_state: draft
+                    to_state: in_approval
+                    comment: null
+                    at: "2026-09-21T09:10:00Z"
+                  - id: 701
+                    action: create
+                    actor_id: 33333333-3333-4333-8333-333333333333
                     from_state: null
                     to_state: draft
                     comment: null
                     at: "2026-09-21T09:00:00Z"
-                field_value_versions: []
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
-          description: "`ERR_NOT_FOUND` — request does not exist or is not visible."
+          description: "`NOT_FOUND` — request does not exist or is not visible."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications for the current user
+      description: |
+        Returns only notifications where the recipient is the authenticated user.
+        Envelope `{ "items": [...] }`, sorted by `created_at` **descending**.
+        Mark-as-read is **not** part of the Target-active contract.
+        Roles: `employee`, `approver`, `admin`. Traceability: UC-13; FR-NOTIF-02.
+      responses:
+        "200":
+          description: Notification list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationListResponse"
+              example:
+                items:
+                  - id: 901
+                    request_id: 10245
+                    approval_task_id: 501
+                    event_type: request_submitted
+                    text: Новая заявка на согласование
+                    read: false
+                    created_at: "2026-09-21T09:10:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
 
   /approval-tasks:
     get:
       tags: [ApprovalTasks]
-      summary: Get the current approver's open tasks
+      summary: "[Disabled stub] List approval tasks"
       description: |
-        Returns only open tasks assigned to the current user.
-        Envelope/navigation format is not fixed; see Stage 4.1 §10.10.
-        The response is represented as an item array without adding page,
-        cursor, total, or another envelope. The source of `created_at` remains
-        OPEN in Stage 4.1 §10.4.
-        Role: `approver`. Traceability: UC-07; FR-APP-01.
+        **Disabled compatibility stub.** Always returns `409 INVALID_STATE`.
+        Not Target-active. Not a thin alias.
+        Approver queue is not implemented; use request card ACL + available-actions.
+      deprecated: true
       parameters:
+        - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
       responses:
-        "200":
-          description: Open approval task items; the pagination envelope remains OPEN.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ApprovalTaskListItem"
-              example:
-                - id: 66666666-6666-4666-8666-666666666666
-                  request_id: 22222222-2222-4222-8222-222222222222
-                  request_type:
-                    id: 11111111-1111-4111-8111-111111111111
-                    name: Annual leave
-                  stage:
-                    number: 1
-                    name: Line manager
-                  status: open
-                  created_at: "2026-09-21T09:10:00Z"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "422":
-          description: "`ERR_VALIDATION` — invalid page_size."
+        "409":
+          description: "`INVALID_STATE` — disabled stub."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: INVALID_STATE
+                  message: Очередь согласования будет доступна после следующего этапа API
+                  details: {}
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
 
   /approval-tasks/{task_id}:
     get:
       tags: [ApprovalTasks]
-      summary: Get an approval task and request card
+      summary: "[Disabled stub] Get approval task card"
       description: |
-        Returns the current approver's own task in any status and an aggregate
-        snapshot-based request card. For an open task the current version is
-        used; completed decisions remain tied to their FieldValueVersion.
-        The route decision remains OPEN in Stage 4.1 §10.5.
-        For a foreign/nonexistent task, choosing between `404 ERR_NOT_FOUND`
-        and `403 ERR_FORBIDDEN_APPROVAL` remains OPEN in §10.6.
-        Role: `approver` (assignee). Traceability: UC-07; FR-APP-02,
-        FR-REQ-04, FR-REQ-05.
+        **Disabled compatibility stub.** Always returns `409 INVALID_STATE`.
+        Not Target-active. Approver reads `GET /requests/{request_id}` instead.
+      deprecated: true
       parameters:
         - $ref: "#/components/parameters/TaskId"
       responses:
-        "200":
-          description: Approval task and full request card.
+        "409":
+          description: "`INVALID_STATE` — disabled stub."
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApprovalTaskCard"
-              example:
-                task:
-                  id: 66666666-6666-4666-8666-666666666666
-                  request_id: 22222222-2222-4222-8222-222222222222
-                  stage_number: 1
-                  assignee_id: 77777777-7777-4777-8777-777777777777
-                  status: open
-                  decision: null
-                  value_version_id: 88888888-8888-4888-8888-888888888888
-                request:
-                  id: 22222222-2222-4222-8222-222222222222
-                  request_type:
-                    id: 11111111-1111-4111-8111-111111111111
-                    name: Annual leave
-                  initiator:
-                    id: 33333333-3333-4333-8333-333333333333
-                  status: in_approval
-                  current_stage:
-                    number: 1
-                    name: Line manager
-                  created_at: "2026-09-21T09:00:00Z"
-                  updated_at: "2026-09-21T09:10:00Z"
-                  schema:
-                    request_type_id: 11111111-1111-4111-8111-111111111111
-                    fields: []
-                  values: []
-                  value_source: submitted_version
-                  submit_number: 1
-                  comments: []
-                available_actions: [approve, reject, return]
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: |
-            `ERR_FORBIDDEN` — user lacks the approver role.
-            `ERR_FORBIDDEN_APPROVAL` is an unresolved alternative for a foreign task (§10.6).
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: |
-            `ERR_NOT_FOUND` — task absent or not linked to current approver.
-            Selection versus ERR_FORBIDDEN_APPROVAL remains OPEN (§10.6).
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
 
   /approval-tasks/{task_id}/approve:
     post:
       tags: [ApprovalTasks]
-      summary: Approve the current stage
+      summary: "[Disabled stub] Approve via task path"
       description: |
-        Completes an own open task with approve. Self-approval is forbidden.
-        First-approve-wins cancels sibling open tasks. The next stage and tasks
-        use RouteInstance; final-stage approval marks the request approved.
-        Decision, tasks, request state/stage, and history are atomic and tied
-        to the task's FieldValueVersion.
-        Role: `approver` (assignee). Traceability: UC-07; FR-APP-03,
-        FR-APP-06, FR-APP-07.
+        **Disabled compatibility stub.** Always returns `409 INVALID_STATE`.
+        Not a thin alias. Use `POST /requests/{id}/actions/{action_id}`.
+      deprecated: true
       parameters:
         - $ref: "#/components/parameters/TaskId"
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ApproveInput"
-            example:
-              comment: Approved.
+              $ref: "#/components/schemas/ExecuteActionInput"
       responses:
-        "200":
-          description: Approval decision applied.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApproveResult"
-              example:
-                task:
-                  id: 66666666-6666-4666-8666-666666666666
-                  status: completed
-                  decision: approve
-                  value_version_id: 88888888-8888-4888-8888-888888888888
-                request:
-                  id: 22222222-2222-4222-8222-222222222222
-                  status: approved
-                  current_stage:
-                    number: 1
-                    name: Line manager
-        "403":
-          $ref: "#/components/responses/ForbiddenApproval"
         "409":
-          description: |
-            `ERR_TASK_DONE` — task is completed/cancelled;
-            `ERR_DUP_ACTION` — duplicate action in a race/retry;
-            `ERR_INVALID_STATE` — request/task state does not allow approval.
+          description: "`INVALID_STATE` — disabled stub."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
 
   /approval-tasks/{task_id}/reject:
     post:
       tags: [ApprovalTasks]
-      summary: Reject a request
+      summary: "[Disabled stub] Reject via task path"
       description: |
-        Completes an own open task with reject. Self-approval is forbidden and
-        a non-empty trimmed comment is required. All current-stage open tasks
-        close, no later-stage tasks are created, and the decision is tied to
-        the current FieldValueVersion. Decision, tasks, request state, and
-        history are atomic.
-        Role: `approver` (assignee). Traceability: UC-08; FR-APP-04.
+        **Disabled compatibility stub.** Always returns `409 INVALID_STATE`.
+        Not a thin alias. Use `POST /requests/{id}/actions/{action_id}`.
+      deprecated: true
       parameters:
         - $ref: "#/components/parameters/TaskId"
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RequiredDecisionInput"
-            example:
-              comment: Required information is missing.
+              $ref: "#/components/schemas/ExecuteActionInput"
       responses:
-        "200":
-          description: Rejection decision applied.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/RejectResult"
-              example:
-                task:
-                  id: 66666666-6666-4666-8666-666666666666
-                  status: completed
-                  decision: reject
-                  value_version_id: 88888888-8888-4888-8888-888888888888
-                request:
-                  id: 22222222-2222-4222-8222-222222222222
-                  status: rejected
-                  current_stage:
-                    number: 1
-                    name: Line manager
-        "403":
-          $ref: "#/components/responses/ForbiddenApproval"
         "409":
-          $ref: "#/components/responses/DecisionConflict"
-        "422":
-          description: "`ERR_VALIDATION` — comment is absent or empty after trim."
+          description: "`INVALID_STATE` — disabled stub."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
 
   /approval-tasks/{task_id}/return:
     post:
       tags: [ApprovalTasks]
-      summary: Return a request for revision
+      summary: "[Disabled stub] Return via task path"
       description: |
-        Completes an own open task with return. Self-approval is forbidden and
-        a non-empty trimmed comment is required. Current-stage open tasks
-        close; RouteInstance and existing FieldValueVersion records do not
-        change. The request retains the return stage for audit. Decision,
-        tasks, request state, and history are atomic.
-        Role: `approver` (assignee). Traceability: UC-09; FR-APP-05, FR-REQ-08.
+        **Disabled compatibility stub.** Always returns `409 INVALID_STATE`.
+        Not a thin alias. Use `POST /requests/{id}/actions/{action_id}`.
+      deprecated: true
       parameters:
         - $ref: "#/components/parameters/TaskId"
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RequiredDecisionInput"
-            example:
-              comment: Please correct the dates.
+              $ref: "#/components/schemas/ExecuteActionInput"
       responses:
-        "200":
-          description: Return decision applied.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ReturnResult"
-              example:
-                task:
-                  id: 66666666-6666-4666-8666-666666666666
-                  status: completed
-                  decision: return
-                  value_version_id: 88888888-8888-4888-8888-888888888888
-                request:
-                  id: 22222222-2222-4222-8222-222222222222
-                  status: returned
-                  current_stage:
-                    number: 1
-                    name: Line manager
-        "403":
-          $ref: "#/components/responses/ForbiddenApproval"
         "409":
-          $ref: "#/components/responses/DecisionConflict"
-        "422":
-          description: "`ERR_VALIDATION` — comment is absent or empty after trim."
+          description: "`INVALID_STATE` — disabled stub."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Target authentication (ADR-AUTH-JWT-01).
+
   parameters:
     TypeId:
       name: type_id
       in: path
       required: true
       schema:
-        type: string
-        format: uuid
+        type: integer
+        format: int64
+      description: Request type ID (integer).
     RequestId:
       name: request_id
       in: path
       required: true
       schema:
-        type: string
-        format: uuid
+        type: integer
+        format: int64
+      description: Request ID (integer; also the UI request number).
     TaskId:
       name: task_id
       in: path
       required: true
       schema:
-        type: string
-        format: uuid
+        type: integer
+        format: int64
+      description: ApprovalTask ID (integer). Stub routes only.
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
     PageSize:
       name: page_size
       in: query
       required: false
-      description: Number of list items. No other navigation parameter is fixed.
       schema:
         type: integer
         default: 20
+        minimum: 1
         maximum: 100
     RequestStatusFilter:
       name: status
@@ -860,83 +909,93 @@ components:
         $ref: "#/components/schemas/RequestStatus"
 
   responses:
+    Unauthorized:
+      description: "`UNAUTHORIZED` — missing or invalid JWT."
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Требуется аутентификация
+              details: {}
     Forbidden:
-      description: "`ERR_FORBIDDEN` — role does not permit the operation."
+      description: "`FORBIDDEN` — role does not permit the operation."
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
           example:
-            error_code: ERR_FORBIDDEN
-            message: Недостаточно прав для выполнения операции
-            details: {}
+            error:
+              code: FORBIDDEN
+              message: Недостаточно прав для выполнения операции
+              details: {}
     ForbiddenApproval:
-      description: "`ERR_FORBIDDEN_APPROVAL` — user is not assignee or self-approval is attempted."
+      description: "`FORBIDDEN_APPROVAL` — self-approval or no open assignee task."
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
           example:
-            error_code: ERR_FORBIDDEN_APPROVAL
-            message: Вы не можете выполнить действие по этой задаче
-            details: {}
+            error:
+              code: FORBIDDEN_APPROVAL
+              message: Вы не можете выполнить действие по этой задаче
+              details: {}
     RequestNotFound:
-      description: "`ERR_NOT_FOUND` — request does not exist or belongs to another employee."
+      description: "`NOT_FOUND` — request does not exist or is not visible to the caller."
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
           example:
-            error_code: ERR_NOT_FOUND
-            message: Объект не найден
-            details: {}
-    DecisionConflict:
-      description: |
-        `ERR_TASK_DONE` — task is completed/cancelled;
-        `ERR_DUP_ACTION` — duplicate action in a race/retry;
-        `ERR_INVALID_STATE` — request/task state does not allow the decision.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorResponse"
+            error:
+              code: NOT_FOUND
+              message: Объект не найден
+              details: {}
     InternalError:
-      description: "`ERR_INTERNAL` — unexpected server error; mutations are rolled back."
+      description: "`INTERNAL` — unexpected server error; mutations are rolled back."
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
           example:
-            error_code: ERR_INTERNAL
-            message: Произошла внутренняя ошибка. Попробуйте позже
-            details: {}
+            error:
+              code: INTERNAL
+              message: Произошла внутренняя ошибка. Попробуйте позже
+              details: {}
 
   schemas:
     RequestStatus:
       type: string
       enum: [draft, in_approval, returned, approved, rejected, cancelled]
 
+    RoleCode:
+      type: string
+      enum: [employee, approver, admin]
+
     ErrorCode:
       type: string
+      description: Target error codes without ERR_ prefix (ADR-ERR-03).
       enum:
-        - ERR_FORBIDDEN
-        - ERR_FORBIDDEN_APPROVAL
-        - ERR_NOT_FOUND
-        - ERR_VALIDATION
-        - ERR_INACTIVE_TYPE
-        - ERR_INVALID_STATE
-        - ERR_TASK_DONE
-        - ERR_DUP_ACTION
-        - ERR_ROUTE_CONFIG
-        - ERR_INTERNAL
+        - UNAUTHORIZED
+        - INVALID_CREDENTIALS
+        - FORBIDDEN
+        - FORBIDDEN_APPROVAL
+        - NOT_FOUND
+        - VALIDATION
+        - INACTIVE_TYPE
+        - INVALID_STATE
+        - REQUEST_ACTION_NOT_ALLOWED
+        - TASK_DONE
+        - ROUTE_CONFIG
+        - INTERNAL
 
-    ErrorResponse:
+    ErrorBody:
       type: object
-      description: |
-        Recommended, not mandatory error envelope from Stage 4.1.
-        Its mandatory JSON shape remains OPEN in Stage 4.1 §10.11.
-      required: [error_code, message, details]
+      required: [code, message, details]
       properties:
-        error_code:
+        code:
           $ref: "#/components/schemas/ErrorCode"
         message:
           type: string
@@ -944,13 +1003,111 @@ components:
           type: object
           additionalProperties: true
 
-    RequestTypeSummary:
+    ErrorResponse:
       type: object
-      required: [id, name, description]
+      description: Nested error envelope (ADR-ERR-03).
+      required: [error]
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorBody"
+
+    LoginRequest:
+      type: object
+      required: [login, password]
+      additionalProperties: false
+      properties:
+        login:
+          type: string
+        password:
+          type: string
+          format: password
+
+    CurrentUser:
+      type: object
+      required: [id, login, full_name, roles]
       properties:
         id:
           type: string
           format: uuid
+        login:
+          type: string
+        full_name:
+          type: string
+        email:
+          type: string
+          nullable: true
+        position:
+          type: string
+          nullable: true
+        department:
+          type: string
+          nullable: true
+        roles:
+          type: array
+          description: Single system role as a one-element list (User.role_id).
+          items:
+            $ref: "#/components/schemas/RoleCode"
+          minItems: 1
+          maxItems: 1
+
+    LoginResponse:
+      type: object
+      required: [access_token, token_type, expires_in, user]
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          default: bearer
+        expires_in:
+          type: integer
+          description: Access token lifetime in seconds.
+        user:
+          $ref: "#/components/schemas/CurrentUser"
+
+    StatusRef:
+      type: object
+      required: [id, code, name]
+      properties:
+        id:
+          type: integer
+          format: int64
+        code:
+          type: string
+        name:
+          type: string
+
+    ActionOut:
+      type: object
+      required: [id, code, name]
+      description: Runtime available-action item (no effect / target_status).
+      properties:
+        id:
+          type: integer
+          format: int64
+        code:
+          type: string
+        name:
+          type: string
+
+    AvailableActionsResponse:
+      type: object
+      required: [available_actions]
+      properties:
+        available_actions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActionOut"
+
+    RequestTypeSummary:
+      type: object
+      required: [id, code, name]
+      properties:
+        id:
+          type: integer
+          format: int64
+        code:
+          type: string
         name:
           type: string
         description:
@@ -959,11 +1116,13 @@ components:
 
     RequestTypeRef:
       type: object
-      required: [id, name]
+      required: [id, code, name]
       properties:
         id:
+          type: integer
+          format: int64
+        code:
           type: string
-          format: uuid
         name:
           type: string
 
@@ -977,24 +1136,23 @@ components:
           type: string
         data_type:
           type: string
-          enum: [text, date, number, catalog]
+          enum: [text, date, number, catalog, boolean]
         required:
           type: boolean
         order_no:
           type: integer
         dictionary_id:
-          type: string
-          format: uuid
+          type: integer
+          format: int64
           nullable: true
-          description: Dictionary reference for catalog fields; item delivery remains OPEN (§10.3).
 
     RequestTypeSchema:
       type: object
       required: [request_type_id, fields]
       properties:
         request_type_id:
-          type: string
-          format: uuid
+          type: integer
+          format: int64
         fields:
           type: array
           items:
@@ -1002,19 +1160,25 @@ components:
 
     CurrentStage:
       type: object
-      required: [number, name]
+      required: [id, name, sequence_no]
       properties:
-        number:
+        id:
           type: integer
+          format: int64
         name:
           type: string
+        sequence_no:
+          type: integer
 
     UserReference:
       type: object
-      description: |
-        User reference. Stage 4.1 names initiator/author/actor but does not fix
-        their complete JSON shape.
-      additionalProperties: true
+      required: [id, full_name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
 
     FieldValue:
       type: object
@@ -1025,15 +1189,38 @@ components:
         value:
           type: string
           nullable: true
-          description: Logical value carrier; its format is validated according to the field data_type.
+
+    ApprovalTaskSummary:
+      type: object
+      required: [id, stage_id, assignee_user_id, status, created_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        stage_id:
+          type: integer
+          format: int64
+        assignee_user_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [open, completed, cancelled]
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
 
     Comment:
       type: object
-      required: [id, kind, text, author, approval_task_id, created_at]
+      required: [id, kind, text, author, created_at]
       properties:
         id:
-          type: string
-          format: uuid
+          type: integer
+          format: int64
         kind:
           type: string
           enum: [free, decision]
@@ -1042,8 +1229,8 @@ components:
         author:
           $ref: "#/components/schemas/UserReference"
         approval_task_id:
-          type: string
-          format: uuid
+          type: integer
+          format: int64
           nullable: true
         created_at:
           type: string
@@ -1055,34 +1242,38 @@ components:
       additionalProperties: false
       properties:
         request_type_id:
-          type: string
-          format: uuid
+          type: integer
+          format: int64
 
     CreatedRequest:
       type: object
       required:
         - id
         - request_type_id
-        - initiator_id
+        - initiator_user_id
+        - status_id
         - status
-        - current_stage_number
+        - current_stage_id
         - created_at
         - updated_at
       properties:
         id:
-          type: string
-          format: uuid
-        request_type_id:
-          type: string
-          format: uuid
-        initiator_id:
-          type: string
-          format: uuid
-        status:
-          type: string
-          enum: [draft]
-        current_stage_number:
           type: integer
+          format: int64
+        request_type_id:
+          type: integer
+          format: int64
+        initiator_user_id:
+          type: string
+          format: uuid
+        status_id:
+          type: integer
+          format: int64
+        status:
+          $ref: "#/components/schemas/StatusRef"
+        current_stage_id:
+          type: integer
+          format: int64
           nullable: true
         created_at:
           type: string
@@ -1096,17 +1287,16 @@ components:
       required: [id, request_type, status, current_stage, created_at, updated_at]
       properties:
         id:
-          type: string
-          format: uuid
+          type: integer
+          format: int64
         request_type:
           $ref: "#/components/schemas/RequestTypeRef"
         status:
-          $ref: "#/components/schemas/RequestStatus"
+          $ref: "#/components/schemas/StatusRef"
         current_stage:
           allOf:
             - $ref: "#/components/schemas/CurrentStage"
           nullable: true
-          description: Required to be non-null when status is in_approval.
         created_at:
           type: string
           format: date-time
@@ -1116,28 +1306,42 @@ components:
 
     RequestCard:
       type: object
+      description: |
+        Target request card (runtime). No embedded schema, available_actions,
+        value_source, submit_number, or field_value_versions.
       required:
         - id
         - request_type
+        - initiator_user_id
         - initiator
+        - status_id
         - status
-        - current_stage
+        - current_stage_id
         - created_at
         - updated_at
-        - schema
         - values
-        - value_source
+        - approval_tasks
         - comments
       properties:
         id:
-          type: string
-          format: uuid
+          type: integer
+          format: int64
         request_type:
           $ref: "#/components/schemas/RequestTypeRef"
+        initiator_user_id:
+          type: string
+          format: uuid
         initiator:
           $ref: "#/components/schemas/UserReference"
+        status_id:
+          type: integer
+          format: int64
         status:
-          $ref: "#/components/schemas/RequestStatus"
+          $ref: "#/components/schemas/StatusRef"
+        current_stage_id:
+          type: integer
+          format: int64
+          nullable: true
         current_stage:
           allOf:
             - $ref: "#/components/schemas/CurrentStage"
@@ -1148,18 +1352,14 @@ components:
         updated_at:
           type: string
           format: date-time
-        schema:
-          $ref: "#/components/schemas/RequestTypeSchema"
         values:
           type: array
           items:
             $ref: "#/components/schemas/FieldValue"
-        value_source:
-          type: string
-          enum: [working, submitted_version]
-        submit_number:
-          type: integer
-          description: Present for snapshot-based display.
+        approval_tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApprovalTaskSummary"
         comments:
           type: array
           items:
@@ -1175,56 +1375,15 @@ components:
           items:
             $ref: "#/components/schemas/FieldValue"
 
-    UpdatedRequestValues:
+    ExecuteActionInput:
       type: object
-      required: [id, status, schema, values, updated_at]
+      additionalProperties: false
       properties:
-        id:
+        comment:
           type: string
-          format: uuid
-        status:
-          $ref: "#/components/schemas/RequestStatus"
-        schema:
-          $ref: "#/components/schemas/RequestTypeSchema"
-        values:
-          type: array
-          items:
-            $ref: "#/components/schemas/FieldValue"
-        updated_at:
-          type: string
-          format: date-time
-
-    SubmitRequestResult:
-      type: object
-      required: [id, status, current_stage, submit_number, updated_at]
-      properties:
-        id:
-          type: string
-          format: uuid
-        status:
-          type: string
-          enum: [in_approval]
-        current_stage:
-          $ref: "#/components/schemas/CurrentStage"
-        submit_number:
-          type: integer
-        updated_at:
-          type: string
-          format: date-time
-
-    CancelRequestResult:
-      type: object
-      required: [id, status, updated_at]
-      properties:
-        id:
-          type: string
-          format: uuid
-        status:
-          type: string
-          enum: [cancelled]
-        updated_at:
-          type: string
-          format: date-time
+          nullable: true
+          description: |
+            Required (non-empty after trim) for reject/return; optional otherwise.
 
     CreateCommentInput:
       type: object
@@ -1233,43 +1392,20 @@ components:
       properties:
         text:
           type: string
-          description: Must be non-empty after trim.
-
-    CreatedComment:
-      type: object
-      required: [id, request_id, author_id, kind, text, created_at]
-      properties:
-        id:
-          type: string
-          format: uuid
-        request_id:
-          type: string
-          format: uuid
-        author_id:
-          type: string
-          format: uuid
-        kind:
-          type: string
-          enum: [free]
-        text:
-          type: string
-        created_at:
-          type: string
-          format: date-time
 
     HistoryEvent:
       type: object
-      required: [id, actor, action, from_state, to_state, comment, at]
+      required: [id, action, actor_id, from_state, to_state, comment, at]
       properties:
         id:
-          type: string
-          format: uuid
-        actor:
-          allOf:
-            - $ref: "#/components/schemas/UserReference"
-          nullable: true
+          type: integer
+          format: int64
         action:
           type: string
+        actor_id:
+          type: string
+          format: uuid
+          nullable: true
         from_state:
           type: string
           nullable: true
@@ -1282,251 +1418,59 @@ components:
         at:
           type: string
           format: date-time
-        value_version_id:
-          type: string
-          format: uuid
 
-    FieldValueVersion:
+    HistoryEventListResponse:
       type: object
-      required: [id, submit_number, schema_document, values_document, created_at]
+      required: [items]
       properties:
-        id:
-          type: string
-          format: uuid
-        submit_number:
-          type: integer
-        schema_document:
-          description: JSON copy of the submitted schema.
-        values_document:
-          description: JSON copy of the submitted values.
-        created_at:
-          type: string
-          format: date-time
-
-    RequestHistory:
-      type: object
-      required: [events, field_value_versions]
-      properties:
-        events:
+        items:
           type: array
-          description: Chronological order.
+          description: Sorted by at descending (newest first).
           items:
             $ref: "#/components/schemas/HistoryEvent"
-        field_value_versions:
-          type: array
-          items:
-            $ref: "#/components/schemas/FieldValueVersion"
 
-    ApprovalTaskListItem:
+    NotificationEventType:
+      type: string
+      enum:
+        - new_task
+        - status_change
+        - request_submitted
+        - request_approved
+        - request_rejected
+        - request_returned
+        - request_cancelled
+
+    Notification:
       type: object
-      required: [id, request_id, request_type, stage, status, created_at]
+      required: [id, event_type, text, read, created_at]
       properties:
         id:
-          type: string
-          format: uuid
+          type: integer
+          format: int64
         request_id:
+          type: integer
+          format: int64
+          nullable: true
+        approval_task_id:
+          type: integer
+          format: int64
+          nullable: true
+        event_type:
+          $ref: "#/components/schemas/NotificationEventType"
+        text:
           type: string
-          format: uuid
-        request_type:
-          $ref: "#/components/schemas/RequestTypeRef"
-        stage:
-          $ref: "#/components/schemas/CurrentStage"
-        status:
-          type: string
-          enum: [open]
+        read:
+          type: boolean
         created_at:
           type: string
           format: date-time
-          description: Required by FR-APP-01; its model source remains OPEN (§10.4).
 
-    ApprovalTask:
+    NotificationListResponse:
       type: object
-      required:
-        - id
-        - request_id
-        - stage_number
-        - assignee_id
-        - status
-        - decision
-        - value_version_id
+      required: [items]
       properties:
-        id:
-          type: string
-          format: uuid
-        request_id:
-          type: string
-          format: uuid
-        stage_number:
-          type: integer
-        assignee_id:
-          type: string
-          format: uuid
-        status:
-          type: string
-          enum: [open, completed, cancelled]
-        decision:
-          type: string
-          enum: [approve, reject, return]
-          nullable: true
-        value_version_id:
-          type: string
-          format: uuid
-          nullable: true
-
-    ApprovalTaskCard:
-      type: object
-      required: [task, request, available_actions]
-      properties:
-        task:
-          $ref: "#/components/schemas/ApprovalTask"
-        request:
-          allOf:
-            - $ref: "#/components/schemas/RequestCard"
-            - type: object
-              required: [submit_number]
-              properties:
-                value_source:
-                  type: string
-                  enum: [submitted_version]
-        available_actions:
+        items:
           type: array
-          description: Available for an open task; empty for completed/cancelled.
+          description: Sorted by created_at descending.
           items:
-            type: string
-
-    ApproveInput:
-      type: object
-      additionalProperties: false
-      properties:
-        comment:
-          type: string
-
-    RequiredDecisionInput:
-      type: object
-      required: [comment]
-      additionalProperties: false
-      properties:
-        comment:
-          type: string
-          description: Must be non-empty after trim.
-
-    CompletedTaskApprove:
-      type: object
-      required: [id, status, decision, value_version_id]
-      properties:
-        id:
-          type: string
-          format: uuid
-        status:
-          type: string
-          enum: [completed]
-        decision:
-          type: string
-          enum: [approve]
-        value_version_id:
-          type: string
-          format: uuid
-
-    CompletedTaskReject:
-      type: object
-      required: [id, status, decision, value_version_id]
-      properties:
-        id:
-          type: string
-          format: uuid
-        status:
-          type: string
-          enum: [completed]
-        decision:
-          type: string
-          enum: [reject]
-        value_version_id:
-          type: string
-          format: uuid
-
-    CompletedTaskReturn:
-      type: object
-      required: [id, status, decision, value_version_id]
-      properties:
-        id:
-          type: string
-          format: uuid
-        status:
-          type: string
-          enum: [completed]
-        decision:
-          type: string
-          enum: [return]
-        value_version_id:
-          type: string
-          format: uuid
-
-    ApproveRequestResult:
-      type: object
-      required: [id, status, current_stage]
-      properties:
-        id:
-          type: string
-          format: uuid
-        status:
-          type: string
-          enum: [in_approval, approved]
-        current_stage:
-          allOf:
-            - $ref: "#/components/schemas/CurrentStage"
-          nullable: true
-
-    RejectRequestResult:
-      type: object
-      required: [id, status, current_stage]
-      properties:
-        id:
-          type: string
-          format: uuid
-        status:
-          type: string
-          enum: [rejected]
-        current_stage:
-          allOf:
-            - $ref: "#/components/schemas/CurrentStage"
-          nullable: true
-
-    ReturnRequestResult:
-      type: object
-      required: [id, status, current_stage]
-      properties:
-        id:
-          type: string
-          format: uuid
-        status:
-          type: string
-          enum: [returned]
-        current_stage:
-          $ref: "#/components/schemas/CurrentStage"
-
-    ApproveResult:
-      type: object
-      required: [task, request]
-      properties:
-        task:
-          $ref: "#/components/schemas/CompletedTaskApprove"
-        request:
-          $ref: "#/components/schemas/ApproveRequestResult"
-
-    RejectResult:
-      type: object
-      required: [task, request]
-      properties:
-        task:
-          $ref: "#/components/schemas/CompletedTaskReject"
-        request:
-          $ref: "#/components/schemas/RejectRequestResult"
-
-    ReturnResult:
-      type: object
-      required: [task, request]
-      properties:
-        task:
-          $ref: "#/components/schemas/CompletedTaskReturn"
-        request:
-          $ref: "#/components/schemas/ReturnRequestResult"
+            $ref: "#/components/schemas/Notification"

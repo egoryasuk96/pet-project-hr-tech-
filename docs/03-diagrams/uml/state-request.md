@@ -2,15 +2,15 @@
 
 **Продукт:** Employee Service  
 **ID:** UML-SM-01  
-**Версия:** 1.0  
-**Статус:** Baseline v1.0  
-**Связанные документы:** [uml-description.md](./uml-description.md), [Snapshot Model](../erd/snapshot-model.md)
+**Версия:** 1.1  
+**Статус:** Target architecture (docs E0–E1)  
+**Связанные документы:** [uml-description.md](./uml-description.md), [ADR-LIVE-CFG-01](../architecture/adr-live-config.md)
 
 ---
 
 ## 1. Назначение
 
-Формальная модель жизненного цикла заявки по статусам MVP. Переходы и guard-условия взяты из глоссария и BR; новые статусы и правила **не добавляются**.
+Формальная модель жизненного цикла заявки по статусам MVP. Переходы и guard-условия взяты из глоссария и BR.
 
 ---
 
@@ -18,7 +18,7 @@
 
 **Контекст:** экземпляр заявки (`Request`).
 
-**Атрибуты состояния (уровень анализа):** `status`, признак текущего этапа (для `in_approval` / после `return`), наличие RouteInstance и текущей FieldValueVersion ([Snapshot Model](../erd/snapshot-model.md)).
+**Атрибуты состояния (уровень анализа):** `status_id` (→ Status), `current_stage_id` (FK на live ApprovalStage, nullable вне in_approval).
 
 ---
 
@@ -27,8 +27,8 @@
 | Состояние | Смысл | Допустимые действия инициатора |
 | :--- | :--- | :--- |
 | `draft` | Черновик; не на согласовании | edit, submit, cancel |
-| `in_approval` | На согласовании по RouteInstance | свободный комментарий (BR-28); cancel **запрещён** |
-| `returned` | Возвращена на доработку; номер этапа возврата сохранён (аудит) | edit, resubmit, cancel |
+| `in_approval` | На согласовании по live-маршруту | свободный комментарий (BR-28); cancel **запрещён** |
+| `returned` | Возвращена на доработку; `current_stage_id` хранит этап возврата | edit, resubmit, cancel |
 | `approved` | Финальное согласование | терминальное |
 | `rejected` | Отклонена | терминальное |
 | `cancelled` | Отменена инициатором | терминальное |
@@ -40,12 +40,12 @@
 | From | To | Событие / действие | Guard | Effect (существующие BR) |
 | :--- | :--- | :--- | :--- | :--- |
 | `[начальное]` | `draft` | create | тип активен (BR-10) | инициатор = текущий пользователь (BR-19) |
-| `draft` | `in_approval` | submit | поля OK (BR-26); маршрут валиден (BR-18); тип активен | **RouteInstance** (BR-08) + **FieldValueVersion** (BR-26); задачи 1-го этапа; история |
+| `draft` | `in_approval` | submit | поля OK (BR-26); live-маршрут валиден (BR-18); тип активен | `current_stage_id` → первый live-этап; ApprovalTask из live assignments; история |
 | `draft` | `cancelled` | cancel | — | история (BR-07) |
-| `in_approval` | `approved` | finalApprove | approve на последнем этапе RouteInstance (BR-17) | закрытие задач; уведомление инициатору (если в scope) |
-| `in_approval` | `rejected` | reject | комментарий непустой (BR-25); не инициатор (BR-21); своя открытая задача (BR-15) | закрытие открытых задач этапа (BR-04) |
-| `in_approval` | `returned` | return | комментарий непустой (BR-25); BR-21; BR-15 | сохранить номер этапа; закрыть задачи этапа (BR-05) |
-| `returned` | `in_approval` | resubmit | поля OK по актуальной схеме; маршрут валиден; тип активен | **RouteInstance не менять** (BR-22); **новая** FieldValueVersion (BR-26); `currentStageNumber` → 1; задачи **первого** этапа (BR-06) |
+| `in_approval` | `approved` | finalApprove | approve на последнем live-этапе (BR-17) | закрытие задач |
+| `in_approval` | `rejected` | reject | комментарий непустой (BR-25); не инициатор (BR-21); своя open задача (BR-15) | закрытие открытых задач этапа (BR-04) |
+| `in_approval` | `returned` | return | комментарий непустой (BR-25); BR-21; BR-15 | сохранить `current_stage_id`; закрыть задачи этапа (BR-05) |
+| `returned` | `in_approval` | resubmit | поля OK по live-схеме; маршрут валиден; тип активен | `current_stage_id` → первый live-этап; новые ApprovalTask этапа 1 (BR-06, BR-22) |
 | `returned` | `cancelled` | cancel | — | история (BR-07) |
 
 ### 4.1. Отклонённые / невозможные переходы (notes)
@@ -67,14 +67,14 @@
 stateDiagram-v2
   [*] --> draft: create
 
-  draft --> in_approval: submit\n[fieldsOK and routeValid]\n/ RouteInstance + FieldValueVersion + tasks
+  draft --> in_approval: submit\n[fieldsOK and routeValid]\n/ current_stage_id + tasks
   draft --> cancelled: cancel
 
-  in_approval --> approved: finalApprove\n[lastStage]
+  in_approval --> approved: finalApprove\n[lastLiveStage]
   in_approval --> rejected: reject\n[commentRequired and notInitiator]
-  in_approval --> returned: return\n[commentRequired and notInitiator]\n/ keepStageNumber
+  in_approval --> returned: return\n[commentRequired and notInitiator]\n/ keep current_stage_id
 
-  returned --> in_approval: resubmit\n[fieldsOK and routeValid]\n/ keepRouteInstance + newFieldValueVersion + firstStageTasks
+  returned --> in_approval: resubmit\n[fieldsOK and routeValid]\n/ current_stage_id to stage1 + tasks
   returned --> cancelled: cancel
 
   approved --> [*]
@@ -84,28 +84,22 @@ stateDiagram-v2
   note right of in_approval
     Approve непоследнего этапа:
     status остаётся in_approval
+    current_stage_id → next live stage
     (BR-02, FR-APP-06)
-  end note
-
-  note right of returned
-    Вариант B + OQ-B (Snapshot Model):
-    RouteInstance — без изменений (BR-22)
-    FieldValueVersion — новая (BR-26)
-    currentStageNumber → 1; задачи этапа 1
   end note
 ```
 
 ---
 
-## 6. Связь с Snapshot Model (кратко)
+## 6. Live config (кратко)
 
-Канон: [Snapshot Model](../erd/snapshot-model.md).
+Канон: [ADR-LIVE-CFG-01](../architecture/adr-live-config.md).
 
-| Момент | RouteInstance | FieldValueVersion |
+| Момент | current_stage_id | ApprovalTask |
 | :--- | :--- | :--- |
-| Первый `draft → in_approval` | Создаётся | Версия #1 |
-| `returned → in_approval` | Без изменений | Новая версия |
-| Пока `in_approval` | Чтение next stage | Текущая версия для согласующих |
+| Первый `draft → in_approval` | Первый live ApprovalStage | Из live StageAssignment |
+| `returned → in_approval` | Снова первый live-этап | Новые задачи этапа 1 |
+| Approve непоследнего этапа | Следующий live ApprovalStage | Новые задачи следующего этапа |
 
 ---
 
@@ -114,14 +108,23 @@ stateDiagram-v2
 | Тип | ID |
 | :--- | :--- |
 | **UC** | UC-04, UC-05, UC-08, UC-09, UC-10 |
-| **FR** | FR-REQ-01, FR-REQ-03, FR-REQ-07, FR-REQ-08, FR-REQ-09; FR-APP-04, FR-APP-05, FR-APP-06, FR-APP-07 |
-| **BR** | BR-04, BR-05, BR-06, BR-07, BR-08, BR-17, BR-18, BR-19, BR-20, BR-21, BR-22, BR-25, BR-26; BR-29 — **Future / backlog** |
+| **FR** | FR-REQ-01, FR-REQ-03, FR-REQ-07, FR-REQ-08, FR-REQ-09; FR-APP-04…07 |
+| **BR** | BR-04…08, BR-17, BR-18, BR-19, BR-20, BR-21, BR-22, BR-25, BR-26 |
 | **AC** | AC-APP-01, AC-APP-02, AC-APP-05b, AC-APP-06, AC-APP-07, AC-APP-08, AC-REQ-07, AC-DRAFT-01, AC-DRAFT-02 |
-| **BPMN** | BPMN-01 (жизненный цикл), BPMN-02 (исходы этапа) |
+| **BPMN** | BPMN-01, BPMN-02 |
 
 ---
 
 ## 8. Границы
 
-- Статусы **задачи** согласования (`open` / `completed` / `cancelled`) — на UML-CL-01 и UML-SEQ-02, не отдельные состояния заявки.
-- Новые статусы заявки не вводятся.
+- Статусы **задачи** (`open` / `completed` / `cancelled`) — UML-CL-01 и UML-SEQ-02.
+- RouteInstance / FieldValueVersion **не** используются.
+
+---
+
+## История изменений
+
+| Версия | Дата | Описание |
+| :--- | :--- | :--- |
+| 1.0 | 2026-09-19 | Первая версия |
+| 1.1 | 2026-09-23 | current_stage_id; без snapshot |

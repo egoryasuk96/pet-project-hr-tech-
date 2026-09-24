@@ -2,9 +2,9 @@
 
 **Продукт:** Employee Service  
 **ID:** ARCH-CTX  
-**Версия:** 1.1  
-**Статус:** Baseline v1.0  
-**Связанные документы:** [architecture-description.md](./architecture-description.md), [Vision](../../01-vision-and-scope/vision-scope.md), [ADR-AUTH-DEMO-01](./adr-demo-role-header.md), [ADR-UI-01](./adr-static-web-client.md)
+**Версия:** 1.2  
+**Статус:** Target architecture (Frozen Target)  
+**Связанные документы:** [architecture-description.md](./architecture-description.md), [Vision](../../01-vision-and-scope/vision-scope.md), [ADR-AUTH-JWT-01](./adr-jwt-core-api.md), [ADR-UI-01](./adr-static-web-client.md)
 
 ---
 
@@ -18,12 +18,14 @@
 
 | Участник | Тип | Смысл | Scope |
 | :--- | :--- | :--- | :--- |
-| **Employee Service** | Система | Каталог, заявки, согласование, история на карточке; UI — static HTML/JS | Baseline |
-| **Сотрудник** (`employee`) | Актёр | Инициатор заявок, мои заявки, создание, карточка | Baseline |
-| **Согласующий** (`approver`) | Актёр | Очередь задач, approve / reject / return | Baseline |
-| **Администратор** (`admin`) | Актёр | Конфигурация типов/маршрутов, реестр | **Future / backlog** |
+| **Employee Service** | Система | Каталог, заявки, согласование (Action Engine), история, in-app уведомления; UI — static HTML/JS | Target |
+| **Сотрудник** (`employee`) | Актёр | Инициатор заявок, мои заявки, карточка | Target |
+| **Согласующий** (`approver`) | Актёр | Действия по заявке через available-actions / execute | Target |
+| **Администратор** (`admin`) | Актёр | Конфигурация процессов/маршрутов, роли пользователей, реестр | Target (docs); Admin UI — Future |
 
-Один пользователь может совмещать роли (union permissions, BR-16). В Baseline переключение актёра — экран выбора роли + заголовок ([ADR-AUTH-DEMO-01](./adr-demo-role-header.md)), без login/password + JWT.
+У каждого пользователя **одна** системная роль (`role_id`, BR-16 / [ADR-ORG-01](./adr-org-model.md)). Auth Target: JWT ([ADR-AUTH-JWT-01](./adr-jwt-core-api.md)).
+
+**Legacy:** union нескольких ролей; demo-header без login (ADR-AUTH-DEMO-01 — Superseded).
 
 ---
 
@@ -34,8 +36,8 @@
 | Не используется | Основание |
 | :--- | :--- |
 | SSO / AD / LDAP | Out of scope |
-| Email / push | BR-11 — только in-app (уведомления — backlog) |
-| Внешний BPM (Camunda и аналоги) | Out of scope; встроенный Approval Engine |
+| Email / push | BR-11 — только in-app |
+| Внешний BPM (Camunda и аналоги) | Out of scope; встроенный Approval / Action Engine |
 | Оргструктура / auto-routing руководителя | BR-12, out of scope |
 | HRIS / payroll | Out of scope |
 
@@ -51,13 +53,13 @@ flowchart TB
   Apr[Согласующий approver]
   Adm[Администратор admin]
 
-  subgraph ES["Employee Service (граница Baseline)"]
-    Core[Каталог / Заявки / Согласование / История на карточке]
+  subgraph ES["Employee Service (граница Target)"]
+    Core[Каталог / Заявки / Action Engine / История / Notifications]
   end
 
   Emp -->|использует| Core
   Apr -->|использует| Core
-  Adm -.->|Future / backlog| Core
+  Adm -.->|Admin UI Future| Core
 
   NoteOut[Внешние runtime-системы отсутствуют в MVP]
   Core -.->|нет интеграций| NoteOut
@@ -67,16 +69,17 @@ flowchart TB
 
 ## 5. Что внутри границы (обзор)
 
-**Baseline:**
+**CURRENT / TARGET:**
 
-1. Демо-идентичность: роль через заголовок + экран выбора роли (Vision §12 п.7; ADR-AUTH-DEMO-01). Login/password + JWT — [backlog](../../backlog.md).
-2. Лёгкий веб-клиент: static HTML+JS от FastAPI, пять экранов (Vision §12 п.8; ADR-UI-01).
-3. Каталог активных типов и формы (FR-CAT-*).
-4. Жизненный цикл заявки и RouteInstance / FieldValueVersion (FR-REQ-*, BR-08/22/26).
-5. Последовательное согласование (FR-APP-*, BR-02…05, BR-21, BR-25).
+1. Auth: login/password → JWT access token; Bearer на защищённых запросах ([ADR-AUTH-JWT-01](./adr-jwt-core-api.md)). Refresh token нет. Demo-header — Legacy.
+2. Лёгкий веб-клиент: static HTML+JS от FastAPI ([ADR-UI-01](./adr-static-web-client.md)).
+3. Каталог активных типов и схемы (FR-CAT-*).
+4. Жизненный цикл заявки по live-маршруту и ProcessTransition (FR-REQ-*, BR-08/22/26; [ADR-LIVE-CFG-01](./adr-live-config.md)).
+5. Согласование через Action Engine: `GET .../available-actions` + `POST .../actions/{action_id}` ([ADR-ACTION-01](./adr-configurable-actions.md)).
 6. История решений и статусов на карточке (FR-AUDIT-*, BR-24).
+7. In-app уведомления (API + UI список).
 
-**Future / backlog** (Vision §12 п.9): admin-конфигурация, in-app уведомления, профиль, полноценная auth.
+**Future / backlog** (Vision §7.1): Admin UI, профиль (Cabinet), Create UI / полноценная Approver Queue как отдельные экраны.
 
 Детализация контейнеров — [container-diagram.md](./container-diagram.md).
 
@@ -86,9 +89,9 @@ flowchart TB
 
 | Тип | ID |
 | :--- | :--- |
-| **UC** | UC ядра Baseline; UC-01/02/11–13/15 — backlog |
-| **FR** | CAT / REQ / APP / AUDIT (Baseline); AUTH / CAB / NOTIF / ADMIN — backlog |
-| **BR** | BR ядра; BR-11/12/13/23/27/29 — по scope / backlog |
+| **UC** | UC ядра + login; UC-02/11–12/15 — backlog UI |
+| **FR** | CAT / REQ / APP / AUDIT / AUTH / NOTIF (Target); CAB / ADMIN — backlog |
+| **BR** | BR ядра; BR-12/13/27 — по scope / backlog admin |
 | **Vision** | Scope §6, Out of scope §7, §12 |
 | **UML** | UML-UC-01 |
 
@@ -99,3 +102,12 @@ flowchart TB
 - Не показываются HTTP-эндпоинты и таблицы БД.
 - Не добавляются внешние системы «на будущее».
 - Новые актёры и роли не вводятся.
+
+---
+
+## История
+
+| Версия | Дата | Описание |
+| :--- | :--- | :--- |
+| 1.1 | 2026-09-20 | Baseline context |
+| 1.2 | 2026-09-24 | JWT Target; demo-header Legacy; Action Engine в границе |

@@ -18,9 +18,9 @@ Employee Service — сервис заявок сотрудников (отпу�
 
 **Auth runtime:** JWT access token (`POST /auth/login`, `Authorization: Bearer`); см. [ADR-AUTH-JWT-01](./03-diagrams/architecture/adr-jwt-core-api.md). Demo-header из раннего Baseline (ADR-AUTH-DEMO-01) в runtime **не** используется.
 
-**Экраны MVP (5):** login (JWT) / мои заявки / создание заявки / карточка заявки / очередь согласующего. Frontend — следующий этап реализации; Notifications и Admin — [backlog.md](./backlog.md).
+**Frontend (реализованный срез):** Login (JWT) / My Requests / Request Detail (available-actions + execute) / Notifications. Create UI, Admin UI и полноценная Approver Queue — **не** объявлены реализованными. Admin / Cabinet — [backlog.md](./backlog.md).
 
-Требования вне Baseline — [backlog.md](./backlog.md).
+Требования вне текущего среза — [backlog.md](./backlog.md) (с маркерами Target-active для auth/notifications).
 
 ---
 
@@ -31,7 +31,9 @@ Employee Service — сервис заявок сотрудников (отпу�
 3. [Business Rules](./02-requirements/business-rules.md) — ключевые правила согласования  
 4. [Acceptance Criteria](./02-requirements/acceptance-criteria.md) — проверяемые критерии  
 5. [Архитектура](./03-diagrams/architecture/architecture-description.md) — контейнеры и границы системы  
-6. [ERD](./03-diagrams/erd/erd-description.md) — модель данных  
+6. [ERD](./03-diagrams/erd/erd-description.md) — модель данных (live config, [ADR-LIVE-CFG-01](./03-diagrams/architecture/adr-live-config.md))
+
+**Ключевые ADR (target):** [ADR-LIVE-CFG-01](./03-diagrams/architecture/adr-live-config.md), [ADR-ACTION-01](./03-diagrams/architecture/adr-configurable-actions.md), [ADR-ORG-01](./03-diagrams/architecture/adr-org-model.md), [ADR-ID-01](./03-diagrams/architecture/adr-id-strategy.md), [ADR-ERR-03](./03-diagrams/architecture/adr-error-envelope.md), [ADR-AUTH-JWT-01](./03-diagrams/architecture/adr-jwt-core-api.md). Superseded: [ADR-SNAP-01](./03-diagrams/architecture/adr-snapshot-submit-versions.md).
 
 ---
 
@@ -44,7 +46,7 @@ Employee Service — сервис заявок сотрудников (отпу�
 | [03-diagrams/bpmn/](./03-diagrams/bpmn/) | BPMN TO-BE |
 | [03-diagrams/uml/](./03-diagrams/uml/) | UML: UC, state, sequence, class |
 | [03-diagrams/architecture/](./03-diagrams/architecture/) | C4-подобные схемы, ADR, трассировка |
-| [03-diagrams/erd/](./03-diagrams/erd/) | ERD, snapshot, data dictionary |
+| [03-diagrams/erd/](./03-diagrams/erd/) | ERD v2 (live config), data dictionary; [snapshot-model.md](./03-diagrams/erd/snapshot-model.md) — Deprecated |
 | [04-api/api-contract-analysis.md](./04-api/api-contract-analysis.md) | Stage 4.1 — анализ API-контракта (зафиксирован) |
 | [04-api/openapi.yaml](./04-api/openapi.yaml) | OpenAPI Baseline-контракт |
 | [04-api/approval-api-contract.md](./04-api/approval-api-contract.md) | Контракт Approval API (реализован) |

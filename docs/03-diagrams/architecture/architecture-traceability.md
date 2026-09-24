@@ -2,9 +2,9 @@
 
 **Продукт:** Employee Service  
 **ID:** ARCH-MAP  
-**Версия:** 1.1  
-**Статус:** Baseline v1.0  
-**Связанные документы:** [architecture-description.md](./architecture-description.md), [Snapshot Model](../erd/snapshot-model.md), [ADR-UI-01](./adr-static-web-client.md), [ADR-AUTH-DEMO-01](./adr-demo-role-header.md)
+**Версия:** 1.2  
+**Статус:** Target architecture (Frozen Target)  
+**Связанные документы:** [architecture-description.md](./architecture-description.md), [ADR-LIVE-CFG-01](./adr-live-config.md), [ADR-ACTION-01](./adr-configurable-actions.md), [ADR-AUTH-JWT-01](./adr-jwt-core-api.md), [ADR-UI-01](./adr-static-web-client.md)
 
 ---
 
@@ -18,20 +18,22 @@
 
 | Компонент | FR | BR | NFR / ACL | UC | Scope |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Auth Module (demo header) | — (FR-AUTH-* backlog) | — | Vision §12 п.7; ADR-AUTH-DEMO-01 | экран выбора роли | Baseline |
-| Authorization Module | — | BR-01, BR-14–16, BR-21 | NFR-SEC-02/05; ACL-*; AC-ACC-* | защищённые сценарии | Baseline |
-| Catalog Module | FR-CAT-01…03 | BR-10, BR-26 (live schema) | — | UC-03 | Baseline |
-| Request Module | FR-REQ-01/02/04–08 | BR-07, BR-19, BR-28 | — | UC-04, UC-06, UC-10 | Baseline |
-| Submit Orchestrator | FR-REQ-03, FR-REQ-09 | BR-08, BR-18, BR-20, BR-22, BR-26 | NFR-REL-01/03 | UC-05 | Baseline |
-| Snapshot Module | (через submit) | BR-08, BR-09, BR-22, BR-26 | NFR-REL-03 | UC-05 | Baseline |
-| Approval Engine | FR-APP-01…07 | BR-02–05, BR-14, BR-15, BR-17, BR-21, BR-25 | NFR-REL-01/02 | UC-07…09 | Baseline |
-| Audit Module | FR-AUDIT-01, FR-AUDIT-02 | BR-24 | NFR-LOG-02/03 | UC-14 | Baseline |
-| HTTP / API Layer + static | — | — | NFR-PERF-03, NFR-LOG-01, NFR-USB-02; ADR-UI-01 | — | Baseline |
-| Web static client (UI-зоны) | отображение FR областей ядра | — | NFR-USB-01/03 | UI экранов ядра | Baseline |
-| PostgreSQL | персистентность | — | NFR-AVL-02, NFR-DEP-01, NFR-MNT-02 | — | Baseline |
+| Auth Module (JWT) | FR-AUTH-01…03 | BR-16 | NFR-SEC-01/03/04; ADR-AUTH-JWT-01 | UC-01 | Target |
+| Authorization Module | — | BR-01, BR-14–16, BR-21 | NFR-SEC-02/05; ACL-*; AC-ACC-* | защищённые сценарии | Target |
+| Catalog Module | FR-CAT-01…03 | BR-10, BR-26 (live schema) | — | UC-03 | Target |
+| Request Module | FR-REQ-01/02/04–08 | BR-07, BR-19, BR-28 | — | UC-04, UC-06, UC-10 | Target |
+| Submit Orchestrator | FR-REQ-03, FR-REQ-09 | BR-08, BR-18, BR-20, BR-22, BR-26 | NFR-REL-01 | UC-05 | Target |
+| Action Engine | — | BR-20, BR-07 (transitions) | ADR-ACTION-01 | UC-05, UC-07…09 | Target |
+| Approval Engine | FR-APP-01…07 | BR-02–05, BR-14, BR-15, BR-17, BR-21, BR-25 | NFR-REL-01/02 | UC-07…09 | Target |
+| Audit Module | FR-AUDIT-01, FR-AUDIT-02 | BR-24 | NFR-LOG-02/03 | UC-14 | Target |
+| Notification Module | FR-NOTIF-01…03 | BR-11, BR-23, BR-29 | — | UC-13 | Target |
+| HTTP / API Layer + static | — | — | NFR-PERF-03, NFR-LOG-01, NFR-USB-02; ADR-UI-01 | — | Target |
+| Web static client (реализованный срез) | Login / My Requests / Detail / Notifications | — | NFR-USB-01/03 | UI среза | Target |
+| PostgreSQL | персистентность | — | NFR-AVL-02, NFR-DEP-01, NFR-MNT-02 | — | Target |
 | Cabinet Module | FR-CAB-01 | — | — | UC-02 | Backlog |
-| Admin Config Module | FR-ADMIN-01…08 | BR-09, BR-10, BR-12, BR-18, BR-27 | ACL-04, ACL-09 (backlog; см. consistency-review RR-ACL-01) | UC-11, UC-12, UC-15 | Future / backlog |
-| Notification Module | FR-NOTIF-01…03 | BR-11, BR-23, BR-29 | — | UC-13 | Future / backlog |
+| Admin Config Module | FR-ADMIN-01…08 | BR-09, BR-10, BR-12, BR-18, BR-27 | ACL-04, ACL-09 | UC-11, UC-12, UC-15 | Future / backlog |
+
+**Historical (не CURRENT):** Auth Module via demo-header — [ADR-AUTH-DEMO-01](./adr-demo-role-header.md) Superseded.
 
 ---
 
@@ -39,28 +41,32 @@
 
 | Правило | Требование | Где в архитектуре | TX / ошибка |
 | :--- | :--- | :--- | :--- |
-| RouteInstance только при первом submit | BR-08 | Snapshot Module create-once; [Snapshot Model](../erd/snapshot-model.md) | ADR-TX-01 / ADR-SNAP-01 |
-| RouteInstance не меняется при resubmit | BR-22 | Snapshot: skip rebuild | ADR-TX-01 |
-| FieldValueVersion при каждом успешном submit | BR-26, BR-22 | Новая версия после валидации live schema | ADR-TX-01 / ADR-SNAP-01 |
-| Изменения live-конфигурации не ретроактивны | BR-09 | runtime → RouteInstance; Admin UI как writer — [backlog](../../backlog.md) | ADR-TX-04 (Future) |
+| Submit читает live route | BR-08 | Action Engine + Submit Orchestrator + Approval Engine | ADR-TX-01 / ADR-LIVE-CFG-01 |
+| Resubmit с первого live-этапа | BR-06, BR-22 | current_stage_id → stage 1; новые tasks | ADR-TX-01 |
+| Working values | BR-26 | RequestFieldValue по live schema | — |
+| Live config in-flight caveat | BR-09, ADR-LIVE-CFG-01 | Admin Config (Future); guard на удаление stage | ADR-TX-04 (Future) |
+| available-actions + execute | ADR-ACTION-01 | Action Engine | ADR-TX-02 |
+| approve_advance | ADR-ACTION-01 | Action Engine + Approval Engine | ADR-TX-02 |
 | First-approve wins | BR-03 | Approval Engine: complete + cancel siblings | ADR-TX-02 |
-| Self-approval prohibition | BR-21 | Authorization + Approval Engine pre-check | `ERR_FORBIDDEN_APPROVAL` |
-| Comment required reject/return | BR-25 | Approval Engine validation | `ERR_VALIDATION` |
-| RBAC / ownership | BR-01/14–16, ACL-* | Authorization Module | 403 / 404 по NFR-SEC-02/05 |
+| Self-approval prohibition | BR-21 | Authorization + Action/Approval pre-check | `FORBIDDEN_APPROVAL` |
+| Comment required reject/return | BR-25 | Action Engine validation | `VALIDATION` |
+| RBAC / ownership | BR-01/14–16, ACL-* | Authorization Module (`role_id`) | 403 / 404 по NFR-SEC-02/05 |
 | История | BR-24, NFR-LOG-02 | Audit Module | та же TX (NFR-REL-01) |
-| In-app notifications | BR-11, BR-23, BR-29 | Notification Module | Future / backlog; TX wording «если в scope» |
+| In-app notifications | BR-11, BR-23, BR-29 | Notification Module | та же TX |
 
 ---
 
-## 4. RouteInstance / FieldValueVersion — сводка
+## 4. Live config — сводка
 
-Краткая отсылка (канон — [Snapshot Model](../erd/snapshot-model.md), ADR [ADR-SNAP-01](./adr-snapshot-submit-versions.md)):
+Канон: [ADR-LIVE-CFG-01](./adr-live-config.md). Snapshot (ADR-SNAP-01) — **Superseded** / HISTORICAL.
 
-| Момент | RouteInstance | FieldValueVersion | Модули |
+| Момент | current_stage_id | ApprovalTask | Модули |
 | :--- | :--- | :--- | :--- |
-| Первый submit | Создаётся | Версия #1 | Submit + Snapshot |
-| Resubmit | Без изменений | Новая версия | Submit + Snapshot |
-| Пока `in_approval` | Чтение для next stage | Текущая версия для согласующих | Approval Engine + Snapshot |
+| Первый submit | Первый live ApprovalStage | Из live StageAssignment | Action + Submit + Approval |
+| Resubmit | Снова первый live-этап | Новые tasks этапа 1 | Action + Submit + Approval |
+| Approve (не последний) | Следующий live ApprovalStage | Новые tasks | Action + Approval |
+
+**Не создаётся:** RouteInstance, FieldValueVersion.
 
 ---
 
@@ -68,44 +74,50 @@
 
 | NFR | Ответ Architecture |
 | :--- | :--- |
-| NFR-SEC-01…04 (JWT/login) | Backlog; Baseline AuthN = ADR-AUTH-DEMO-01 |
+| NFR-SEC-01…04 (JWT/login) | Target: ADR-AUTH-JWT-01 |
 | NFR-SEC-02/05/06 | Authorization + HTTPS внешний демо |
-| NFR-REL-01…03 | ADR-TX-* + Snapshot immutability + idempotent approval |
+| NFR-REL-01…03 | ADR-TX-* + idempotent actions; NFR-REL-03 snapshot wording → deprecated (live config) |
 | NFR-PERF-01…04 | Монолит + pagination; измерения — этап реализации |
-| NFR-SCL-01/02 | Без server-side session (демо-заголовок / JWT в backlog); конфиг 50 типов / 10 этапов |
+| NFR-SCL-01/02 | Без server-side session (JWT access, без refresh); конфиг 50 типов / 10 этапов |
 | NFR-LOG-01…03 | HTTP logs + Audit Module; retention как политика |
-| NFR-DEP-01…03 | Python + Neon/local PG локально; Render + Neon в облаке; runtime FastAPI+static+DB; secrets env |
+| NFR-DEP-01…03 | Python + Neon/local PG; Render + Neon; FastAPI+static+DB; secrets env |
 | NFR-USB-01…03 | UI-зоны static + error mapping RU |
-| NFR-AVL-01/02 | Локальный/демо-стенд по DEP-01; API stateless (без sticky session); персистентность PostgreSQL |
+| NFR-AVL-01/02 | Локальный/демо-стенд по DEP-01; API stateless; PostgreSQL |
 
 ---
 
 ## 6. ADR-реестр (не требования)
 
-### 6.1. Active ADR (Baseline / Future)
+### 6.1. Active ADR (Target / Future)
 
 | ID | Суть | Файл | Статус |
 | :--- | :--- | :--- | :--- |
-| ADR-CNT-01, 02, 04 | Монолит, одна БД, FE без authoritative BR | container-diagram.md | Baseline |
-| ADR-CMP-01…04 | Список модулей/UI-зон, Submit Orchestrator, AuthZ | component-diagram.md | Baseline, кроме Superseded SPA-части ADR-CMP-02 ниже |
-| ADR-TX-01…03 | Транзакции submit / approval / cancel | data-flows.md | Baseline |
+| ADR-CNT-01, 02, 04 | Монолит, одна БД, FE без authoritative BR | container-diagram.md | Target |
+| ADR-CMP-01…05 | Список модулей/UI-зон, Submit, Action Engine, AuthZ | component-diagram.md | Target |
+| ADR-TX-01…03 | Транзакции submit / action / cancel | data-flows.md | Target |
 | ADR-TX-04 | Admin save/activate | data-flows.md | Future / backlog |
-| ADR-SEC-01 | bcrypt для полной auth | security-and-crosscutting.md | Backlog auth |
-| ADR-ERR-01…02 | Центральный error mapping | security-and-crosscutting.md | Baseline |
-| ADR-LOG-01 | Структурированный tech log | security-and-crosscutting.md | Baseline |
-| ADR-NOTIF-01 | Pull UI для in-app | security-and-crosscutting.md | Backlog |
-| ADR-SNAP-01 | RouteInstance + FieldValueVersion | adr-snapshot-submit-versions.md | Baseline |
-| ADR-AUTH-DEMO-01 | Демо-роль заголовком | adr-demo-role-header.md | Baseline |
-| ADR-UI-01 | Static HTML+JS от FastAPI | adr-static-web-client.md | Baseline |
+| ADR-SEC-01 | bcrypt | security-and-crosscutting.md | Target |
+| ADR-SEC-03 | JWT middleware / no server session | security-and-crosscutting.md | Target via ADR-AUTH-JWT-01 |
+| ADR-ERR-01…02 | HTTP mapping / validation-before-TX | security-and-crosscutting.md | Target |
+| ADR-ERR-03 | Nested error envelope | adr-error-envelope.md | Accepted |
+| ADR-LOG-01 | Структурированный tech log | security-and-crosscutting.md | Target |
+| ADR-NOTIF-01 | Pull UI для in-app | security-and-crosscutting.md | Target |
+| ADR-LIVE-CFG-01 | Live config; no snapshot | adr-live-config.md | Accepted |
+| ADR-ACTION-01 | ProcessTransition, Action Engine | adr-configurable-actions.md | Accepted |
+| ADR-AUTH-JWT-01 | JWT Bearer | adr-jwt-core-api.md | Accepted |
+| ADR-UI-01 | Static HTML+JS от FastAPI | adr-static-web-client.md | Accepted |
+| ADR-ORG-01 | Org model; one role_id | adr-org-model.md | Accepted |
+| ADR-ID-01 | User UUID; business int PK | adr-id-strategy.md | Accepted |
 
-### 6.2. Superseded ADR (история решений)
+### 6.2. Superseded / HISTORICAL ADR
 
 | ID | Суть | Файл | Статус / замена |
 | :--- | :--- | :--- | :--- |
-| ADR-CNT-03 | JWT на клиенте SPA | container-diagram.md | **Superseded** → ADR-AUTH-DEMO-01 / ADR-UI-01 |
+| ADR-SNAP-01 | RouteInstance + FieldValueVersion | adr-snapshot-submit-versions.md | **Superseded** → ADR-LIVE-CFG-01 |
+| ADR-AUTH-DEMO-01 | Демо-роль заголовком | adr-demo-role-header.md | **Superseded** → ADR-AUTH-JWT-01 |
+| ADR-CNT-03 | JWT на клиенте React SPA | container-diagram.md | **Superseded** → ADR-UI-01 + ADR-AUTH-JWT-01 |
 | ADR-CMP-02 (SPA-часть) | Отдельный SPA Web UI | component-diagram.md | **Superseded** → ADR-UI-01 |
-| ADR-SEC-02 | JWT на клиенте SPA | security-and-crosscutting.md | **Superseded** → ADR-AUTH-DEMO-01 |
-| ADR-SEC-03 | JWT middleware | security-and-crosscutting.md | **Superseded** для Baseline → ADR-AUTH-DEMO-01; JWT вернётся с backlog |
+| ADR-SEC-02 | JWT на клиенте SPA | security-and-crosscutting.md | **Superseded** (SPA); storage → ADR-AUTH-JWT-01 |
 
 ---
 
@@ -118,14 +130,14 @@ flowchart LR
   Uml[UML]
   Arch[Architecture]
   Erd[ERD]
-  Api[OpenAPI_planned]
+  Api[OpenAPI_Frozen_Target]
 
   Req --> Bpmn
   Req --> Uml
   Bpmn --> Arch
   Uml --> Arch
   Arch --> Erd
-  Arch -.->|planned| Api
+  Arch --> Api
 ```
 
 ---
@@ -139,11 +151,11 @@ flowchart LR
 | Взаимодействие и потоки данных | ARCH-FLOW |
 | Внешние зависимости только из требований | ARCH-CTX (нет runtime) |
 | Где бизнес-правила | ARCH-CMP §5, ARCH-MAP §3 |
-| Безопасность (demo header + AuthZ) | ARCH-SEC |
+| Безопасность (JWT + AuthZ) | ARCH-SEC |
 | Ошибки | ARCH-SEC §4 |
-| Аудит; уведомления → backlog | ARCH-SEC §5–6, ARCH-FLOW |
+| Аудит; уведомления | ARCH-SEC §5–6, ARCH-FLOW |
 | Масштабируемость и производительность | ARCH-SEC §7 |
-| RouteInstance / FieldValueVersion | Snapshot Model + ARCH-MAP §4, ARCH-FLOW A |
+| Live config / Action Engine | ADR-LIVE-CFG-01 + ARCH-MAP §4, ARCH-FLOW A/B |
 | First-approve / self-approval / comment | ARCH-FLOW B, ARCH-MAP §3 |
 | RBAC / history | ARCH-CMP, ARCH-SEC |
 | Static web client | ADR-UI-01, ARCH-CNT |
@@ -154,4 +166,13 @@ flowchart LR
 
 - Матрица не изменяет ID и формулировки требований.
 - ADR не трактуются как FR/BR/NFR.
-- ERD и OpenAPI остаются следующими этапами.
+- OpenAPI Frozen Target — `docs/04-api` (не изменяется этим файлом).
+
+---
+
+## История
+
+| Версия | Дата | Описание |
+| :--- | :--- | :--- |
+| 1.1 | 2026-09-23 | Live config / Action Engine traceability |
+| 1.2 | 2026-09-24 | JWT Target; ADR-DEMO Superseded; Notification Target |

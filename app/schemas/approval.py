@@ -1,4 +1,4 @@
-"""Approval task API schemas."""
+"""Approval task API schemas (Legacy wrappers — Target Action Engine next)."""
 
 from __future__ import annotations
 
@@ -9,13 +9,13 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.enums import ApprovalDecision, ApprovalTaskStatus, RequestStatus
-from app.schemas.request import CommentOut, CurrentStageOut, FieldValue, UserRef
+from app.schemas.request import CommentOut, CurrentStageOut, FieldValue, StatusOut, UserRef
 from app.schemas.request_type import RequestTypeRef, RequestTypeSchemaOut
 
 
 class ApprovalTaskListItem(BaseModel):
-    id: UUID
-    request_id: UUID
+    id: int
+    request_id: int
     request_type: RequestTypeRef
     stage: CurrentStageOut
     status: Literal[ApprovalTaskStatus.OPEN]
@@ -23,31 +23,27 @@ class ApprovalTaskListItem(BaseModel):
 
 
 class ApprovalTaskDetail(BaseModel):
-    id: UUID
-    request_id: UUID
-    stage_number: int
-    assignee_id: UUID
+    id: int
+    request_id: int
+    stage_id: int
+    assignee_user_id: UUID
     status: ApprovalTaskStatus
-    decision: ApprovalDecision | None
-    value_version_id: UUID | None
-    decided_at: datetime | None
+    comment: str | None = None
+    completed_at: datetime | None = None
 
 
 class ApprovalRequestCard(BaseModel):
     model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
-    id: UUID
+    id: int
     request_type: RequestTypeRef
     initiator: UserRef
-    status: RequestStatus
-    current_stage: CurrentStageOut
+    status: StatusOut
+    current_stage: CurrentStageOut | None
     created_at: datetime
     updated_at: datetime
     form_schema: RequestTypeSchemaOut = Field(alias="schema")
     values: list[FieldValue]
-    value_source: Literal["submitted_version"]
-    submit_number: int
-    comments: list[CommentOut]
 
 
 class ApprovalTaskCardResponse(BaseModel):
@@ -63,16 +59,14 @@ class DecisionCommentInput(BaseModel):
 
 
 class DecisionTaskOut(BaseModel):
-    id: UUID
+    id: int
     status: Literal[ApprovalTaskStatus.COMPLETED]
-    decision: ApprovalDecision
-    value_version_id: UUID
 
 
 class DecisionRequestOut(BaseModel):
-    id: UUID
-    status: RequestStatus
-    current_stage: CurrentStageOut
+    id: int
+    status: StatusOut | RequestStatus
+    current_stage: CurrentStageOut | None
 
 
 class DecisionResult(BaseModel):

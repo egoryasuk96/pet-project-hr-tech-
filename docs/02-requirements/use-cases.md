@@ -54,8 +54,8 @@ MVP Baseline. Сценарии вне Baseline — [docs/backlog.md](../backlog.
 | **Primary actor** | employee (инициатор) |
 | **Preconditions** | Заявка в `draft` или `returned`; пользователь — инициатор |
 | **Trigger** | Команда «Отправить» |
-| **Main flow** | 1. Валидация полей по **актуальной** схеме типа (BR-26) 2. Проверка маршрута (BR-18) 3. Если `draft` — создание экземпляра маршрута (BR-08) 4. Если `returned` — экземпляр маршрута не меняется (BR-22); `currentStageNumber` → 1 (BR-06) 5. Новая версия схемы и значений полей (номер отправки; BR-26) 6. Статус `in_approval` 7. Создание задач этапа 1 8. История (in-app уведомления — [docs/backlog.md](../backlog.md)). Механика: [Snapshot Model](../03-diagrams/erd/snapshot-model.md) |
-| **Alternative flows** | A1. Повторный submit после return — согласование с **первого** этапа RouteInstance (BR-06); создаётся новая версия значений, маршрут не rebuild |
+| **Main flow** | 1. Валидация полей по live-схеме (BR-26) 2. Проверка live-маршрута (BR-18) 3. `current_stage_id` → первый live ApprovalStage (BR-08) 4. Статус `in_approval` (BR-20) 5. ApprovalTask из live StageAssignment 6. История (in-app — [backlog](../backlog.md)). Канон: [ADR-LIVE-CFG-01](../03-diagrams/architecture/adr-live-config.md) |
+| **Alternative flows** | A1. Resubmit после return — с **первого** live-этапа (BR-06); новые ApprovalTask |
 | **Exceptions** | E1. ERR_VALIDATION  E2. ERR_ROUTE_CONFIG  E3. ERR_INVALID_STATE  E4. ERR_INACTIVE_TYPE |
 | **Postconditions** | Заявка на согласовании; задачи созданы; данные зафиксированы |
 | **Related FR** | FR-REQ-03, FR-REQ-09, FR-APP-01, см. [docs/backlog.md](../backlog.md) |

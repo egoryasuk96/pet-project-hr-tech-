@@ -2,46 +2,50 @@
 
 **Продукт:** Employee Service  
 **ID:** ADR-AUTH-DEMO-01  
-**Версия:** 1.0  
-**Статус:** Baseline v1.0  
-**Связанные документы:** [architecture-description.md](./architecture-description.md), [Backlog](../../backlog.md) (UC-01, FR-AUTH-*, NFR-SEC-01/04), [Vision & Scope](../../01-vision-and-scope/vision-scope.md)
+**Версия:** 1.1  
+**Статус:** **Superseded** → [ADR-AUTH-JWT-01](./adr-jwt-core-api.md)  
+**Связанные документы:** [architecture-description.md](./architecture-description.md), [ADR-AUTH-JWT-01](./adr-jwt-core-api.md), [Vision & Scope](../../01-vision-and-scope/vision-scope.md)
 
 ---
 
-## Контекст
+## Статус
 
-Employee Service — портфолио-демо ядра workflow заявок. Настоящая аутентификация (login/password, JWT, refresh) **не** входит в Baseline MVP и вынесена в backlog. Нужен простой способ переключать актёра (`employee` / `approver` / при необходимости `admin` в seed) для ручной проверки сценариев на пяти экранах.
-
----
-
-## Решение
-
-1. Настоящий AuthN **отсутствует** в MVP.
-2. Текущая демо-роль (и при необходимости идентификатор пользователя) передаётся **HTTP-заголовком** с клиента на API.
-3. Экран **выбора роли** — точка входа демо: пользователь выбирает роль/демо-пользователя; клиент запоминает выбор и подставляет заголовок в последующие запросы.
-4. Проверки доступа в MVP опираются на значение заголовка + seed RBAC (ownership, задачи), без JWT.
-
-Это **технический stub**, не новый UC/FR ID.
+**HISTORICAL / Superseded.** Документ сохранён как описание раннего Baseline-stub. Для CURRENT/TARGET runtime **не** применяется: AuthN = JWT Bearer ([ADR-AUTH-JWT-01](./adr-jwt-core-api.md)).
 
 ---
 
-## Последствия
+## Контекст (исторический)
+
+Employee Service — портфолио-демо ядра workflow заявок. На раннем Baseline настоящая аутентификация (login/password, JWT) ещё не была в runtime; нужен был простой способ переключать актёра (`employee` / `approver` / при необходимости `admin` в seed) для ручной проверки сценариев.
+
+---
+
+## Решение (исторический stub)
+
+1. Настоящий AuthN **отсутствовал** в раннем Baseline.
+2. Демо-роль (и при необходимости идентификатор пользователя) передавалась **HTTP-заголовком** с клиента на API.
+3. Экран **выбора роли** — точка входа демо: пользователь выбирал роль/демо-пользователя; клиент запоминал выбор и подставлял заголовок.
+4. Проверки доступа опирались на значение заголовка + seed RBAC (ownership, задачи), без JWT.
+
+Это был **технический stub**, не новый UC/FR ID.
+
+---
+
+## Последствия (на момент Baseline)
 
 | + | − |
 | :--- | :--- |
-| Быстрый демо-контур без login UI | Заголовок подделывается клиентом — только для локального/демо стенда |
-| Экраны ядра проверяются без JWT | NFR/SEC про JWT не применяются к Baseline runtime |
-| Ясный путь возврата полной auth | Документы и OpenAPI backlog должны явно отличать stub от целевой модели |
+| Быстрый демо-контур без login UI | Заголовок подделывался клиентом — только для локального/демо стенда |
+| Экраны ядра проверялись без JWT | NFR/SEC про JWT не применялись к тому runtime |
+| Ясный путь к полной auth | Документы должны явно отличать stub от целевой модели |
 
 ---
 
-## Что возвращается в полной версии
+## Замена (CURRENT / TARGET)
 
-Из [docs/backlog.md](../../backlog.md):
-
-- UC-01 Login; FR-AUTH-01…03; NFR-SEC-01, NFR-SEC-03, NFR-SEC-04;
-- JWT access token (TTL по backlog), password hash, экран login;
-- заголовок демо-роли **убирается** или остаётся только как dev-override вне production.
+- [ADR-AUTH-JWT-01](./adr-jwt-core-api.md): `POST /auth/login` → JWT access token; `Authorization: Bearer`; RBAC через `User.role_id`.
+- Demo-header **не** принимается как AuthN.
+- Refresh tokens не используются.
 
 ---
 
@@ -50,3 +54,4 @@ Employee Service — портфолио-демо ядра workflow заявок.
 | Версия | Дата | Описание |
 | :--- | :--- | :--- |
 | 1.0 | 2026-09-20 | Зафиксирован stub: роль в заголовке + экран выбора роли |
+| 1.1 | 2026-09-24 | Status → Superseded by ADR-AUTH-JWT-01; текст — HISTORICAL |

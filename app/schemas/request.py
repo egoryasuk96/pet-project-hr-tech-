@@ -1,4 +1,4 @@
-"""Employee request API schemas."""
+"""Employee request API schemas (Target E2 read models + Legacy write stubs)."""
 
 from __future__ import annotations
 
@@ -8,36 +8,49 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.domain.enums import CommentKind, RequestStatus
-from app.schemas.request_type import RequestTypeRef, RequestTypeSchemaOut
+from app.domain.enums import ApprovalTaskStatus, CommentKind, RequestStatus
+
+
+class StatusOut(BaseModel):
+    id: int
+    code: str
+    name: str
+
+
+class RequestTypeRef(BaseModel):
+    id: int
+    code: str
+    name: str
+
+
+class StageOut(BaseModel):
+    id: int
+    name: str
+    sequence_no: int
 
 
 class CreateRequestInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    request_type_id: UUID
+    request_type_id: int
 
 
 class CreatedRequest(BaseModel):
-    id: UUID
-    request_type_id: UUID
-    initiator_id: UUID
-    status: Literal[RequestStatus.DRAFT]
-    current_stage_number: int | None
+    id: int
+    request_type_id: int
+    initiator_user_id: UUID
+    status_id: int
+    status: StatusOut
+    current_stage_id: int | None
     created_at: datetime
     updated_at: datetime
 
 
-class CurrentStageOut(BaseModel):
-    number: int
-    name: str
-
-
 class RequestListItem(BaseModel):
-    id: UUID
+    id: int
     request_type: RequestTypeRef
-    status: RequestStatus
-    current_stage: CurrentStageOut | None
+    status: StatusOut
+    current_stage: StageOut | None
     created_at: datetime
     updated_at: datetime
 
@@ -48,11 +61,11 @@ class UserRef(BaseModel):
 
 
 class CommentOut(BaseModel):
-    id: UUID
+    id: int
     kind: CommentKind
     text: str
     author: UserRef
-    approval_task_id: UUID | None
+    approval_task_id: int | None
     created_at: datetime
 
 
@@ -61,6 +74,15 @@ class FieldValue(BaseModel):
 
     field_code: str
     value: str | None
+
+
+class ApprovalTaskSummary(BaseModel):
+    id: int
+    stage_id: int
+    assignee_user_id: UUID
+    status: ApprovalTaskStatus
+    created_at: datetime
+    completed_at: datetime | None = None
 
 
 class UpdateValuesInput(BaseModel):
@@ -72,9 +94,9 @@ class UpdateValuesInput(BaseModel):
 class UpdatedRequestValues(BaseModel):
     model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
-    id: UUID
-    status: RequestStatus
-    form_schema: RequestTypeSchemaOut = Field(alias="schema")
+    id: int
+    status: StatusOut
+    form_schema: dict[str, Any] = Field(alias="schema")
     values: list[FieldValue]
     updated_at: datetime
 
@@ -82,22 +104,47 @@ class UpdatedRequestValues(BaseModel):
 class RequestCard(BaseModel):
     model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
-    id: UUID
+    id: int
     request_type: RequestTypeRef
+    initiator_user_id: UUID
     initiator: UserRef
-    status: RequestStatus
-    current_stage: CurrentStageOut | None
+    status_id: int
+    status: StatusOut
+    current_stage_id: int | None
+    current_stage: StageOut | None
     created_at: datetime
     updated_at: datetime
-    form_schema: RequestTypeSchemaOut = Field(alias="schema")
     values: list[FieldValue]
-    value_source: Literal["working", "submitted_version"]
-    submit_number: int | None = None
+    approval_tasks: list[ApprovalTaskSummary] = Field(default_factory=list)
     comments: list[CommentOut] = Field(default_factory=list)
 
 
+class ActionExecuteInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    comment: str | None = None
+
+
+class ActionOut(BaseModel):
+    id: int
+    code: str
+    name: str
+
+
+class AvailableActionsResponse(BaseModel):
+    available_actions: list[ActionOut]
+
+
+# --- Legacy / Pre-E2 response shapes kept for thin wrappers (not Target primary) ---
+
+
+class CurrentStageOut(BaseModel):
+    number: int
+    name: str
+
+
 class SubmitRequestResult(BaseModel):
-    id: UUID
+    id: int
     status: Literal[RequestStatus.IN_APPROVAL]
     current_stage: CurrentStageOut
     submit_number: int
@@ -105,7 +152,7 @@ class SubmitRequestResult(BaseModel):
 
 
 class CancelRequestResult(BaseModel):
-    id: UUID
+    id: int
     status: Literal[RequestStatus.CANCELLED]
     updated_at: datetime
 
@@ -117,8 +164,8 @@ class CreateCommentInput(BaseModel):
 
 
 class CreatedComment(BaseModel):
-    id: UUID
-    request_id: UUID
+    id: int
+    request_id: int
     author_id: UUID
     kind: Literal[CommentKind.FREE]
     text: str
@@ -126,7 +173,7 @@ class CreatedComment(BaseModel):
 
 
 class HistoryEventOut(BaseModel):
-    id: UUID
+    id: int
     actor: UserRef | None
     action: str
     from_state: str | None
@@ -135,14 +182,5 @@ class HistoryEventOut(BaseModel):
     at: datetime
 
 
-class FieldValueVersionOut(BaseModel):
-    id: UUID
-    submit_number: int
-    schema_document: Any
-    values_document: Any
-    created_at: datetime
-
-
 class RequestHistory(BaseModel):
     events: list[HistoryEventOut]
-    field_value_versions: list[FieldValueVersionOut]

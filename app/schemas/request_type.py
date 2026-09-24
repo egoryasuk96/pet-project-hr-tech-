@@ -1,8 +1,6 @@
-"""Request type catalog and live form schema."""
+"""Request type catalog and live form schema (Target integer IDs)."""
 
 from __future__ import annotations
-
-from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -10,24 +8,26 @@ from app.domain.enums import FieldDataType
 
 
 class RequestTypeSummary(BaseModel):
-    id: UUID
+    id: int
+    code: str
     name: str
     description: str | None
 
 
 class RequestTypeRef(BaseModel):
-    id: UUID
+    id: int
+    code: str
     name: str
 
 
 class DictionaryItemOut(BaseModel):
-    id: UUID
+    id: int
     code: str
     name: str
 
 
 class DictionaryOut(BaseModel):
-    id: UUID
+    id: int
     name: str
     items: list[DictionaryItemOut]
 
@@ -38,10 +38,10 @@ class RequestFieldDefinitionOut(BaseModel):
     data_type: FieldDataType
     required: bool
     order_no: int
-    dictionary_id: UUID | None
+    dictionary_id: int | None
     dictionary: DictionaryOut | None = None
 
 
 class RequestTypeSchemaOut(BaseModel):
-    request_type_id: UUID
+    request_type_id: int
     fields: list[RequestFieldDefinitionOut]

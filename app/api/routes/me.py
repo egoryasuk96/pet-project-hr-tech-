@@ -20,8 +20,8 @@ router = APIRouter(tags=["Current user"])
     summary="Get the current user and roles",
     description="FR-AUTH-02. Requires a valid JWT. Never returns password_hash.",
     responses={
-        401: {"model": ErrorResponse, "description": "ERR_UNAUTHORIZED"},
-        500: {"model": ErrorResponse, "description": "ERR_INTERNAL"},
+        401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
+        500: {"model": ErrorResponse, "description": "INTERNAL"},
     },
 )
 def read_me(user: User = Depends(get_current_user)) -> CurrentUser:

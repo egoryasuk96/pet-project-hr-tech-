@@ -2,9 +2,9 @@
 
 **Продукт:** Employee Service  
 **ID:** ARCH-FLOW  
-**Версия:** 1.1  
-**Статус:** Baseline v1.0  
-**Связанные документы:** [architecture-description.md](./architecture-description.md), [Snapshot Model](../erd/snapshot-model.md), [ADR-AUTH-DEMO-01](./adr-demo-role-header.md), [ADR-UI-01](./adr-static-web-client.md)
+**Версия:** 1.2  
+**Статус:** Target architecture (Frozen Target)  
+**Связанные документы:** [architecture-description.md](./architecture-description.md), [ADR-LIVE-CFG-01](./adr-live-config.md), [ADR-ACTION-01](./adr-configurable-actions.md), [ADR-AUTH-JWT-01](./adr-jwt-core-api.md), [ADR-UI-01](./adr-static-web-client.md)
 
 ---
 
@@ -12,28 +12,33 @@
 
 Показать, как контейнеры и логические модули взаимодействуют в ключевых сценариях, уже описанных BPMN-01…03 и UML-SEQ-01…03. Порядок бизнес-правил **не меняется**; добавляется только архитектурная раскладка.
 
-Транзакционные границы ниже — **ADR-детализация** поверх уже требуемой атомарности (NFR-REL-01; BR-29 при наличии уведомлений в scope). Они не создают новых FR/BR/NFR.
+Транзакционные границы ниже — **ADR-детализация** поверх уже требуемой атомарности (NFR-REL-01; BR-29). Они не создают новых FR/BR/NFR.
 
-**Клиент:** `Web_Static` — статический HTML/JS ([ADR-UI-01](./adr-static-web-client.md)). REST передаёт демо-роль заголовком ([ADR-AUTH-DEMO-01](./adr-demo-role-header.md)), не JWT.
+**Клиент:** `Web_Static` — статический HTML/JS ([ADR-UI-01](./adr-static-web-client.md)). REST передаёт `Authorization: Bearer` JWT ([ADR-AUTH-JWT-01](./adr-jwt-core-api.md)). Demo-header — не AuthN.
+
+**Workflow (live):** `Request → Process/RequestType → live ApprovalRoute → ApprovalStage → StageAssignment`; transitions — `ProcessTransition` → Action Engine.
 
 ---
 
 ## 2. Поток A — Первый submit и resubmit (UC-05)
 
-**Требования:** BR-08, BR-18, BR-20, BR-22, BR-24, BR-26; FR-REQ-03/09; FR-AUDIT-02. Уведомления (BR-23/29, FR-NOTIF-01) — если в scope; иначе [backlog](../../backlog.md).
+**Требования:** BR-08, BR-18, BR-20, BR-22, BR-24, BR-26; FR-REQ-03/09; FR-AUDIT-02; BR-23/29 (notifications).
+
+Primary path: `POST /requests/{id}/actions/{action_id}` (Action Engine). Legacy aliases `POST .../submit` — deprecated thin wrappers.
 
 ### 2.1. Шаги (логический)
 
-1. HTTP Layer принимает команду submit; AuthN (демо-заголовок); AuthZ (инициатор, статус `draft`|`returned`).
-2. Request / Catalog: валидация полей по **актуальной** схеме; проверка типа активен; валидация маршрута (BR-18).
-3. **Submit Orchestrator** открывает транзакцию БД (**ADR-TX-01**):
-   - если первый submit (`draft`) → Snapshot: **создать** RouteInstance (BR-08);
-   - если resubmit (`returned`) → Snapshot: **не** rebuild RouteInstance (BR-22);
-   - Snapshot: **новая** FieldValueVersion (BR-26; канон — [Snapshot Model](../erd/snapshot-model.md));
-   - статус → `in_approval`; создать ApprovalTask **первого** этапа по RouteInstance (BR-06 / BR-20);
-   - Audit: событие submit/resubmit (+ связь с версией значений, BR-24);
-   - Notification: если в scope (иначе backlog).
-4. Commit. Ошибка Audit/Snapshot (и Notification при наличии) → rollback.
+1. HTTP Layer принимает команду; AuthN (JWT → user); AuthZ (инициатор, статус `draft`|`returned`).
+2. Action Engine: lookup `ProcessTransition`; effect `status_only` (submit).
+3. Request / Catalog: валидация полей по **актуальной** схеме; проверка типа активен; валидация маршрута (BR-18).
+4. **Одна транзакция БД** (**ADR-TX-01**):
+   - lock Request;
+   - статус → `in_approval`; `current_stage_id` → первый live **ApprovalStage** (BR-08, BR-20);
+   - создать ApprovalTask из **live** StageAssignment (BR-08);
+   - при resubmit (`returned`) — снова первый live-этап (BR-06, BR-22);
+   - Audit: HistoryEvent submit/resubmit (BR-24);
+   - Notification: in-app (BR-23/29).
+5. Commit. Ошибка Audit/tasks/Notification → rollback.
 
 ### 2.2. Sequence (Mermaid)
 
@@ -42,84 +47,84 @@ sequenceDiagram
   actor Init as Инициатор
   participant Web as Web_Static
   participant API as HTTP_Layer
-  participant AuthZ as Authorization
-  participant Sub as Submit_Orchestrator
-  participant Snap as Snapshot
+  participant Auth as Auth_JWT
+  participant Act as Action_Engine
   participant Appr as Approval_Engine
   participant Aud as Audit
   participant Ntf as Notification
   participant DB as PostgreSQL
 
   Init->>Web: Submit / Resubmit
-  Web->>API: REST + demo role header
-  API->>AuthZ: проверка инициатора и статуса
-  API->>Sub: orchestrate submit
-  Note over Sub,DB: ADR-TX-01 одна транзакция БД
-  Sub->>Sub: validate live schema + route + active type
-  alt первый submit из draft
-    Sub->>Snap: create RouteInstance
-  else resubmit из returned
-    Sub->>Snap: keep RouteInstance
-  end
-  Sub->>Snap: append FieldValueVersion
-  Sub->>Appr: create tasks for current stage
-  Sub->>Aud: write HistoryEvent
-  Note over Ntf: Notification — backlog / BR-29 если в scope
-  Sub->>Ntf: create in-app notifications (если в scope)
-  Sub->>DB: commit
+  Web->>API: REST + Bearer JWT
+  API->>Auth: resolve user from JWT
+  API->>Act: POST actions action_id
+  Note over Act,DB: ADR-TX-01 одна транзакция БД
+  Act->>Act: lock Request; ProcessTransition lookup
+  Act->>Act: validate live schema + route + active type
+  Act->>Appr: current_stage_id = first live stage
+  Act->>Appr: create tasks from live StageAssignment
+  Act->>Aud: write HistoryEvent
+  Act->>Ntf: create in-app notifications
+  Act->>DB: commit
   API-->>Web: in_approval
   Web-->>Init: статус обновлён
 ```
 
 ---
 
-## 3. Поток B — Approve / Reject / Return (UC-07…09)
+## 3. Поток B — Primary mutation: approve / reject / return (и прочие actions)
 
-**Требования:** BR-03, BR-04, BR-05, BR-14, BR-15, BR-17, BR-21, BR-25; FR-APP-*; FR-AUDIT-02. Уведомления — backlog / BR-29 если в scope.
+**Требования:** BR-03, BR-04, BR-05, BR-14, BR-15, BR-17, BR-21, BR-25; FR-APP-*; FR-AUDIT-02; BR-23/29.
+
+**Discovery:** `GET /requests/{id}/available-actions`.  
+**Execute:** `POST /requests/{id}/actions/{action_id}`.
+
+Legacy `/approval-tasks/{id}/approve|return|reject` — disabled stubs (не CURRENT mutation path).
 
 ### 3.1. Шаги
 
-1. AuthN (демо-заголовок); AuthZ: своя **open** задача (BR-15); actor ≠ initiator (BR-21); иначе `ERR_FORBIDDEN_APPROVAL`.
-2. Approval Engine:
-   - reject/return → непустой комментарий (BR-25) иначе `ERR_VALIDATION`;
-   - approve → комментарий опционален.
+1. AuthN (JWT); AuthZ: роль / open задача / ownership (BR-15); actor ≠ initiator (BR-21); иначе `FORBIDDEN_APPROVAL`.
+2. Action Engine:
+   - lock Request;
+   - ProcessTransition lookup (process, from_status, action, role, active);
+   - reject/return → непустой комментарий (BR-25) иначе `VALIDATION`;
+   - effect `approve_advance` или `status_only`.
 3. Транзакция (**ADR-TX-02**):
-   - **Approve:** задача completed; sibling open → `cancelled` (BR-03); читать RouteInstance (не live config); next tasks или `approved` (BR-17);
-   - **Reject:** `rejected`; закрыть open задачи этапа (BR-04);
-   - **Return:** `returned`; сохранить номер этапа; закрыть задачи этапа (BR-05);
-   - Audit (+ Notification в той же TX, если в scope — BR-29).
-4. Повтор по уже закрытой/cancelled задаче → `ERR_TASK_DONE` / `ERR_DUP_ACTION` (NFR-REL-02) без повторной мутации.
+   - **Approve (`approve_advance`):** задача completed; sibling open → `cancelled` (BR-03); next live stage; next tasks или `approved` (BR-17);
+   - **Reject / Return (`status_only`):** статус + закрытие open задач этапа (BR-04/05);
+   - HistoryEvent + Notification в той же TX (BR-24, BR-29).
+4. Повтор по уже закрытой/cancelled задаче → `TASK_DONE` / `INVALID_STATE` (NFR-REL-02) без повторной мутации.
 
-### 3.2. Sequence: approve + first-approve (Mermaid)
+### 3.2. Sequence: execute action (Mermaid)
 
 ```mermaid
 sequenceDiagram
-  actor A as Согласующий_A
+  actor A as Согласующий
   participant Web as Web_Static
   participant API as HTTP_Layer
-  participant AuthZ as Authorization
-  participant Eng as Approval_Engine
-  participant Snap as Snapshot
+  participant Auth as Auth_JWT
+  participant Act as Action_Engine
+  participant Appr as Approval_Engine
   participant Aud as Audit
   participant Ntf as Notification
   participant DB as PostgreSQL
 
-  A->>Web: Approve
-  Web->>API: REST + demo role header
-  API->>AuthZ: own open task; not initiator
-  API->>Eng: approve
-  Note over Eng,DB: ADR-TX-02 одна транзакция
-  Eng->>Eng: complete task A; cancel sibling open tasks
-  Eng->>Snap: read RouteInstance next step
-  alt есть следующий этап
-    Eng->>Eng: create next stage tasks
-  else последний этап
-    Eng->>Eng: status = approved
+  A->>Web: Available actions / Execute
+  Web->>API: GET available-actions / POST actions
+  Note over Web,API: Authorization Bearer JWT
+  API->>Auth: resolve user + role_id
+  API->>Act: execute action_id
+  Note over Act,DB: ADR-TX-02 одна транзакция
+  Act->>Act: lock Request; ProcessTransition lookup
+  Act->>Appr: task / stage updates per effect
+  alt approve_advance next stage
+    Appr->>Appr: current_stage_id = next; create live tasks
+  else final or status_only
+    Appr->>Appr: status = to_status; close tasks
   end
-  Eng->>Aud: HistoryEvent
-  Note over Ntf: Notification — backlog / если в scope
-  Eng->>Ntf: in-app notifications (если в scope)
-  Eng->>DB: commit
+  Act->>Aud: HistoryEvent
+  Act->>Ntf: in-app notifications
+  Act->>DB: commit
   API-->>Web: OK
 ```
 
@@ -131,11 +136,11 @@ sequenceDiagram
 
 **Требования (когда вернётся):** BR-09, BR-10, BR-12, BR-18, BR-27; FR-ADMIN-01…06.
 
-1. AuthZ: роль `admin` (ACL-04 — backlog; не определён в Baseline rbac-matrix); admin не создаёт заявки за сотрудников (BR-27).
-2. Admin Config пишет **live** конфигурацию (тип, поля, этапы, назначения, справочники).
-3. **Snapshot isolation (BR-09):** запись конфига **не** изменяет существующие RouteInstance in-flight заявок.
+1. AuthZ: роль `admin`; admin не создаёт заявки за сотрудников (BR-27).
+2. Admin Config пишет **live** конфигурацию (тип, поля, этапы, назначения, справочники, ProcessTransition).
+3. **In-flight caveat (ADR-LIVE-CFG-01):** правки live config **могут** затронуть in-flight; guard BR-09 на удаление stage с open tasks.
 4. Activate: валидация маршрута (BR-18); иначе тип остаётся неактивным.
-5. Deactivate: скрытие из каталога (BR-10); in-flight продолжают по своим snapshot.
+5. Deactivate: скрытие из каталога (BR-10); in-flight продолжают.
 6. Audit конфигурационных изменений — по мере наличия событий в BR-24 / admin history FR-ADMIN-08.
 
 ```mermaid
@@ -143,22 +148,22 @@ sequenceDiagram
   actor Adm as Администратор
   participant Web as Web_Static
   participant API as HTTP_Layer
-  participant AuthZ as Authorization
+  participant Auth as Auth_JWT
   participant Cfg as Admin_Config
   participant DB as PostgreSQL
 
   Note over Adm,DB: Future / backlog — ADR-TX-04
   Adm->>Web: Сохранить маршрут / активировать тип
-  Web->>API: REST + demo role header
-  API->>AuthZ: роль admin
+  Web->>API: REST + Bearer JWT
+  API->>Auth: resolve user; role admin
   API->>Cfg: save / activate
   Cfg->>Cfg: write live config only
-  Note over Cfg: BR-09 не трогает RouteInstance заявок
+  Note over Cfg: ADR-LIVE-CFG-01 in-flight caveat; BR-09 guard
   alt activate
     Cfg->>Cfg: validate route BR-18
   end
   Cfg->>DB: persist
-  API-->>Web: OK / ERR_ROUTE_CONFIG
+  API-->>Web: OK / ROUTE_CONFIG
 ```
 
 ---
@@ -167,15 +172,16 @@ sequenceDiagram
 
 | Сценарий | Модули | Правила видимости | Scope |
 | :--- | :--- | :--- | :--- |
-| Свои заявки | Request + AuthZ | BR-01 | Baseline |
-| Очередь задач | Approval Engine + AuthZ | BR-14, BR-15 | Baseline |
-| История | Audit + AuthZ | FR-AUDIT-01; visibility как у заявки | Baseline |
+| Свои заявки | Request + AuthZ | BR-01 | Target |
+| Available actions | Action Engine + AuthZ | BR-14, BR-15, ProcessTransition | Target |
+| История | Audit + AuthZ | FR-AUDIT-01; visibility как у заявки | Target |
+| Уведомления | Notification + AuthZ | только получатель; FR-NOTIF-02/03 | Target |
+| Очередь задач (list) | Approval Engine + AuthZ | BR-14, BR-15 | API stub / Future UI |
 | Реестр admin | Admin / Request + AuthZ | BR-13 | Future / backlog |
-| Уведомления | Notification + AuthZ | только получатель; FR-NOTIF-02/03 | Future / backlog |
 
 Пагинация списков — NFR-PERF-03 (default 20 / max 100).
 
-Чужой скрываемый ресурс для employee → `ERR_NOT_FOUND` / 404 (NFR-SEC-05).
+Чужой скрываемый ресурс для employee → `NOT_FOUND` / 404 (NFR-SEC-05).
 
 ---
 
@@ -183,12 +189,15 @@ sequenceDiagram
 
 | ID | Граница | Что атомарно | Источник требования | Scope |
 | :--- | :--- | :--- | :--- | :--- |
-| **ADR-TX-01** | Submit / resubmit | status + snapshots + tasks + audit (+ notifications если в scope) | NFR-REL-01, BR-20; BR-29 — backlog | Baseline core |
-| **ADR-TX-02** | Approve / reject / return | status/tasks (вкл. first-approve cancel) + audit (+ notifications если в scope) | BR-03/04/05, NFR-REL-01; BR-29 — backlog | Baseline core |
-| **ADR-TX-03** | Cancel | status + audit (+ notification инициатору при наличии в BR-23) | BR-07, BR-24; BR-23 — backlog | Baseline core |
-| **ADR-TX-04** | Admin save/activate | запись live config; **без** мутации RouteInstance заявок | BR-09 | **Future / backlog** |
+| **ADR-TX-01** | Submit / resubmit (via Action Engine) | lock + status + current_stage_id + tasks + HistoryEvent + Notification | NFR-REL-01, BR-20, BR-29 | Target |
+| **ADR-TX-02** | Execute action (approve / reject / return / …) | lock + transition + status/tasks + HistoryEvent + Notification | BR-03/04/05, NFR-REL-01, BR-29 | Target |
+| **ADR-TX-03** | Cancel (via Action Engine) | status + HistoryEvent + Notification | BR-07, BR-24, BR-23 | Target |
+| **ADR-TX-04** | Admin save/activate | запись live config; in-flight caveat ADR-LIVE-CFG-01 | BR-09 | **Future / backlog** |
 
-Детализация «один DB transaction на use case» — **предположение MVP** о реализации атомарности, уже требуемой NFR/BR. Альтернативы (outbox и т.п.) не вводятся в MVP.
+Канонический mutation flow:  
+`HTTP action → Action Engine → lock Request → ProcessTransition lookup → state/task update → HistoryEvent → Notification → commit`.
+
+Детализация «один DB transaction на use case» — **предположение MVP** о реализации атомарности, уже требуемой NFR/BR.
 
 ---
 
@@ -199,13 +208,22 @@ sequenceDiagram
 | A | UC-04, UC-05, UC-10 | BPMN-01 | UML-SEQ-01, UML-SM-01 |
 | B | UC-07, UC-08, UC-09 | BPMN-02 | UML-SEQ-02, UML-SM-01 |
 | C | UC-11, UC-12 (backlog) | BPMN-03 (Future) | UML-SEQ-03 (Future) |
-| D | UC-06, UC-14; UC-13/15 backlog | — | UML-UC-01 |
+| D | UC-06, UC-13, UC-14 | — | UML-UC-01 |
 
 ---
 
 ## 8. Границы
 
-- Нет HTTP path / OpenAPI.
+- Нет HTTP path / OpenAPI schema (см. `docs/04-api`).
 - Нет диаграмм физической репликации БД.
 - Порядок правил совпадает с требованиями / BPMN / UML.
 - Новые потоки и ID не вводятся.
+
+---
+
+## История
+
+| Версия | Дата | Описание |
+| :--- | :--- | :--- |
+| 1.1 | 2026-09-23 | Live config flows; demo-header AuthN |
+| 1.2 | 2026-09-24 | Bearer JWT; Action Engine primary mutation; Notification in TX |

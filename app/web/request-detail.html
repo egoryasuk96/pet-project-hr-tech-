@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Заявка — HR Tech</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/app.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-brand">HR Tech</div>
+        <nav class="topbar-nav" aria-label="Основная навигация">
+          <a href="/my-requests" class="is-active">Мои заявки</a>
+          <a href="/my-notifications">Уведомления</a>
+        </nav>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-user" id="user-name"></span>
+        <button type="button" class="btn btn-ghost" id="logout-btn">Выйти</button>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <div class="page-header detail-header">
+        <div class="detail-header-left">
+          <a class="back-link" href="/my-requests">← К списку</a>
+          <h1 class="page-title" id="detail-title">Заявка</h1>
+        </div>
+        <div id="detail-status"></div>
+      </div>
+
+      <div class="state-panel" id="state-loading">
+        <p>Загрузка заявки…</p>
+      </div>
+
+      <div class="state-panel" id="state-error" hidden>
+        <h2>Не удалось открыть заявку</h2>
+        <p id="state-error-message">Произошла внутренняя ошибка. Попробуйте позже</p>
+        <a class="btn btn-secondary" href="/my-requests" style="width: auto; display: inline-flex">
+          К списку заявок
+        </a>
+      </div>
+
+      <div id="detail-content" hidden>
+        <section class="detail-card" aria-labelledby="meta-heading">
+          <h2 class="detail-section-title" id="meta-heading">Сведения</h2>
+          <dl class="detail-meta" id="detail-meta"></dl>
+        </section>
+
+        <section class="detail-card" aria-labelledby="values-heading">
+          <h2 class="detail-section-title" id="values-heading">Поля заявки</h2>
+          <div id="detail-values"></div>
+        </section>
+
+        <section class="detail-card" aria-labelledby="actions-heading">
+          <h2 class="detail-section-title" id="actions-heading">Доступные действия</h2>
+          <div class="form-error" id="action-error" hidden></div>
+          <div class="action-chips" id="detail-actions"></div>
+          <div class="action-comment-panel" id="action-comment-panel" hidden>
+            <label class="field" for="action-comment-input">
+              Комментарий
+              <textarea
+                id="action-comment-input"
+                rows="3"
+                placeholder="Укажите причину"
+              ></textarea>
+            </label>
+            <div class="action-comment-actions">
+              <button type="button" class="btn btn-primary" id="action-comment-confirm" style="width: auto">
+                Подтвердить
+              </button>
+              <button type="button" class="btn btn-secondary" id="action-comment-cancel" style="width: auto">
+                Отмена
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="detail-card" aria-labelledby="history-heading">
+          <h2 class="detail-section-title" id="history-heading">История</h2>
+          <div id="detail-history"></div>
+        </section>
+      </div>
+    </main>
+
+    <script src="/static/js/session.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/request-detail.js"></script>
+  </body>
+</html>

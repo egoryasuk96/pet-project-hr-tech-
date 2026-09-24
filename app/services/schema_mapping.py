@@ -15,6 +15,7 @@ from app.schemas.request_type import (
 def to_type_summary(request_type: RequestType) -> RequestTypeSummary:
     return RequestTypeSummary(
         id=request_type.id,
+        code=request_type.code,
         name=request_type.name,
         description=request_type.description,
     )
@@ -26,7 +27,7 @@ def to_field_definition(field: RequestFieldDefinition) -> RequestFieldDefinition
         items = [
             DictionaryItemOut(id=item.id, code=item.code, name=item.name)
             for item in field.dictionary.items
-            if item.is_active
+            if item.active
         ]
         dictionary_out = DictionaryOut(
             id=field.dictionary.id,

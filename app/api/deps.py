@@ -1,4 +1,4 @@
-"""FastAPI dependencies: DB session, JWT current user, RBAC."""
+"""FastAPI dependencies: DB session, JWT current user, RBAC (Target: single role_id)."""
 
 from __future__ import annotations
 
@@ -15,7 +15,8 @@ from app.core.errors import forbidden, unauthorized
 from app.core.security import decode_access_token
 from app.db.session import get_db
 from app.domain.enums import RoleCode
-from app.domain.identity import User, UserRole
+from app.domain.identity import User
+from app.domain.org import Employee
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -32,7 +33,10 @@ def get_current_user(
         raise unauthorized() from None
     user = session.scalar(
         select(User)
-        .options(selectinload(User.user_roles).selectinload(UserRole.role))
+        .options(
+            selectinload(User.role),
+            selectinload(User.employee).selectinload(Employee.department),
+        )
         .where(User.id == user_id)
     )
     if user is None or not user.is_active:
@@ -42,8 +46,7 @@ def get_current_user(
 
 def require_roles(*codes: RoleCode) -> Callable[..., User]:
     def _dependency(user: User = Depends(get_current_user)) -> User:
-        have = {item.role.code for item in user.user_roles}
-        if have.isdisjoint(codes):
+        if user.role is None or user.role.code not in codes:
             raise forbidden()
         return user
 

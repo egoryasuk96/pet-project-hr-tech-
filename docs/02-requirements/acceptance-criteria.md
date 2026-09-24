@@ -38,8 +38,8 @@ Given заявка в статусе `draft` с заполненными обя�
 And у типа настроен валидный маршрут (≥1 этап, у каждого этапа ≥1 назначение)  
 When инициатор выполняет submit  
 Then статус заявки становится `in_approval`  
-And создан RouteInstance  
-And зафиксированы схема и значения полей заявки (BR-26)  
+And установлен current_stage_id на первый live-этап (BR-08)  
+And working values сохранены по live-схеме (BR-26)  
 And созданы задачи согласования для первого этапа  
 And (опционально, backlog) согласующие первого этапа получают in-app уведомления  
 And в истории есть событие submit
@@ -119,7 +119,7 @@ And (опционально, backlog) согласующие этапа 2 пол
 ### AC-APP-05b — Завершение маршрута
 **Related:** FR-APP-07, BR-17
 
-Given заявка на последнем этапе RouteInstance  
+Given заявка на последнем live-этапе маршрута  
 When выполнен успешный approve этого этапа  
 Then статус заявки = `approved`  
 And открытых задач нет  
@@ -193,10 +193,9 @@ Given заявка в `returned` после return на этапе 2 из 3
 And инициатор изменил значения полей  
 When инициатор выполняет submit  
 Then статус = `in_approval`  
-And экземпляр маршрута не пересобирается (идентичен сохранённому)  
-And создана **новая версия** схемы и значений полей (номер отправки); решение согласующего будет привязано к этой версии (BR-26, BR-22; [Snapshot Model](../03-diagrams/erd/snapshot-model.md))  
-And `currentStageNumber` = 1; создаются задачи **этапа 1** (не этапа 2)  
-And в истории есть событие повторной отправки (предыдущие версии значений и решения по ним доступны, BR-24)
+And `current_stage_id` = первый live-этап; создаются задачи **этапа 1** (не этапа 2) (BR-06, BR-22)  
+And working values сохранены по актуальной live-схеме (BR-26)  
+And в истории есть событие повторной отправки (BR-24)
 
 ---
 
@@ -218,25 +217,27 @@ And система создаёт задачи следующего этапа �
 
 ---
 
-## 10. RouteInstance
+## 10. Live config (caveat)
 
-### AC-APP-10 — Изоляция от изменений конфигурации
-**Related:** FR-REQ-03, BR-08, BR-09; Admin UI — [docs/backlog.md](../backlog.md)
+> **Target (ADR-LIVE-CFG-01):** snapshot isolation **не** применяется. AC ниже переформулированы под live config.
 
-Given заявка уже отправлена (есть RouteInstance с этапами E1→E2, assignees X)  
-When live-конфигурация маршрута типа изменена через seed/test data или SQL/test script (добавлен E3 или assignees заменены на Y)  
-And согласующий выполняет approve по заявке  
-Then согласование продолжается по исходному RouteInstance (E1→E2, assignees X)  
-And новый этап E3 для этой заявки не появляется
+### AC-APP-10 — In-flight caveat при изменении конфигурации
+**Related:** FR-REQ-03, BR-09, ADR-LIVE-CFG-01; Admin UI — [backlog](../backlog.md)
+
+Given заявка в `in_approval` на live-этапе E1  
+When admin изменяет live-маршрут (добавлен E3 или изменены assignees)  
+And согласующий выполняет approve  
+Then следующий этап определяется по **актуальному** live-маршруту на момент approve (caveat ADR-LIVE-CFG-01)  
+And рекомендуется блокировать удаление этапа с open tasks (BR-09)
 
 ---
 
-### AC-APP-10b — Новый submit использует новую конфигурацию
-**Related:** FR-REQ-03, BR-08, BR-09; Admin UI — [docs/backlog.md](../backlog.md)
+### AC-APP-10b — Новый submit использует актуальную конфигурацию
+**Related:** FR-REQ-03, BR-08; Admin UI — [backlog](../backlog.md)
 
-Given live-конфигурация маршрута типа изменена через seed/test data или SQL/test script  
+Given live-конфигурация маршрута изменена  
 When сотрудник создаёт новую заявку и делает первый submit  
-Then RouteInstance новой заявки соответствует актуальной конфигурации на момент submit
+Then ApprovalTask создаются из **актуальных** live StageAssignment на момент submit
 
 ---
 
@@ -375,19 +376,16 @@ Then используется актуальная схема типа
 
 ---
 
-### AC-DRAFT-02 — После submit схема и значения зафиксированы версией
-**Related:** FR-REQ-03, FR-REQ-09, BR-09, BR-26, BR-22; Admin UI — [backlog](../backlog.md)
+### AC-DRAFT-02 — Working values и live schema
+**Related:** FR-REQ-03, FR-REQ-09, BR-26, BR-22; Admin UI — [backlog](../backlog.md)
 
-Given заявка успешно отправлена (submit)  
-When live-схема типа изменена через seed/test data или SQL/test script (поле переименовано/удалено)  
-And согласующий открывает карточку заявки  
-Then он видит **текущую версию** схемы и значений, зафиксированную на последнем successful submit  
-And изменение конфигурации типа не меняет отображаемые данные этой версии
+Given заявка в `in_approval`  
+When согласующий открывает карточку заявки  
+Then он видит **текущие** RequestFieldValue и live-схему типа (BR-26)
 
-Given заявка в `returned`, инициатор отредактировал поля по актуальной схеме и выполнил resubmit  
-Then создана **новая** FieldValueVersion (номер отправки); предыдущая версия остаётся в истории (BR-24, UC-14)  
-And экземпляр маршрута остаётся прежним  
-См. [Snapshot Model](../03-diagrams/erd/snapshot-model.md).
+Given заявка в `returned`, инициатор отредактировал поля по актуальной live-схеме и выполнил resubmit  
+Then working values обновлены; согласование с первого live-этапа (BR-06, BR-22)  
+And событие resubmit зафиксировано в HistoryEvent (BR-24)
 
 ---
 
@@ -413,13 +411,13 @@ And экземпляр маршрута остаётся прежним
 | AC-APP-07b | Return без комментария запрещён |
 | AC-APP-08 | Resubmit с первого этапа |
 | AC-APP-09 | Достаточно одного approve |
-| AC-APP-10 | Изоляция от изменений конфигурации |
-| AC-APP-10b | Новый submit использует новую конфигурацию |
+| AC-APP-10 | Live config in-flight caveat |
+| AC-APP-10b | Submit использует актуальный live-маршрут |
 | AC-CAT-01 | Неактивный тип скрыт и недоступен |
 | AC-CAT-01b | Уже созданные заявки живут |
 | AC-CAT-02 | Пустой каталог |
 | AC-DRAFT-01 | Edit draft/returned использует актуальную схему |
-| AC-DRAFT-02 | После submit — FieldValueVersion; маршрут без rebuild |
+| AC-DRAFT-02 | Working values и live schema |
 | AC-REQ-06 | Свободный комментарий инициатора в in_approval |
 | AC-REQ-07 | Отмена только draft/returned |
 
