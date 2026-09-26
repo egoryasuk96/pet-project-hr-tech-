@@ -98,7 +98,10 @@ class HtmlPageGateMiddleware(BaseHTTPMiddleware):
         if request.method == "GET" and _wants_html(request):
             page = _html_page_for_path(request.url.path)
             if page is not None:
-                return FileResponse(_WEB_DIR / page)
+                return FileResponse(
+                    _WEB_DIR / page,
+                    headers={"Cache-Control": "no-store, must-revalidate"},
+                )
         return await call_next(request)
 
 
@@ -115,11 +118,17 @@ def create_app() -> FastAPI:
     # fall through to GET /requests/{request_id} (API path param is untyped in router).
     @application.get("/login", include_in_schema=False)
     def login_page() -> FileResponse:
-        return FileResponse(_WEB_DIR / "login.html")
+        return FileResponse(
+            _WEB_DIR / "login.html",
+            headers={"Cache-Control": "no-store, must-revalidate"},
+        )
 
     @application.get("/requests/create", include_in_schema=False)
     def request_create_page() -> FileResponse:
-        return FileResponse(_WEB_DIR / "request-create-select.html")
+        return FileResponse(
+            _WEB_DIR / "request-create-select.html",
+            headers={"Cache-Control": "no-store, must-revalidate"},
+        )
 
     application.include_router(api_router)
     application.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")

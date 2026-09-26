@@ -63,6 +63,7 @@
         method: opts.method || "GET",
         headers,
         body: opts.body != null ? JSON.stringify(opts.body) : undefined,
+        cache: opts.cache != null ? opts.cache : "no-store",
       });
     } catch (_networkErr) {
       throw new ApiError(
