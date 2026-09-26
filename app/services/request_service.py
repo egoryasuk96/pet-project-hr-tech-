@@ -7,14 +7,14 @@ from datetime import UTC, datetime
 from sqlalchemy import exists, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.errors import AppError, inactive_type, not_found
+from app.core.errors import AppError, inactive_type, invalid_state, not_found, validation
 from app.domain.approval import ApprovalTask
 from app.domain.audit import HistoryEvent
-from app.domain.catalog import RequestType
+from app.domain.catalog import RequestFieldDefinition, RequestType
 from app.domain.enums import RoleCode
 from app.domain.identity import User
 from app.domain.process import Status
-from app.domain.request import Request
+from app.domain.request import Request, RequestFieldValue
 from app.domain.routing import ApprovalStage
 from app.schemas.request import (
     ApprovalTaskSummary,
@@ -27,10 +27,10 @@ from app.schemas.request import (
     RequestTypeRef,
     StageOut,
     StatusOut,
-    UpdatedRequestValues,
     UserRef,
 )
 from app.services.auth_service import _employee_full_name
+from app.services.field_validation import definitions_by_code, validate_field_value
 
 
 def _status_out(status: Status) -> StatusOut:
@@ -94,7 +94,12 @@ def _draft_status(session: Session) -> Status:
     return status
 
 
-def create_draft(session: Session, user: User, request_type_id: int) -> CreatedRequest:
+def create_draft(
+    session: Session,
+    user: User,
+    request_type_id: int,
+    values: list[FieldValue] | None = None,
+) -> CreatedRequest:
     request_type = session.get(RequestType, request_type_id)
     if request_type is None:
         raise not_found()
@@ -109,6 +114,9 @@ def create_draft(session: Session, user: User, request_type_id: int) -> CreatedR
     )
     session.add(request)
     session.flush()
+
+    _persist_create_values(session, request.id, request_type.id, values)
+
     session.add(
         HistoryEvent(
             request_id=request.id,
@@ -132,7 +140,66 @@ def create_draft(session: Session, user: User, request_type_id: int) -> CreatedR
         current_stage_id=request.current_stage_id,
         created_at=request.created_at,
         updated_at=request.updated_at,
+        values=[
+            FieldValue(field_code=item.field_code, value=item.value)
+            for item in sorted(request.field_values, key=lambda row: row.field_code)
+        ],
     )
+
+
+def _validate_and_normalize_values(
+    session: Session,
+    request_type_id: int,
+    values: list[FieldValue],
+) -> list[tuple[str, str | None]]:
+    """Validate payload values against live definitions. No required-check (submit only)."""
+    seen: set[str] = set()
+    for item in values:
+        if item.field_code in seen:
+            raise validation({"field_code": item.field_code, "reason": "duplicate"})
+        seen.add(item.field_code)
+
+    definitions = session.scalars(
+        select(RequestFieldDefinition).where(
+            RequestFieldDefinition.request_type_id == request_type_id
+        )
+    ).all()
+    by_code = definitions_by_code(list(definitions))
+
+    normalized: list[tuple[str, str | None]] = []
+    for item in values:
+        field = by_code.get(item.field_code)
+        if field is None:
+            raise validation({"field_code": item.field_code, "reason": "unknown_field"})
+
+        raw = item.value
+        if raw is None or raw.strip() == "":
+            stored_value: str | None = None
+        else:
+            stored_value = validate_field_value(session, field, raw)
+        normalized.append((item.field_code, stored_value))
+    return normalized
+
+
+def _persist_create_values(
+    session: Session,
+    request_id: int,
+    request_type_id: int,
+    values: list[FieldValue] | None,
+) -> None:
+    """Persist optional create-time values. No required-check; type-validate present values."""
+    if not values:
+        return
+    for field_code, stored_value in _validate_and_normalize_values(
+        session, request_type_id, values
+    ):
+        session.add(
+            RequestFieldValue(
+                request_id=request_id,
+                field_code=field_code,
+                value=stored_value,
+            )
+        )
 
 
 def list_own_requests(
@@ -267,12 +334,49 @@ def update_working_values(
     user: User,
     request_id: int,
     values: list[FieldValue],
-) -> UpdatedRequestValues:
-    raise AppError(
-        "INVALID_STATE",
-        "Сохранение полей будет доступно после следующего этапа API",
-        409,
+) -> RequestCard:
+    """Partial upsert of working values (FR-REQ-02 / BR-26). Own request, draft|returned only.
+
+    Fields omitted from the payload are intentionally left unchanged — this is
+    partial update, not a full replace of request_field_values.
+    """
+    request = _load_owned_request(session, user, request_id)
+    status_code = request.status.code
+    if status_code not in {"draft", "returned"}:
+        raise invalid_state()
+
+    normalized = _validate_and_normalize_values(
+        session, request.request_type_id, values
     )
+    existing = {row.field_code: row for row in request.field_values}
+    for field_code, stored_value in normalized:
+        row = existing.get(field_code)
+        if row is None:
+            session.add(
+                RequestFieldValue(
+                    request_id=request.id,
+                    field_code=field_code,
+                    value=stored_value,
+                )
+            )
+        else:
+            row.value = stored_value
+
+    # TimestampMixin.onupdate only fires on Request UPDATE; child upsert alone does not.
+    request.updated_at = datetime.now(UTC)
+    session.add(
+        HistoryEvent(
+            request_id=request.id,
+            actor_id=user.id,
+            action="update_values",
+            from_state=status_code,
+            to_state=status_code,
+            comment=None,
+            at=datetime.now(UTC),
+        )
+    )
+    session.commit()
+    return get_own_request(session, user, request.id)
 
 
 def cancel_request(session: Session, user: User, request_id: int) -> RequestCard:

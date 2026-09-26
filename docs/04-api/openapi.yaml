@@ -385,11 +385,12 @@ paths:
           $ref: "#/components/responses/InternalError"
     patch:
       tags: [Requests]
-      summary: Save working values (deferred stub)
+      summary: Save working values
       description: |
-        **Deferred stub in current runtime.** Always returns `409 INVALID_STATE`
-        («сохранение полей будет доступно после следующего этапа API»).
-        Not Target-active. Role gate: `employee`.
+        Saves working field values for the request.
+        Available when status is `draft` or `returned` (initiator only).
+        Other statuses → `409 INVALID_STATE`.
+        Role: `employee`. Traceability: FR-REQ-02; BR-26.
       parameters:
         - $ref: "#/components/parameters/RequestId"
       requestBody:
@@ -399,16 +400,24 @@ paths:
             schema:
               $ref: "#/components/schemas/UpdateValuesInput"
       responses:
-        "409":
-          description: "`INVALID_STATE` — deferred stub."
+        "200":
+          description: Values saved.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/RequestCard"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/RequestNotFound"
+        "409":
+          description: "`INVALID_STATE` — request is not in `draft` or `returned`."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1282,6 +1291,14 @@ components:
         request_type_id:
           type: integer
           format: int64
+        values:
+          type: array
+          description: |
+            Динамические значения полей заявки.
+            Если не переданы — заявка создаётся с пустыми values,
+            пользователь заполнит через PATCH.
+          items:
+            $ref: "#/components/schemas/FieldValue"
 
     CreatedRequest:
       type: object
@@ -1294,6 +1311,7 @@ components:
         - current_stage_id
         - created_at
         - updated_at
+        - values
       properties:
         id:
           type: integer
@@ -1319,6 +1337,13 @@ components:
         updated_at:
           type: string
           format: date-time
+        values:
+          type: array
+          description: |
+            Working field values saved at create time.
+            Empty array when values were omitted.
+          items:
+            $ref: "#/components/schemas/FieldValue"
 
     RequestListItem:
       type: object
@@ -1405,11 +1430,15 @@ components:
 
     UpdateValuesInput:
       type: object
+      description: |
+        Body for PATCH /requests/{id}. Saves working field values when the
+        request is in `draft` or `returned`.
       required: [values]
       additionalProperties: false
       properties:
         values:
           type: array
+          minItems: 1
           items:
             $ref: "#/components/schemas/FieldValue"
 

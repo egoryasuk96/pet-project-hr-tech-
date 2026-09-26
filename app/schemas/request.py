@@ -29,10 +29,18 @@ class StageOut(BaseModel):
     sequence_no: int
 
 
+class FieldValue(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    field_code: str
+    value: str | None
+
+
 class CreateRequestInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     request_type_id: int
+    values: list[FieldValue] | None = None
 
 
 class CreatedRequest(BaseModel):
@@ -44,6 +52,7 @@ class CreatedRequest(BaseModel):
     current_stage_id: int | None
     created_at: datetime
     updated_at: datetime
+    values: list[FieldValue]
 
 
 class RequestListItem(BaseModel):
@@ -69,13 +78,6 @@ class CommentOut(BaseModel):
     created_at: datetime
 
 
-class FieldValue(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    field_code: str
-    value: str | None
-
-
 class ApprovalTaskSummary(BaseModel):
     id: int
     stage_id: int
@@ -88,7 +90,7 @@ class ApprovalTaskSummary(BaseModel):
 class UpdateValuesInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    values: list[FieldValue]
+    values: list[FieldValue] = Field(..., min_length=1)
 
 
 class UpdatedRequestValues(BaseModel):
