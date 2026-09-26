@@ -90,7 +90,7 @@ class ApprovalTaskSummary(BaseModel):
 class UpdateValuesInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    values: list[FieldValue]
+    values: list[FieldValue] = Field(..., min_length=1)
 
 
 class UpdatedRequestValues(BaseModel):

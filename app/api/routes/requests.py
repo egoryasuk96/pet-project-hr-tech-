@@ -21,7 +21,6 @@ from app.schemas.request import (
     RequestCard,
     RequestListItem,
     UpdateValuesInput,
-    UpdatedRequestValues,
 )
 from app.services import action_engine, available_actions_service, history_service, request_service, submit_service
 
@@ -177,10 +176,13 @@ def get_request(
 
 @router.patch(
     "/{request_id}",
-    response_model=UpdatedRequestValues,
+    response_model=RequestCard,
     status_code=status.HTTP_200_OK,
     summary="Save working field values",
-    description="UC-04 / FR-REQ-02. Deferred until later API stage.",
+    description=(
+        "UC-04 / FR-REQ-02. Initiator saves working values when status is "
+        "draft or returned. Partial upsert: omitted fields are not cleared."
+    ),
     responses={
         401: {"model": ErrorResponse, "description": "UNAUTHORIZED"},
         403: {"model": ErrorResponse, "description": "FORBIDDEN"},
@@ -195,7 +197,7 @@ def patch_request(
     body: UpdateValuesInput,
     session: Session = Depends(get_db),
     user: User = Depends(_employee),
-) -> UpdatedRequestValues:
+) -> RequestCard:
     return request_service.update_working_values(session, user, request_id, body.values)
 
 
