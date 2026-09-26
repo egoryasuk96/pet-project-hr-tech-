@@ -145,6 +145,12 @@ a {
   color: var(--error);
 }
 
+.field-error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--error);
+}
+
 .info-banner {
   margin: 0 0 20px;
   padding: 12px 14px;

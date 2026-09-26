@@ -27,6 +27,14 @@
   const backToTypesBtn = document.getElementById("back-to-types-btn");
   const cancelFormBtn = document.getElementById("cancel-form-btn");
 
+  const REASON_MESSAGES = {
+    unknown_field: "Поле недоступно для этого типа заявки",
+    duplicate: "Поле указано дважды",
+    required: "Обязательное поле",
+    invalid_date: "Некорректная дата",
+    invalid_integer: "Некорректное число",
+  };
+
   const user = Session.getUser();
   userNameEl.textContent = (user && user.full_name) || "";
 
@@ -54,26 +62,64 @@
     event.preventDefault();
     if (!selectedTypeId || submitting) return;
     clearCreateError();
+    SchemaForm.clearFieldErrors(schemaFields);
+
+    const missing = SchemaForm.validateRequired(schemaFields);
+    if (missing.length) {
+      showCreateError("Заполните обязательные поля");
+      return;
+    }
+
+    const values = SchemaForm.collectValues(schemaFields);
     setSubmitting(true);
 
     try {
       const created = await apiFetch("/requests", {
         method: "POST",
-        body: { request_type_id: Number(selectedTypeId) },
+        body: {
+          request_type_id: Number(selectedTypeId),
+          values: values,
+        },
       });
       if (!created || created.id == null) {
         throw new Error("Сервер не вернул идентификатор заявки");
       }
       window.location.href = "/requests/" + encodeURIComponent(created.id);
     } catch (err) {
-      showCreateError(
-        err && err.message
-          ? err.message
-          : "Произошла внутренняя ошибка. Попробуйте позже"
-      );
+      const details = (err && err.details) || {};
+      const reason = details.reason;
+      const fieldCode = details.field_code;
+      const mapped =
+        reason && REASON_MESSAGES[reason] ? REASON_MESSAGES[reason] : null;
+
+      SchemaForm.clearFieldErrors(schemaFields);
+
+      if (fieldCode && mapped && showFieldError(fieldCode, mapped)) {
+        showCreateError("Проверьте поля формы");
+      } else if (fieldCode && mapped) {
+        showCreateError(mapped);
+      } else {
+        showCreateError(
+          (err && err.message) ||
+            "Произошла внутренняя ошибка. Попробуйте позже"
+        );
+      }
+
       setSubmitting(false);
     }
   });
+
+  function showFieldError(fieldCode, text) {
+    const el = schemaFields.querySelector(
+      '.schema-field[data-code="' + CSS.escape(fieldCode) + '"]'
+    );
+    if (!el) return false;
+    const err = el.querySelector(".field-error");
+    if (!err) return false;
+    err.textContent = text;
+    err.hidden = false;
+    return true;
+  }
 
   function escapeHtml(value) {
     return String(value)
