@@ -15,14 +15,30 @@ MVP Baseline. AC вне Baseline — [docs/backlog.md](../backlog.md).
 
 ## 1. Создание заявки
 
-### AC-APP-01 — Создание draft
+### AC-APP-01 — Создание draft с values
+**Related:** FR-REQ-01, FR-REQ-02, BR-19, BR-26
+
+Given пользователь с ролью `employee` аутентифицирован  
+And существует активный тип заявки «Отпуск»  
+When он создаёт заявку этого типа через `POST /requests` с `values`  
+Then система отвечает `201`  
+And сохраняет заявку со статусом `draft`  
+And инициатор равен текущему пользователю  
+And значения сохранены в `request_field_values`  
+And в истории есть событие создания
+
+---
+
+### AC-APP-01b — Создание draft без values
 **Related:** FR-REQ-01, BR-19
 
 Given пользователь с ролью `employee` аутентифицирован  
 And существует активный тип заявки «Отпуск»  
-When он создаёт заявку этого типа  
-Then система сохраняет заявку со статусом `draft`  
+When он создаёт заявку этого типа через `POST /requests` без `values`  
+Then система отвечает `201`  
+And сохраняет заявку со статусом `draft`  
 And инициатор равен текущему пользователю  
+And `request_field_values` для этой заявки пусты  
 And в истории есть событие создания
 
 ---
@@ -53,6 +69,17 @@ Given заявка в `draft`
 And маршрут типа без этапов или без назначений  
 When инициатор выполняет submit  
 Then система возвращает ERR_ROUTE_CONFIG  
+And статус остаётся `draft`  
+And задачи не создаются
+
+---
+
+### AC-APP-02c — Submit без обязательных values
+**Related:** FR-REQ-03, BR-26
+
+Given заявка в статусе `draft` без заполненных обязательных полей (`request_field_values` пусты или required отсутствуют)  
+When инициатор выполняет submit  
+Then система возвращает `422 VALIDATION`  
 And статус остаётся `draft`  
 And задачи не создаются
 
@@ -392,6 +419,26 @@ And событие resubmit зафиксировано в HistoryEvent (BR-24)
 
 ---
 
+### AC-DRAFT-03 — PATCH values в draft
+**Related:** FR-REQ-02, BR-26
+
+Given заявка в статусе `draft`, инициатор аутентифицирован  
+When он отправляет `PATCH /requests/{id}` с `values`  
+Then система отвечает `200`  
+And working values обновлены в `request_field_values`
+
+---
+
+### AC-DRAFT-04 — PATCH values в in_approval запрещён
+**Related:** FR-REQ-02, BR-26
+
+Given заявка в статусе `in_approval`  
+When инициатор отправляет `PATCH /requests/{id}` с `values`  
+Then система возвращает `409 INVALID_STATE`  
+And `request_field_values` не изменяются
+
+---
+
 ## 15. Сводка AC (Baseline)
 
 | ID | Тема |
@@ -400,9 +447,11 @@ And событие resubmit зафиксировано в HistoryEvent (BR-24)
 | AC-ACC-02 | Согласующий не действует по чужой задаче |
 | AC-ACC-03 | Запрет самосогласования |
 | AC-ACC-06 | Approver видит полную карточку по своей задаче |
-| AC-APP-01 | Создание draft |
+| AC-APP-01 | Создание draft с values |
+| AC-APP-01b | Создание draft без values |
 | AC-APP-02 | Первый submit из draft |
 | AC-APP-02b | Submit при невалидном маршруте |
+| AC-APP-02c | Submit без обязательных values |
 | AC-APP-03 | Задачи первого этапа после submit |
 | AC-APP-04 | Успешный approve |
 | AC-APP-04b | Approve с комментарием допустим |
@@ -421,10 +470,12 @@ And событие resubmit зафиксировано в HistoryEvent (BR-24)
 | AC-CAT-02 | Пустой каталог |
 | AC-DRAFT-01 | Edit draft/returned использует актуальную схему |
 | AC-DRAFT-02 | Working values и live schema |
+| AC-DRAFT-03 | PATCH values в draft |
+| AC-DRAFT-04 | PATCH values в in_approval запрещён |
 | AC-REQ-06 | Свободный комментарий инициатора в in_approval |
 | AC-REQ-07 | Отмена только draft/returned |
 
-**Количество AC (Baseline): 27**  
+**Количество AC (Baseline): 31**  
 Backlog AC: см. [docs/backlog.md](../backlog.md).
 
 ---
@@ -439,9 +490,11 @@ Backlog AC: см. [docs/backlog.md](../backlog.md).
 
 | AC | FR | BR |
 | :--- | :--- | :--- |
-| AC-APP-01 | FR-REQ-01 | BR-19 |
+| AC-APP-01 | FR-REQ-01, FR-REQ-02 | BR-19, BR-26 |
+| AC-APP-01b | FR-REQ-01 | BR-19 |
 | AC-APP-02 | FR-REQ-03 | BR-08, BR-20, BR-26 |
 | AC-APP-02b | FR-REQ-03 | BR-18 |
+| AC-APP-02c | FR-REQ-03 | BR-26 |
 | AC-APP-03 | FR-REQ-03, FR-APP-01 | BR-20 |
 | AC-APP-04 | FR-APP-03 | BR-15, BR-25 |
 | AC-APP-04b | FR-APP-03 | BR-25 |
@@ -466,5 +519,7 @@ Backlog AC: см. [docs/backlog.md](../backlog.md).
 | AC-REQ-07 | FR-REQ-07 | BR-07 |
 | AC-DRAFT-01 | FR-REQ-02, FR-REQ-03 | BR-26 |
 | AC-DRAFT-02 | FR-REQ-03, FR-REQ-09 | BR-09, BR-22, BR-26 |
+| AC-DRAFT-03 | FR-REQ-02 | BR-26 |
+| AC-DRAFT-04 | FR-REQ-02 | BR-26 |
 
 Backlog AC — [docs/backlog.md](../backlog.md).

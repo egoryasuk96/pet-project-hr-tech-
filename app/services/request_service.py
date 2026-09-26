@@ -7,14 +7,14 @@ from datetime import UTC, datetime
 from sqlalchemy import exists, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.errors import AppError, inactive_type, not_found
+from app.core.errors import AppError, inactive_type, not_found, validation
 from app.domain.approval import ApprovalTask
 from app.domain.audit import HistoryEvent
-from app.domain.catalog import RequestType
+from app.domain.catalog import RequestFieldDefinition, RequestType
 from app.domain.enums import RoleCode
 from app.domain.identity import User
 from app.domain.process import Status
-from app.domain.request import Request
+from app.domain.request import Request, RequestFieldValue
 from app.domain.routing import ApprovalStage
 from app.schemas.request import (
     ApprovalTaskSummary,
@@ -31,6 +31,7 @@ from app.schemas.request import (
     UserRef,
 )
 from app.services.auth_service import _employee_full_name
+from app.services.field_validation import definitions_by_code, validate_field_value
 
 
 def _status_out(status: Status) -> StatusOut:
@@ -94,7 +95,12 @@ def _draft_status(session: Session) -> Status:
     return status
 
 
-def create_draft(session: Session, user: User, request_type_id: int) -> CreatedRequest:
+def create_draft(
+    session: Session,
+    user: User,
+    request_type_id: int,
+    values: list[FieldValue] | None = None,
+) -> CreatedRequest:
     request_type = session.get(RequestType, request_type_id)
     if request_type is None:
         raise not_found()
@@ -109,6 +115,9 @@ def create_draft(session: Session, user: User, request_type_id: int) -> CreatedR
     )
     session.add(request)
     session.flush()
+
+    _persist_create_values(session, request.id, request_type.id, values)
+
     session.add(
         HistoryEvent(
             request_id=request.id,
@@ -132,7 +141,54 @@ def create_draft(session: Session, user: User, request_type_id: int) -> CreatedR
         current_stage_id=request.current_stage_id,
         created_at=request.created_at,
         updated_at=request.updated_at,
+        values=[
+            FieldValue(field_code=item.field_code, value=item.value)
+            for item in sorted(request.field_values, key=lambda row: row.field_code)
+        ],
     )
+
+
+def _persist_create_values(
+    session: Session,
+    request_id: int,
+    request_type_id: int,
+    values: list[FieldValue] | None,
+) -> None:
+    """Persist optional create-time values. No required-check; type-validate present values."""
+    if not values:
+        return
+
+    seen: set[str] = set()
+    for item in values:
+        if item.field_code in seen:
+            raise validation({"field_code": item.field_code, "reason": "duplicate"})
+        seen.add(item.field_code)
+
+    definitions = session.scalars(
+        select(RequestFieldDefinition).where(
+            RequestFieldDefinition.request_type_id == request_type_id
+        )
+    ).all()
+    by_code = definitions_by_code(list(definitions))
+
+    for item in values:
+        field = by_code.get(item.field_code)
+        if field is None:
+            raise validation({"field_code": item.field_code, "reason": "unknown_field"})
+
+        raw = item.value
+        if raw is None or raw.strip() == "":
+            stored_value = None
+        else:
+            stored_value = validate_field_value(session, field, raw)
+
+        session.add(
+            RequestFieldValue(
+                request_id=request_id,
+                field_code=item.field_code,
+                value=stored_value,
+            )
+        )
 
 
 def list_own_requests(

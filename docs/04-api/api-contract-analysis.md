@@ -55,7 +55,7 @@
 | GET | `/request-types` | Target active | employee, admin | Каталог активных типов |
 | GET | `/request-types/{type_id}` | Target active | employee, admin | Описание активного типа |
 | GET | `/request-types/{type_id}/schema` | Target active | employee, admin | Live-схема формы |
-| POST | `/requests` | Target active | employee | Создать draft |
+| POST | `/requests` | Target active | employee | Создать draft (`values` опционально) |
 | GET | `/requests` | Target active | employee | Список своих заявок |
 | GET | `/requests/{request_id}` | Target active | employee (own), approver (via task) | `RequestCard` |
 | GET | `/requests/{request_id}/available-actions` | Target active | employee, approver | `{ available_actions: [{id,code,name}] }` |
@@ -64,7 +64,7 @@
 | GET | `/notifications` | Target active | employee, approver, admin | `{ items: [...] }` DESC |
 | POST | `/requests/{request_id}/submit` | Deprecated thin alias | employee | Alias Action Engine `submit` → `RequestCard` |
 | POST | `/requests/{request_id}/cancel` | Deprecated thin alias | employee | Alias Action Engine `cancel` → `RequestCard` |
-| PATCH | `/requests/{request_id}` | Deferred stub | employee | Всегда `409 INVALID_STATE` |
+| PATCH | `/requests/{request_id}` | Target active | employee | Save working values → `RequestCard` |
 | POST | `/requests/{request_id}/comments` | Deferred stub | employee | Всегда `409 INVALID_STATE` |
 | GET | `/approval-tasks` | Disabled stub | — | Всегда `409 INVALID_STATE` |
 | GET | `/approval-tasks/{task_id}` | Disabled stub | — | Всегда `409 INVALID_STATE` |
@@ -208,6 +208,10 @@ Errors: `403 FORBIDDEN`, `404 NOT_FOUND` (нет / inactive), `500 INTERNAL`.
 
 ## 5. Requests lifecycle
 
+Заявка создаётся через POST /requests (values опционально).
+Значения полей могут быть заданы при создании или позже через
+PATCH /requests/{id}. Submit валидирует значения из request_field_values.
+
 ### 5.1. RequestCard — Target shape (freeze)
 
 Полная карточка заявки. **Нет** полей `schema`, `available_actions`, `value_source`, `submit_number`, `field_value_versions`. Схема — отдельно через schema endpoint; действия — через available-actions.
@@ -258,12 +262,14 @@ Errors: `403 FORBIDDEN`, `404 NOT_FOUND` (нет / inactive), `500 INTERNAL`.
 | `approval_tasks` | summary: `open` \| `completed` \| `cancelled` |
 | `comments` | `kind`: `free` \| `decision` |
 
-Тот же `RequestCard` возвращают: GET card, POST execute, thin aliases submit/cancel.
+Тот же `RequestCard` возвращают: GET card, POST execute, PATCH values, thin aliases submit/cancel.
 
 ### 5.2. POST `/requests` — Target active
 
-**Request:** `{ "request_type_id": 1 }`.  
-`initiator_user_id` клиент не передаёт.
+**Request:** `{ "request_type_id": 1 }` или с опциональными values:
+`{ "request_type_id": 1, "values": [{ "field_code": "start_date", "value": "2026-10-01" }] }`.  
+`initiator_user_id` клиент не передаёт.  
+`values` опциональны (`FieldValue[]`). Без `values` — `request_field_values` пусты; с `values` — сохраняются атомарно с draft.
 
 **Response `201` (`CreatedRequest`):**
 
@@ -276,11 +282,13 @@ Errors: `403 FORBIDDEN`, `404 NOT_FOUND` (нет / inactive), `500 INTERNAL`.
   "status": { "id": 1, "code": "draft", "name": "Черновик" },
   "current_stage_id": null,
   "created_at": "2026-09-21T09:00:00Z",
-  "updated_at": "2026-09-21T09:00:00Z"
+  "updated_at": "2026-09-21T09:00:00Z",
+  "values": []
 }
 ```
 
 Атомарно создаётся HistoryEvent (`create` → `draft`). Snapshot RouteInstance / FieldValueVersion **не** создаются.
+При передаче `values` строки пишутся в `request_field_values` в той же TX; `CreatedRequest.values` отражает сохранённое.
 
 | HTTP | code |
 | :---: | :--- |
@@ -398,16 +406,29 @@ Role: `employee`. Ошибки — как у execute (submit-ветка).
 
 Role: `employee`.
 
-### 5.9. Deferred stubs (requests)
+### 5.9. PATCH `/requests/{request_id}` — Target active
+
+Сохраняет working values (`UpdateValuesInput`: `{ "values": [{ "field_code", "value" }] }`).
+
+Доступно в статусах `draft` и `returned` (инициатор, role `employee`).  
+Иные статусы → `409 INVALID_STATE`.
+
+**Response `200`:** полный `RequestCard`.
+
+| HTTP | code |
+| :---: | :--- |
+| 404 | `NOT_FOUND` — заявка отсутствует / невидима |
+| 409 | `INVALID_STATE` — статус не `draft` / `returned` |
+
+### 5.10. Deferred stub (requests)
 
 | Method | Path | Поведение |
 | :--- | :--- | :--- |
-| PATCH | `/requests/{request_id}` | `409 INVALID_STATE` — сохранение working values отложено |
 | POST | `/requests/{request_id}/comments` | `409 INVALID_STATE` — free comment отложен |
 
 Decision comments создаются через Action Engine (`ExecuteActionInput.comment` на reject/return), не через comments stub.
 
-Body schemas (`UpdateValuesInput`, `CreateCommentInput`) сохранены в OpenAPI для будущего этапа, но endpoints **не** Target-active.
+Body schema `CreateCommentInput` сохранена в OpenAPI для будущего этапа; endpoint **не** Target-active.
 
 ---
 
@@ -559,7 +580,8 @@ Errors: `401 UNAUTHORIZED`, `403 FORBIDDEN`, `404 NOT_FOUND`, `500 INTERNAL`.
 | POST `.../submit` \| `.../cancel` | A (own, alias) | — | — |
 | GET `.../history` | R (own) | R (via task) | — |
 | GET `/notifications` | R (own) | R (own) | R (own) |
-| PATCH values / POST comments | deferred stub | — | — |
+| PATCH `/requests/{id}` | C (own, draft/returned) | — | — |
+| POST `.../comments` | deferred stub | — | — |
 | `/approval-tasks/*` | disabled stub | disabled stub | disabled stub |
 
 Примечания:
@@ -643,7 +665,7 @@ Thin aliases `submit` / `cancel` дают тот же эффект и тот ж�
 
 ### 11.2. Запреты прямых мутаций клиентом
 
-- Status / `current_stage_id` / `initiator_user_id` / `request_type_id` не задаются через PATCH (PATCH — deferred stub).
+- Status / `current_stage_id` / `initiator_user_id` / `request_type_id` не задаются через PATCH; PATCH принимает только `values` (`UpdateValuesInput`).
 - ApprovalTask и HistoryEvent не создаются/меняются клиентом напрямую.
 - `/approval-tasks/*` decision stubs не выполняют бизнес-эффект.
 
