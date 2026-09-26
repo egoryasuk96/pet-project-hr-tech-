@@ -2,7 +2,7 @@
 
 **Продукт:** Employee Service  
 **ID:** UML-SM-01  
-**Версия:** 1.1  
+**Версия:** 1.2  
 **Статус:** Target architecture (docs E0–E1)  
 **Связанные документы:** [uml-description.md](./uml-description.md), [ADR-LIVE-CFG-01](../architecture/adr-live-config.md)
 
@@ -28,7 +28,7 @@
 | :--- | :--- | :--- |
 | `draft` | Черновик; не на согласовании | edit, submit, cancel |
 | `in_approval` | На согласовании по live-маршруту | свободный комментарий (BR-28); cancel **запрещён** |
-| `returned` | Возвращена на доработку; `current_stage_id` хранит этап возврата | edit, resubmit, cancel |
+| `returned` | Возвращена на доработку; `current_stage_id` хранит этап возврата | edit, submit, cancel |
 | `approved` | Финальное согласование | терминальное |
 | `rejected` | Отклонена | терминальное |
 | `cancelled` | Отменена инициатором | терминальное |
@@ -42,10 +42,10 @@
 | `[начальное]` | `draft` | create | тип активен (BR-10) | инициатор = текущий пользователь (BR-19) |
 | `draft` | `in_approval` | submit | поля OK (BR-26); live-маршрут валиден (BR-18); тип активен | `current_stage_id` → первый live-этап; ApprovalTask из live assignments; история |
 | `draft` | `cancelled` | cancel | — | история (BR-07) |
-| `in_approval` | `approved` | finalApprove | approve на последнем live-этапе (BR-17) | закрытие задач |
+| `in_approval` | `approved` | approve (последний этап) | approve на последнем live-этапе (BR-17) | закрытие задач |
 | `in_approval` | `rejected` | reject | комментарий непустой (BR-25); не инициатор (BR-21); своя open задача (BR-15) | закрытие открытых задач этапа (BR-04) |
 | `in_approval` | `returned` | return | комментарий непустой (BR-25); BR-21; BR-15 | сохранить `current_stage_id`; закрыть задачи этапа (BR-05) |
-| `returned` | `in_approval` | resubmit | поля OK по live-схеме; маршрут валиден; тип активен | `current_stage_id` → первый live-этап; новые ApprovalTask этапа 1 (BR-06, BR-22) |
+| `returned` | `in_approval` | submit | поля OK по live-схеме; маршрут валиден; тип активен | `current_stage_id` → первый live-этап; новые ApprovalTask этапа 1 (BR-06, BR-22) |
 | `returned` | `cancelled` | cancel | — | история (BR-07) |
 
 ### 4.1. Отклонённые / невозможные переходы (notes)
@@ -70,11 +70,11 @@ stateDiagram-v2
   draft --> in_approval: submit\n[fieldsOK and routeValid]\n/ current_stage_id + tasks
   draft --> cancelled: cancel
 
-  in_approval --> approved: finalApprove\n[lastLiveStage]
+  in_approval --> approved: approve (последний этап)\n[lastLiveStage]
   in_approval --> rejected: reject\n[commentRequired and notInitiator]
   in_approval --> returned: return\n[commentRequired and notInitiator]\n/ keep current_stage_id
 
-  returned --> in_approval: resubmit\n[fieldsOK and routeValid]\n/ current_stage_id to stage1 + tasks
+  returned --> in_approval: submit\n[fieldsOK and routeValid]\n/ current_stage_id to stage1 + tasks
   returned --> cancelled: cancel
 
   approved --> [*]
@@ -128,3 +128,4 @@ stateDiagram-v2
 | :--- | :--- | :--- |
 | 1.0 | 2026-09-19 | Первая версия |
 | 1.1 | 2026-09-23 | current_stage_id; без snapshot |
+| 1.2 | 2026-09-27 | События SM выровнены с Action.code (`approve`, `submit`) |

@@ -2,7 +2,7 @@
 
 **Продукт:** Employee Service  
 **ID:** BPMN-01  
-**Версия:** 1.0  
+**Версия:** 1.2  
 **Статус:** Baseline v1.0  
 **Связанные документы:** [bpmn-description.md](./bpmn-description.md), [ADR-LIVE-CFG-01](../architecture/adr-live-config.md), [UML-SM-01](../uml/state-request.md)
 
@@ -173,10 +173,10 @@ stateDiagram-v2
   [*] --> draft
   draft --> in_approval: submit
   draft --> cancelled: cancel
-  in_approval --> approved: finalApprove
+  in_approval --> approved: approve (последний этап)
   in_approval --> rejected: reject
   in_approval --> returned: return
-  returned --> in_approval: resubmit
+  returned --> in_approval: submit (повторная подача)
   returned --> cancelled: cancel
   approved --> [*]
   rejected --> [*]
